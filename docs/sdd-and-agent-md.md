@@ -85,3 +85,9 @@ task risk -> workflow level -> skill composition -> verification evidence
    什么情况下 agent 不能继续猜，必须向用户确认。
 
 一个好的 agent md 不是让 agent “更听话”，而是让 agent 在正确的时刻知道下一步该用什么流程。
+
+可复制模板见：
+
+- [`examples/AGENTS.md`](../examples/AGENTS.md)
+- [`examples/CLAUDE.md`](../examples/CLAUDE.md)
+- [`docs/agent-md-guide.md`](./agent-md-guide.md)

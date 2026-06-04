@@ -89,6 +89,35 @@ Adaptive Dev Workflow 不是替代这些 skill，而是给它们加一个入口�
 
 也就是说，这个项目不是“又一个 skill 文件”，而是把 skill、SDD 思想和 agent memory 组织成一个可落地的工程入口。
 
+## Agent MD 应该怎么写
+
+`AGENTS.md` / `CLAUDE.md` 最重要的价值不是提醒 agent “写高质量代码”，而是把项目里的判断标准变成可执行路由：
+
+- **任务路由：** 哪些任务走 Tiny / Small / Medium / Large / OpenSpec。
+- **项目事实：** 入口、模块边界、测试命令、禁区、部署方式。
+- **验证策略：** docs-only、frontend、backend、auth/security、data migration 分别如何证明完成。
+- **停止条件：** 什么时候 agent 不能继续猜，必须让人决策。
+
+弱写法：
+
+```md
+请保持代码质量，注意测试，不要乱改。
+```
+
+强写法：
+
+```md
+行为变更必须先定义验证方式。
+Small 任务至少运行相关 targeted test。
+如果需要改变 public API、data model、security posture 或 user-facing behavior，停止编码并向用户确认。
+```
+
+可复制模板：
+
+- [examples/AGENTS.md](examples/AGENTS.md)：适合 Codex / 通用 agent 的项目级规则模板。
+- [examples/CLAUDE.md](examples/CLAUDE.md)：适合 Claude Code 的项目级规则模板。
+- [docs/agent-md-guide.md](docs/agent-md-guide.md)：详细写法指南和反例/正例。
+
 ## 这是什么
 
 Adaptive Dev Workflow 是一个可复用 skill，用风险门控来协调开发任务：
@@ -322,7 +351,7 @@ Adaptive Dev Workflow 不是：
 .
 ├── skills/adaptive-dev-workflow/   # installable skill source
 ├── docs/                           # manifesto, principles, case study
-├── examples/                       # copyable prompts and scenarios
+├── examples/                       # copyable prompts and Agent MD templates
 ├── CONTRIBUTING.md
 ├── LICENSE
 └── README.md
