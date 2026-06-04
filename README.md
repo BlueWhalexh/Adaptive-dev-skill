@@ -1,12 +1,28 @@
 # Adaptive Dev Workflow
 
-**用最轻的流程，保护真正重要的正确性。**
+**不是再写一个 prompt，而是给 AI coding 一个自适应工程系统。**
 
-Adaptive Dev Workflow 是一个面向 Codex、Claude Code、Gemini CLI 等 agentic coding 工具的小型系统。它帮助 AI coding agent 判断什么时候快速推进，什么时候停下来确认需求，什么时候写计划，什么时候补测试，以及什么时候必须先验证再声称完成。
+Adaptive Dev Workflow 是面向 Codex、Claude Code、Gemini CLI 等 agentic coding 工具的轻量 SDD coordinator。它帮助 AI coding agent 判断什么时候快速推进，什么时候进入 spec-driven flow，什么时候调用 planning / TDD / debugging / verification / review skills，以及什么时候必须停下来让人决策。
 
-它不是一个“神奇 prompt”。它是一个面向真实软件开发的 workflow router。
+它不是一个“神奇 prompt”。它是一个把现有 agent skills、项目级 AGENTS.md / CLAUDE.md 规则、验证门控组合起来的 workflow router。
 
 任务明确时快速。风险真实时谨慎。
+
+## SDD 驱动时代已经来了
+
+过去的 AI coding 很像即时聊天：你提出一个需求，agent 直接开始改代码。它快，但上下文、边界和验收标准经常只存在于对话里。一旦会话变长、项目变复杂、多人协作或多 agent 接力，问题就会出现：需求漂移、计划漂移、实现漂移，最后 reviewer 只能从 diff 里倒推 agent 到底理解了什么。
+
+SDD，也就是 Spec-Driven Development，正在成为 AI coding 的关键方向。它的核心不是“写很多文档”，而是把 intent、requirements、boundaries、acceptance criteria 变成 agent 和人都能反复读取的 source of truth。代码不再是 agent 猜出来的第一产物，而是围绕 spec、tests、review gates 被生成、修改和验证的结果。
+
+但完整 SDD 也有成本：
+
+- 写 spec 需要时间。
+- spec 会过期，需要维护。
+- 小任务不值得启动完整 spec lifecycle。
+- 复杂框架可能要求额外目录、命令、状态机和 review 流程。
+- 普通开发者只是想让 agent 不乱改仓库，不一定想先引入一套重型工程体系。
+
+Adaptive Dev Workflow 的切入点就是这里：**用 SDD 的思想治理 agent，但不把每个任务都变成完整 SDD 项目。**
 
 ## 它解决什么问题
 
@@ -24,6 +40,54 @@ Agent coding 常见的失控方式很固定：
 人类工程师不会对所有任务使用同一种流程。改一个错别字不需要 design doc；重做权限系统也不该像改错别字一样处理。Agentic coding 需要同样的判断力，但 agent 往往会滑向两个极端：纯 vibe coding，或者僵硬的重流程。
 
 Adaptive Dev Workflow 给 agent 一个决策模型：根据风险选择最小必要工程流程。
+
+## 为什么不直接用现有 skills
+
+现在已经有很多很好用的 agent skills 或 workflow：
+
+- `define-goal`：把模糊需求变成可验证目标。
+- `brainstorming`：探索需求、方案和设计取舍。
+- `writing-plans`：把设计拆成可执行计划。
+- `test-driven-development`：用 TDD 约束行为变更。
+- `systematic-debugging`：避免凭感觉修 bug。
+- `verification-before-completion`：禁止没有证据就声称完成。
+- `requesting-code-review`：在高风险改动后引入 review。
+- `OpenSpec` / spec workflow：为复杂项目提供完整 spec lifecycle。
+
+问题是：这些 skill 本身都很有用，但**直接让用户或 agent 手动选择它们，成本太高**。
+
+常见失败方式：
+
+- 小任务被套上过重流程，token 和时间浪费明显。
+- 大任务被当成普通 patch，缺少 design、test 和 review gate。
+- agent 忘记调用某个关键 skill，比如修 bug 时跳过 debugging，收尾时跳过 verification。
+- 用户不知道什么时候该用 OpenSpec，什么时候只需要一个轻量 objective。
+- 项目级 `AGENTS.md` / `CLAUDE.md` 写了很多规则，但没有一个 runtime decision model，agent 仍然不知道下一步该走哪个流程。
+
+Adaptive Dev Workflow 不是替代这些 skill，而是给它们加一个入口层：先判断任务风险，再选择需要的最小 skill 组合。
+
+## 我做了哪些扩展
+
+这个项目在现有 skills 之上增加了四层东西：
+
+1. **Workflow router**
+   先把任务分成 Tiny / Small / Medium / Large / OpenSpec，再决定是否需要 goal、brainstorming、plan、TDD、debugging、verification 或 review。
+
+2. **Cost-aware process**
+   不为了“看起来专业”启动完整流程。README typo 走 Tiny；单点 bug 走 Small；跨模块、用户可见、数据模型、安全相关改动才进入 Medium/Large 或 OpenSpec。
+
+3. **Human decision gates**
+   agent 不应该每一步都问人，但必须在改变目标、scope、public API、data model、security posture、user-facing behavior、依赖或架构路线时暂停。
+
+4. **Agent MD optimization**
+   `AGENTS.md`、`CLAUDE.md`、`GEMINI.md` 这类 agent memory 文件不应该只是规则堆叠。它们应该告诉 agent：
+   - 什么任务必须进入 adaptive workflow。
+   - 哪些目录、命令、验证方式是项目事实。
+   - 哪些行为是禁区，比如无关重构、跳过验证、写入 secret。
+   - scope 变化时应该停下来，而不是继续“帮忙”。
+   - docs-only、配置、业务逻辑、权限、安全任务分别用什么验证标准。
+
+也就是说，这个项目不是“又一个 skill 文件”，而是把 skill、SDD 思想和 agent memory 组织成一个可落地的工程入口。
 
 ## 这是什么
 
@@ -57,7 +121,7 @@ Adaptive Dev Workflow 要求 agent 在最容易伤害质量的节点停下来：
 
 ## Adaptive system 如何工作
 
-这个 skill 是协调器，不替代专业流程；它在需要时路由到它们。
+这个 skill 是 SDD-lite coordinator，不替代专业流程；它在需要时路由到它们。
 
 ```text
 用户请求
@@ -71,6 +135,16 @@ Adaptive Dev Workflow 要求 agent 在最容易伤害质量的节点停下来：
 ```
 
 关键是决策步骤：agent 会根据 blast radius、需求模糊度、行为风险和验证成本选择流程。
+
+## 与普通 prompt、checklist、重型 SDD 的区别
+
+| 方式 | 优点 | 问题 | Adaptive Dev Workflow 的做法 |
+| --- | --- | --- | --- |
+| 普通 prompt | 轻、快、容易复制 | 没有稳定门控，agent 容易继续猜 | 把“何时停下、何时验证、何时升级流程”写成系统规则 |
+| Checklist | 明确、好 review | 对所有任务一视同仁，容易变成仪式 | 根据风险选择最小必要 checklist |
+| 单个 skill | 专项能力强 | 用户要知道何时调用哪个 skill | 用 router 统一入口 |
+| 重型 SDD / OpenSpec | 适合复杂项目和长期演进 | 对小任务成本高，维护 spec 也有负担 | 只有 Medium/Large/OpenSpec 才升级 |
+| AGENTS.md / CLAUDE.md 规则堆 | 持久、项目级 | 容易变成静态约束，缺少运行时决策 | 把 agent md 变成流程路由和验证策略 |
 
 ## Workflow levels
 
@@ -267,3 +341,10 @@ Adaptive Dev Workflow 不是：
 - Codex、Claude Code、Gemini CLI 等工具的兼容说明。
 
 请避免把项目变成万能 AI coding 宣言或巨大 checklist。价值在于选择“仍能保护正确性的最小流程”。
+
+## 背景阅读
+
+- [SpecDD](https://specdd.ai/)：把 intent、requirements、boundaries、completion criteria 作为人和 agent 的 shared source of truth。
+- [Spec-Driven Development with AI Agents](https://www.xcapit.com/en/blog/spec-driven-development-ai-agents)：介绍 spec 作为系统行为 single source of truth 的 SDD 视角。
+- [OpenAI Codex AGENTS.md docs](https://github.com/openai/codex/blob/main/docs/agents_md.md)：Codex 对 `AGENTS.md` 作用域和层级指令的说明。
+- [Anthropic Claude Code memory docs](https://docs.anthropic.com/zh-CN/docs/claude-code/memory)：`CLAUDE.md` 作为项目共享指令和跨会话记忆的说明。
