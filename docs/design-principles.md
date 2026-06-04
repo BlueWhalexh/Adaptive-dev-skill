@@ -1,25 +1,25 @@
 # Design Principles
 
-## 1. Process Is A Risk Control
+## 1. Process 是 risk control
 
-The workflow level should be chosen from ambiguity, blast radius, behavior risk, and verification cost. Process is useful only when it reduces real risk.
+Workflow level 应该由需求模糊度、blast radius、行为风险和验证成本决定。流程只有在降低真实风险时才有价值。
 
-## 2. Scope Must Be Explicit
+## 2. Scope 必须显式
 
-Before coding, the agent should know what outcome is expected, what files or behaviors are in scope, what is out of scope, and what should trigger a pause.
+开始编码前，agent 应该知道期望 outcome、哪些文件或行为在 scope 内、哪些不在 scope 内，以及什么情况需要暂停。
 
-## 3. Verification Comes Before Completion Claims
+## 3. Completion claim 前必须验证
 
-The final answer should name the command or check that was run and what happened. A confident statement without fresh evidence is not an engineering result.
+最终回复应该说明运行了什么命令或检查，以及结果是什么。没有 fresh evidence 的自信陈述不是工程结果。
 
-## 4. Human Gates Belong At Decision Points
+## 4. Human gate 应放在决策点
 
-The agent should not ask for permission after every edit. It should pause when a decision changes the goal, public API, data model, security posture, user-facing behavior, dependency graph, or scope.
+agent 不应该每改一行都询问许可。它应该在决策会改变目标、public API、data model、security posture、user-facing behavior、dependency graph 或 scope 时暂停。
 
-## 5. Compose Specialized Workflows
+## 5. 组合专业 workflow
 
-Adaptive Dev Workflow coordinates other workflows instead of duplicating them. Planning, TDD, debugging, OpenSpec, and review workflows are useful when the task calls for them.
+Adaptive Dev Workflow 负责协调，而不是复制其他 workflow。Planning、TDD、debugging、OpenSpec 和 review workflow 只在任务需要时使用。
 
-## 6. Follow The Repository
+## 6. 跟随仓库
 
-Read the project structure first. Use existing patterns, helpers, tests, and conventions. Avoid unrelated refactors.
+先读项目结构。使用现有 patterns、helpers、tests 和 conventions。避免无关重构。

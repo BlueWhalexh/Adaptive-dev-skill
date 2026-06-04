@@ -1,6 +1,6 @@
 # Example Requests
 
-Use these as copyable starting points.
+这些示例可以直接复制后改写。
 
 ## Tiny
 

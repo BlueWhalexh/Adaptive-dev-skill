@@ -1,29 +1,29 @@
-# Case Study: Preventing Scope Drift In A Status Filter
+# Case Study：防止状态筛选功能的 scope drift
 
-This is an illustrative case study for communicating the workflow. It describes a common pattern rather than a measured benchmark.
+这是一个用于沟通 workflow 的 illustrative case study。它描述的是常见模式，不是 measured benchmark。
 
-## Request
+## 请求
 
 ```text
 Add a status filter to the issues page.
 ```
 
-## Failure Mode Without A Workflow
+## 没有 workflow 时的失败模式
 
-An agent may immediately implement the visible UI and make several hidden choices:
+agent 可能会立即实现可见 UI，同时做出几个隐藏决策：
 
-- invent the list of statuses
-- change the URL query model
-- alter table state management
-- touch styling outside the filter
-- assume the backend supports filtering
-- skip empty-state verification
+- 发明 status 列表。
+- 改 URL query model。
+- 改 table state management。
+- 修改 filter 之外的 styling。
+- 假设 backend 支持 filtering。
+- 跳过 empty-state verification。
 
-The user asked for a status filter, but the review now includes state management, styling, API behavior, and unverified edge cases.
+用户要求的是 status filter，但 review 现在要覆盖 state management、styling、API behavior 和未验证的边界条件。
 
-## Adaptive Workflow Response
+## Adaptive Workflow 的响应
 
-The agent first frames the task:
+agent 先框定任务：
 
 ```text
 Outcome: users can filter issues by an existing status value.
@@ -33,12 +33,12 @@ Evidence: browser check or frontend test covering active filter, reset, and empt
 Stop condition: pause if the backend does not already accept a status filter.
 ```
 
-Then it chooses the level:
+然后选择 level：
 
-- Small if the page already has filtering patterns and the backend supports status.
-- Medium if query state, data fetching, or empty states need new behavior.
-- Stop for user decision if backend API changes are required.
+- 如果页面已有 filtering patterns 且 backend 支持 status，则是 Small。
+- 如果 query state、data fetching 或 empty states 需要新行为，则是 Medium。
+- 如果需要 backend API 变更，则停下来让用户决策。
 
-## Review Outcome
+## Review 结果
 
-The change is easier to review because the agent made fewer hidden decisions. The reviewer can compare the diff against the stated scope and acceptance evidence.
+这个改动更容易 review，因为 agent 做了更少隐藏决策。Reviewer 可以直接用声明过的 scope 和 acceptance evidence 对照 diff。

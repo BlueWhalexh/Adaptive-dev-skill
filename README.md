@@ -1,98 +1,98 @@
 # Adaptive Dev Workflow
 
-**Use the lightest process that still protects correctness.**
+**用最轻的流程，保护真正重要的正确性。**
 
-Adaptive Dev Workflow is a small system for agentic coding tools such as Codex, Claude Code, and Gemini CLI. It helps an AI coding agent decide when to move fast, when to stop and clarify, when to plan, when to test, and when to verify before it claims the work is done.
+Adaptive Dev Workflow 是一个面向 Codex、Claude Code、Gemini CLI 等 agentic coding 工具的小型系统。它帮助 AI coding agent 判断什么时候快速推进，什么时候停下来确认需求，什么时候写计划，什么时候补测试，以及什么时候必须先验证再声称完成。
 
-It is not a magic prompt. It is a workflow router for software work.
+它不是一个“神奇 prompt”。它是一个面向真实软件开发的 workflow router。
 
-Fast when the task is obvious. Careful when the risk is real.
+任务明确时快速。风险真实时谨慎。
 
-## The Problem
+## 它解决什么问题
 
-Agent coding often fails in predictable ways:
+Agent coding 常见的失控方式很固定：
 
-- The agent starts coding before it understands the request.
-- A tiny fix turns into a broad refactor.
-- The agent changes behavior that was never in scope.
-- Tests are skipped because the change "looks obvious".
-- The final answer says the work is complete without fresh evidence.
-- The repo ends up harder to review than the original problem.
+- agent 还没理解需求就开始写代码。
+- 一个小修复被扩成大重构。
+- agent 改了用户从未要求改变的行为。
+- 因为“看起来很明显”，测试和验证被跳过。
+- 最终回复声称完成，但没有 fresh evidence。
+- 仓库变得比原问题更难 review。
 
-This is not only a model-quality problem. It is a process problem.
+这不只是模型能力问题，也是流程问题。
 
-Human engineers do not use the same process for every task. A typo fix does not need a design doc. A permissions migration should not be handled like a typo fix. Agentic coding needs the same judgment, but agents tend to default either to pure vibe coding or to rigid ceremony.
+人类工程师不会对所有任务使用同一种流程。改一个错别字不需要 design doc；重做权限系统也不该像改错别字一样处理。Agentic coding 需要同样的判断力，但 agent 往往会滑向两个极端：纯 vibe coding，或者僵硬的重流程。
 
-Adaptive Dev Workflow gives the agent a decision model for choosing the smallest useful engineering process.
+Adaptive Dev Workflow 给 agent 一个决策模型：根据风险选择最小必要工程流程。
 
-## What This Is
+## 这是什么
 
-Adaptive Dev Workflow is a reusable skill that coordinates development work through risk-based gates:
+Adaptive Dev Workflow 是一个可复用 skill，用风险门控来协调开发任务：
 
-- clarify the objective when the request is vague
-- classify the task as Tiny, Small, Medium, Large, or OpenSpec
-- use planning only when the risk justifies it
-- use TDD or explicit validation for behavior changes
-- add debugging discipline when behavior is unexplained
-- require fresh verification before completion claims
-- keep scope changes behind human decision gates
+- 需求模糊时先明确目标。
+- 将任务分类为 Tiny、Small、Medium、Large 或 OpenSpec。
+- 只有风险需要时才引入计划。
+- 行为变更使用 TDD 或显式验证方式。
+- 遇到无法解释的失败时引入 debugging discipline。
+- 声称完成前必须有 fresh verification。
+- scope 变化必须经过 human decision gate。
 
-The goal is not more process. The goal is less chaos.
+目标不是增加流程。目标是减少失控。
 
-## Why Not Just Vibe Code?
+## 为什么不是直接 vibe code
 
-Vibe coding is useful for exploration, prototypes, and low-risk throwaway work. It becomes expensive when the output lands in a real repository.
+Vibe coding 适合探索、原型和低风险一次性工作。但当输出要进入真实仓库时，它会变得昂贵。
 
-The failure mode is not that the agent writes code. The failure mode is that the agent writes code while silently making product, architecture, risk, and verification decisions that should have been explicit.
+真正的问题不是 agent 写代码，而是 agent 在写代码时默默做了产品、架构、风险和验证决策，而这些决策本来应该被显式暴露出来。
 
-Adaptive Dev Workflow asks the agent to stop at the points where silent decisions usually damage quality:
+Adaptive Dev Workflow 要求 agent 在最容易伤害质量的节点停下来：
 
-- What exactly is the desired outcome?
-- What is in scope and out of scope?
-- What evidence proves the work?
-- Is this a one-line edit or a cross-module change?
-- Does the task need a plan, a test, a debugger, or a review gate?
+- 目标到底是什么？
+- 哪些在 scope 内，哪些不在？
+- 什么证据能证明完成？
+- 这是单行改动，还是跨模块改动？
+- 这个任务需要计划、测试、debugger，还是 review gate？
 
-This keeps the speed of agentic coding while adding the engineering guardrails that matter.
+这样既保留 agentic coding 的速度，又补上真正必要的工程护栏。
 
-## How The Adaptive System Works
+## Adaptive system 如何工作
 
-The skill acts as a coordinator. It does not replace specialized workflows; it routes to them when they are needed.
+这个 skill 是协调器，不替代专业流程；它在需要时路由到它们。
 
 ```text
-User request
-  -> define the objective
-  -> classify risk and scope
-  -> choose the workflow level
-  -> add only the gates needed for that level
-  -> implement within scope
-  -> verify with fresh evidence
-  -> report changes, checks, and review points
+用户请求
+  -> 明确目标
+  -> 分类风险和 scope
+  -> 选择 workflow level
+  -> 只加入当前任务需要的 gate
+  -> 在 scope 内实现
+  -> 用 fresh evidence 验证
+  -> 汇报改动、验证和 review 重点
 ```
 
-The important part is the decision step. The agent is instructed to choose process based on blast radius, ambiguity, behavior risk, and verification needs.
+关键是决策步骤：agent 会根据 blast radius、需求模糊度、行为风险和验证成本选择流程。
 
-## Workflow Levels
+## Workflow levels
 
-| Level | Use when | Typical flow |
+| Level | 适用场景 | 典型流程 |
 | --- | --- | --- |
-| Tiny | Text, docs, config, typo, or one obvious edit | confirm target -> edit -> verify |
-| Small | Narrow fix with clear expected behavior | objective -> focused implementation -> focused check |
-| Medium | 1-3 modules, new behavior, meaningful edge cases | objective -> design/plan -> test or validator -> verify |
-| Large | Cross-module feature, migration, security, data model, user-facing workflow | discovery -> design/spec -> staged plan -> implementation -> review -> verification |
-| OpenSpec | Repo already uses OpenSpec | delegate the lifecycle to the repo's OpenSpec workflow |
+| Tiny | 文本、文档、配置、错别字、单个明显改动 | 确认目标 -> 编辑 -> 验证 |
+| Small | 行为明确的窄范围修复 | objective -> focused implementation -> focused check |
+| Medium | 1-3 个模块、新行为、有边界条件 | objective -> design/plan -> test or validator -> verify |
+| Large | 跨模块功能、迁移、安全、数据模型、用户流程 | discovery -> design/spec -> staged plan -> implementation -> review -> verification |
+| OpenSpec | 仓库已经使用 OpenSpec | 交给仓库的 OpenSpec workflow |
 
-The system is intentionally adaptive. It should not force a design doc for a README typo, and it should not let an agent rewrite an auth flow without a plan.
+这个系统刻意保持 adaptive。它不应该强迫 README typo 走 design doc，也不应该允许 agent 无计划重写 auth flow。
 
-## Install
+## 安装
 
-Recommended repository name:
+推荐仓库命名：
 
 ```text
 adaptive-dev-workflow
 ```
 
-This repo currently ships the skill source under:
+当前仓库将 skill 源码放在：
 
 ```text
 skills/adaptive-dev-workflow/
@@ -100,26 +100,26 @@ skills/adaptive-dev-workflow/
 
 ### Codex
 
-Copy or symlink the skill into your Codex skills directory:
+复制或 symlink 到 Codex skills 目录：
 
 ```sh
 mkdir -p ~/.codex/skills
 cp -R skills/adaptive-dev-workflow ~/.codex/skills/adaptive-dev-workflow
 ```
 
-Then ask Codex to use it:
+然后让 Codex 使用它：
 
 ```text
 Use $adaptive-dev-workflow to implement this change with the smallest process that protects correctness.
 ```
 
-### Claude Code or Other Agent CLIs
+### Claude Code 或其他 Agent CLI
 
-If your agent supports local skills, copy the same folder into that tool's skill location. If it does not, paste the contents of `skills/adaptive-dev-workflow/SKILL.md` into your project instructions or agent memory as a workflow policy.
+如果你的 agent 支持 local skills，把同一个目录复制到对应工具的 skill 目录。如果不支持，可以将 `skills/adaptive-dev-workflow/SKILL.md` 的内容放入项目级 instructions 或 agent memory，作为 workflow policy。
 
-### Project-Level Use
+### 项目级使用
 
-For teams, the most practical setup is to reference the workflow from your project-level agent instructions:
+团队使用时，最实用的方式是在项目级 agent instructions 中引用：
 
 ```text
 For implementation, fix, refactor, design, or planning tasks, use adaptive-dev-workflow.
@@ -127,11 +127,11 @@ Choose Tiny/Small/Medium/Large based on ambiguity, blast radius, and verificatio
 Do not claim completion without fresh verification evidence.
 ```
 
-## Usage
+## 使用方式
 
-Use it when you want the agent to do software work without either over-planning or freewheeling.
+当你希望 agent 做软件工作，但不想过度计划，也不想自由发挥时使用它。
 
-Example:
+示例：
 
 ```text
 Use $adaptive-dev-workflow.
@@ -139,62 +139,62 @@ Add pagination to the repository list page. Keep the existing API shape unless a
 Verify with the relevant frontend tests and a browser check.
 ```
 
-For a tiny docs edit:
+文档小改：
 
 ```text
 Use $adaptive-dev-workflow.
 Fix the install command in README.md and verify the markdown still has no broken local links.
 ```
 
-For a risky backend change:
+风险较高的后端改动：
 
 ```text
 Use $adaptive-dev-workflow.
 Refactor token refresh handling. Preserve current session semantics, add regression coverage, and stop if the API contract needs to change.
 ```
 
-## Example Scenarios
+## 示例场景
 
-| Request | Expected behavior |
+| 请求 | 期望行为 |
 | --- | --- |
-| "Fix this typo in CONTRIBUTING.md" | Tiny flow, no heavy plan |
-| "Add one validation rule to a form" | Small flow, targeted check |
-| "Add filters to an order page" | Medium flow, clarify fields and verification |
-| "Rework permissions for admin users" | Large flow, design/spec and explicit review gates |
-| "Investigate why tests are flaky" | Add systematic debugging before fixes |
+| "Fix this typo in CONTRIBUTING.md" | Tiny flow，不引入重计划 |
+| "Add one validation rule to a form" | Small flow，做 targeted check |
+| "Add filters to an order page" | Medium flow，确认字段和验证方式 |
+| "Rework permissions for admin users" | Large flow，设计/spec 和明确 review gates |
+| "Investigate why tests are flaky" | 先加入 systematic debugging，再修复 |
 
-## Case Study: Scope Control On A Small Feature
+## Case study：控制一个小功能的 scope drift
 
-This is an illustrative before/after based on a common agent-coding failure mode. It is not a benchmark claim.
+这是一个 illustrative before/after，用来说明常见 agent-coding failure mode。它不是 benchmark claim。
 
-### Before: Pure Vibe Coding
+### Before：纯 vibe coding
 
-Request:
+请求：
 
 ```text
 Add a status filter to the issues page.
 ```
 
-Likely agent behavior:
+常见 agent 行为：
 
-- adds the filter UI
-- changes query parameters
-- rewrites part of the table state
-- updates unrelated styling
-- does not ask which statuses exist
-- does not verify empty-state behavior
-- reports completion based on code changes
+- 添加 filter UI。
+- 改 query parameters。
+- 重写一部分 table state。
+- 顺手改 unrelated styling。
+- 不确认有哪些 status。
+- 不验证 empty-state behavior。
+- 根据“代码已改”直接报告完成。
 
-Review result:
+Review 结果：
 
-- behavior may work for the happy path
-- scope is larger than requested
-- reviewers must inspect unrelated changes
-- missing edge cases are discovered later
+- happy path 可能可用。
+- scope 比请求更大。
+- reviewer 必须检查无关改动。
+- 缺失的边界条件稍后才暴露。
 
-### After: Adaptive Dev Workflow
+### After：Adaptive Dev Workflow
 
-The agent first frames the work:
+agent 会先框定任务：
 
 ```text
 Outcome: issues page can filter by existing issue status.
@@ -203,46 +203,46 @@ Evidence: targeted frontend test or browser check covering active filter and emp
 Stop condition: pause if the backend API does not already support status filtering.
 ```
 
-Then it chooses a Small or Medium workflow depending on the existing code. If the API already supports the parameter, the task stays narrow. If not, the agent stops before expanding scope into backend work.
+然后根据现有代码选择 Small 或 Medium。如果 backend 已支持该参数，任务保持窄范围。如果不支持，agent 会在扩展到 backend 工作前停下来。
 
-Review result:
+Review 结果：
 
-- fewer surprise edits
-- clearer acceptance criteria
-- verification is tied to behavior
-- the agent has an explicit reason to pause when scope changes
+- surprise edits 更少。
+- acceptance criteria 更清晰。
+- 验证和行为绑定。
+- scope 变化时，agent 有明确理由暂停。
 
-## Why This Works
+## Why this works
 
-Adaptive Dev Workflow works because it treats process as a risk control, not a ritual.
+Adaptive Dev Workflow 有效，是因为它把流程当作 risk control，而不是仪式。
 
-Design principles:
+设计原则：
 
-- **Right-sized process:** use the smallest workflow that protects correctness.
-- **Explicit scope:** make hidden assumptions visible before coding.
-- **Human decision gates:** pause when the agent would otherwise change goals, APIs, security posture, or user-facing behavior.
-- **Fresh evidence:** do not claim completion without running the check that proves it.
-- **Composable discipline:** delegate to planning, TDD, debugging, OpenSpec, or review workflows only when those workflows are useful.
-- **Repo empathy:** read the project first and follow existing conventions.
+- **Right-sized process:** 使用能保护正确性的最小流程。
+- **Explicit scope:** 编码前暴露隐藏假设。
+- **Human decision gates:** 当 agent 可能改变目标、API、安全姿态或用户可见行为时暂停。
+- **Fresh evidence:** 没有运行能证明完成的检查，就不能声称完成。
+- **Composable discipline:** 只在有用时调用 planning、TDD、debugging、OpenSpec 或 review workflow。
+- **Repo empathy:** 先读项目，沿用既有约定。
 
-The system is deliberately conservative at the edges where agents are most likely to damage a codebase.
+这个系统在 agent 最容易破坏代码库的边界处保持保守。
 
-## What It Is Not
+## 它不是什么
 
-Adaptive Dev Workflow is not:
+Adaptive Dev Workflow 不是：
 
-- a guarantee that generated code is correct
-- a replacement for human review
-- a benchmarked productivity claim
-- a heavyweight spec process for every task
-- a prompt that makes vague requirements safe
-- a substitute for tests, CI, or observability
+- 生成代码正确性的保证。
+- human review 的替代品。
+- 已验证的 productivity benchmark。
+- 每个任务都必须使用的重型 spec 流程。
+- 能让模糊需求自动安全的 prompt。
+- tests、CI 或 observability 的替代品。
 
-It is best for real codebases where reviewability, scope control, and verification matter.
+它最适合真实代码库：reviewability、scope control 和 verification 都重要的场景。
 
-It is less useful for throwaway prototypes, experiments where correctness is not important, or teams that already have a mature agent workflow with equivalent gates.
+它不太适合一次性原型、正确性不重要的实验，或者已经有成熟 agent workflow 且具备等价 gate 的团队。
 
-## Repository Structure
+## 仓库结构
 
 ```text
 .
@@ -256,14 +256,14 @@ It is less useful for throwaway prototypes, experiments where correctness is not
 
 ## Contributing
 
-Contributions should preserve the core idea: adaptive discipline over fixed ceremony.
+贡献应保留核心思想：adaptive discipline，而不是 fixed ceremony。
 
-Useful contributions include:
+有价值的贡献包括：
 
-- clearer installation paths for specific agent tools
-- real-world case studies without inflated claims
-- sharper decision rules for workflow levels
-- examples that show when the skill should stop and ask
-- compatibility notes for Codex, Claude Code, Gemini CLI, and similar tools
+- 更清晰的特定 agent 工具安装路径。
+- 不夸大的真实 case study。
+- 更清晰的 workflow level 决策规则。
+- 展示 skill 何时应该暂停并询问的示例。
+- Codex、Claude Code、Gemini CLI 等工具的兼容说明。
 
-Please avoid turning the project into a universal AI coding manifesto or a giant checklist. The value is in choosing the smallest process that still protects correctness.
+请避免把项目变成万能 AI coding 宣言或巨大 checklist。价值在于选择“仍能保护正确性的最小流程”。
