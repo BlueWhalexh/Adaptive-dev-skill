@@ -7,11 +7,11 @@ description: Use when a user asks to implement, fix, refactor, design, plan, ver
 
 ## Overview
 
-Use this as the coordinator for turning a software request into scoped, implemented, reviewed, and verified work. Pick the smallest workflow that protects correctness; add process only when risk, ambiguity, blast radius, or handoff cost justifies it.
+Use this as the router for turning a software request into scoped, implemented, reviewed, and verified work. Pick the smallest workflow that protects correctness; add gates only when risk, ambiguity, blast radius, or handoff cost justifies them.
 
 Core principle: production AI coding is harness engineering: current truth, bounded action space, executable evidence, and review loops.
 
-This skill coordinates other skills when available. Do not duplicate their full instructions.
+This skill coordinates other skills when available. It selects gates and preserves scope; it must not dilute or reimplement the internal discipline of stronger execution skills.
 
 ## Dependency Check
 
@@ -31,6 +31,18 @@ only the gates justified by the task:
 - `openspec-workflow`: repo already uses OpenSpec and required dependencies are available.
 
 For Tiny or mechanical changes, do not force TDD. Define the smallest validator that proves the claim. If a preferred skill is unavailable, keep the same gate in plain workflow form and state the fallback briefly.
+
+## Hard Gate Inheritance
+
+This skill decides whether a gate is justified; it does not lower that gate's standard. Once routed to a supporting skill, follow that skill's stronger rules.
+
+- Debug route or unexplained failure -> use `systematic-debugging`; do not propose or apply fixes before root-cause investigation.
+- TDD route -> use `test-driven-development` / `superpowers:test-driven-development`; no production behavior change before valid Red evidence when the behavior is automatable.
+- Plan/spec gate -> use `writing-plans` / `superpowers:writing-plans` or `openspec-workflow` when available; do not replace their plan/spec method with an ad hoc summary.
+- Completion gate -> use `verification-before-completion`; do not claim success without fresh verification evidence.
+- Review gate -> use `requesting-code-review` or an isolated review pass for high-risk/broad work; do not self-approve broad changes as complete.
+
+If you skip a stronger gate for behavior-risk work, state why it is impractical, which alternate validator will be used, what it proves, and what remains unproven.
 
 ## First Move
 
@@ -58,10 +70,10 @@ Choose exactly one process level. Explain the choice in one or two sentences whe
 | Level | Use When | Flow |
 | --- | --- | --- |
 | Tiny | Text/docs/config change, typo, single obvious fix with no runtime blast radius | objective -> edit -> focused verification |
-| Small | Single-file or narrow bugfix with clear behavior | objective -> inspect existing pattern -> failing evidence or focused validator -> implement -> verify -> self-review |
-| Debug | CI/test failure, regression, production-like failure, or unexplained behavior | objective -> collect logs/current truth -> reproduce -> isolate root cause -> minimal fix -> regression/focused validator -> verify |
-| Medium | 1-3 modules, new behavior/API, meaningful edge cases | objective -> discovery -> design approval -> short plan -> TDD or explicit validator -> task gates -> phase smoke/E2E -> review |
-| Large | Cross-module feature, migration, data model change, security risk, user-facing workflow | discovery -> current-truth docs -> design/spec -> staged plan -> incremental implementation -> independent review -> system verification |
+| Small | Single-file or narrow bugfix with clear behavior | objective -> inspect existing pattern -> select gates -> delegate TDD/debug if triggered -> implement -> verify -> self-review |
+| Debug | CI/test failure, regression, production-like failure, or unexplained behavior | objective -> route to systematic-debugging -> reproduce/root cause -> minimal fix -> regression/focused validator -> verify |
+| Medium | 1-3 modules, new behavior/API, meaningful edge cases | objective -> discovery -> route to brainstorming/plan/TDD as triggered -> task gates -> phase smoke/E2E -> review |
+| Large | Cross-module feature, migration, data model change, security risk, user-facing workflow | discovery -> route to spec/plan workflow -> staged implementation -> independent review -> system verification |
 | OpenSpec | Repo already has OpenSpec and required workflow skills are available | delegate lifecycle to `openspec-workflow` |
 
 Avoid accidental heavyweight process: a simple fix should not require a full spec. Avoid accidental lightweight process: a risky change should not ship with only a happy-path check.
@@ -114,7 +126,7 @@ Use these paths when the repo follows this convention; otherwise follow the exis
 
 ## Test And Verification Strategy
 
-Define the evidence before implementation. Good tests constrain behavior and make future agents understand the system, not just increase pass counts. For detailed examples and the skill validation protocol, read `references/evidence-and-validation.md` when route/evidence choice is ambiguous, when planning Medium/Large work, or when changing this skill.
+Define the evidence before implementation. Good evidence constrains behavior and makes future agents understand the system, not just increase pass counts. For detailed examples and the skill validation protocol, read `references/evidence-and-validation.md` when route/evidence choice is ambiguous, when planning Medium/Large work, or when changing this skill.
 
 ### Evidence Ladder
 
@@ -125,10 +137,11 @@ Use the smallest evidence set that can catch the likely failure:
 - Medium feature/API/UI: focused tests plus phase smoke/E2E when a chain matters.
 - Large/high-risk: staged tests, independent review, system verification, and docs handoff.
 
-### TDD And Alternate Validators
+### Red Evidence And Alternate Validators
 
-- Use TDD by default when the project has a suitable test harness and the changed behavior can be captured at reasonable cost, especially for automatable bugs, core logic, API contracts, permissions, data, and state-machine behavior.
-- Prefer TDD for Small behavior changes and important refactors in tested modules.
+- Every task must define evidence before implementation, but not every task needs Red.
+- Route to TDD when changed behavior can be captured at reasonable cost, especially automatable bugs, core logic, API contracts, permissions, data, and state-machine behavior.
+- A valid Red must fail on the current code for the expected reason. If the selected TDD skill is available, follow it instead of this summary.
 - Use an alternate validator for Tiny/mechanical changes, visual-only checks, unavailable test environments, or cases where automation would be more expensive than the risk.
 - Never use "no TDD" as "no evidence"; always state what the validator proves and what remains unproven.
 

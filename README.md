@@ -2,14 +2,14 @@
 
 Risk-adaptive workflow router for agentic coding.
 
-Adaptive Dev Workflow 是一个面向 Codex、Claude Code、Gemini CLI 等 AI coding agent 的轻量开发流程 skill。它不替代 agent，也不替代测试、CI 或 human review。它的职责是让 agent 在开始软件任务时先判断风险，然后选择刚好足够的工程流程。
+Adaptive Dev Workflow 是一个面向 Codex、Claude Code、Gemini CLI 等 AI coding agent 的轻量路由 skill。它不替代 Superpowers、OpenSpec、测试、CI 或 human review。它的职责是让 agent 在开始软件任务时先判断风险，然后选择刚好足够的 gate，并把具体执行交给更专业的 workflow skill。
 
 核心目标：
 
 - 小任务保持快，不把 README typo 变成完整 spec 流程。
 - 高风险任务保持稳，不让权限、数据模型、API、部署配置只靠 happy path 验收。
 - 让 agent 在编码前显式说清 Outcome、Scope、Current truth、Evidence 和 Stop condition。
-- 把 planning、TDD、debugging、verification、review、OpenSpec 等能力组合成一个统一入口。
+- 把 planning、TDD、debugging、verification、review、OpenSpec 等能力组合成一个统一入口，但不重写它们的内部纪律。
 
 ## Why
 
@@ -31,6 +31,7 @@ Agentic coding 最常见的问题不是 agent 不会写代码，而是它会隐�
 - 根据任务选择 Tiny / Small / Debug / Medium / Large / OpenSpec。
 - 决定是否需要 goal clarification、brainstorming、writing-plans、TDD、systematic-debugging、verification、independent review。
 - 要求每个任务都定义 evidence，但允许 Tiny / mechanical change 使用最小 validator。
+- 一旦路由到 TDD、debugging、planning、verification 或 review，继承对应 skill 的更强规则，而不是降级执行。
 - 在改变 scope、public API、data model、security posture、user-facing behavior、依赖、部署或长期架构路线前暂停让人决策。
 - 将复杂证据矩阵和 skill validation protocol 放到 reference 文件，保持 `SKILL.md` 精简。
 
@@ -95,6 +96,28 @@ Do not claim completion without fresh evidence.
 
 For Claude Code or tools without native skill loading, use the same policy in `CLAUDE.md` or project memory, and link to `skills/adaptive-dev-workflow/SKILL.md` as the workflow source.
 
+## Relationship To Superpowers
+
+This project is designed to sit above Superpowers, not replace it.
+
+```text
+Adaptive Dev Workflow = Router + Gate Selector + Scope Guard
+Superpowers = Discipline Executor
+OpenSpec = Spec Lifecycle Executor
+Project AGENTS.md / CLAUDE.md = Repo-specific Constraints
+CI / hooks / tests = Mechanical Enforcement
+```
+
+When a stronger skill is selected, this router must not weaken it:
+
+- Debug route uses `systematic-debugging`: no fix before root-cause investigation.
+- TDD route uses `test-driven-development` / `superpowers:test-driven-development`: no production behavior change before valid Red evidence when the behavior is automatable.
+- Plan/spec gate uses `writing-plans`, `superpowers:writing-plans`, or `openspec-workflow` when available.
+- Completion gate uses `verification-before-completion`: no success claim without fresh evidence.
+- Review gate uses `requesting-code-review` or an isolated review pass for high-risk or broad changes.
+
+The router may decide that a Tiny or mechanical task does not need TDD. It should not decide to run a weaker version of TDD after selecting the TDD gate.
+
 ## Workflow
 
 ```mermaid
@@ -106,10 +129,10 @@ flowchart TD
     C -- "No" --> E["Define Outcome / Scope / Current truth / Evidence / Stop condition"]
     E --> F{"Route"}
     F -- "Tiny" --> T["Edit or answer with focused verification"]
-    F -- "Small" --> S["Inspect pattern, use focused validator, implement, verify"]
-    F -- "Debug" --> G["Collect logs, reproduce, isolate root cause, fix, verify"]
-    F -- "Medium" --> M["Discovery, design approval, short plan, tests or validator, smoke/E2E"]
-    F -- "Large" --> L["Spec, staged plan, independent review, system verification"]
+    F -- "Small" --> S["Inspect pattern, select gates, delegate TDD/debug if triggered, verify"]
+    F -- "Debug" --> G["Route to systematic-debugging"]
+    F -- "Medium" --> M["Discovery, route to planning/TDD/review gates, smoke/E2E"]
+    F -- "Large" --> L["Route to spec/plan workflow, staged implementation, independent review"]
     F -- "OpenSpec" --> O["Delegate lifecycle to repo OpenSpec workflow"]
     T --> Z["Final: changed files, evidence, gaps, review points"]
     S --> Z
@@ -124,10 +147,10 @@ flowchart TD
 | Route | Use when | Evidence expectation |
 | --- | --- | --- |
 | Tiny | Text/docs/config typo, single obvious fix, no runtime blast radius | Diff review, command/link check only if semantics matter |
-| Small | Narrow behavior change or single-file bugfix | Reproduction evidence or focused validator, plus targeted verification |
-| Debug | CI/test failure, regression, production-like failure, unexplained behavior | Logs/current truth, reproduction, root-cause isolation, regression or focused validator |
-| Medium | 1-3 modules, new behavior/API, meaningful edge cases | Design approval, short plan, focused tests, smoke/E2E when a chain matters |
-| Large | Cross-module feature, migration, auth/security/data-model/user workflow | Spec, staged plan, docs handoff, independent review, system verification |
+| Small | Narrow behavior change or single-file bugfix | Focused validator; route to TDD/debug when behavior or root cause risk justifies it |
+| Debug | CI/test failure, regression, production-like failure, unexplained behavior | Use systematic debugging; reproduce and isolate root cause before fixes |
+| Medium | 1-3 modules, new behavior/API, meaningful edge cases | Route to brainstorming/planning/TDD as triggered; add smoke/E2E when a chain matters |
+| Large | Cross-module feature, migration, auth/security/data-model/user workflow | Route to spec/plan workflow, docs handoff, independent review, system verification |
 | OpenSpec | Repository already uses OpenSpec and the workflow is available | Delegate lifecycle to the repo's OpenSpec process |
 
 Escalate the route when the task touches public API, auth, permissions, secrets, payments, PII, data model, runtime/deploy/environment config, availability, performance, cross-service workflow, migration, concurrency, or state-machine behavior.
@@ -141,10 +164,12 @@ This skill uses evidence before claims:
 - Medium feature/API/UI: focused tests plus smoke/E2E when a user-visible or system-visible chain matters.
 - Large/high-risk: staged tests, independent review, system verification, and docs handoff.
 
-TDD is right-sized:
+Red evidence is right-sized:
 
-- Use TDD by default when the project has a suitable harness and changed behavior can be captured at reasonable cost.
-- Prefer it for automatable bugs, core logic, API contracts, permissions, data, and state machines.
+- Every task must define evidence before implementation, but not every task needs Red.
+- Route to TDD when the project has a suitable harness and changed behavior can be captured at reasonable cost.
+- Prefer TDD for automatable bugs, core logic, API contracts, permissions, data, and state machines.
+- Once TDD is selected, follow the selected TDD skill's Red-Green-Refactor process; do not substitute an ad hoc weaker version.
 - Use alternate validators for Tiny/mechanical changes, visual-only checks, unavailable test environments, or cases where automation cost exceeds risk.
 - Never treat "no TDD" as "no evidence".
 
