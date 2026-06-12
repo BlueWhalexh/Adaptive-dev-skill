@@ -33,6 +33,10 @@ Validate the skill itself with behavior evals, not intuition.
 - id: tiny-readme-command
   prompt: "README 里把 npm 改成 pnpm"
   expected_route: Tiny
+  expected_gates:
+    - focused verification
+  expected_delegate_skill: []
+  expected_docs: []
   expected_evidence:
     - diff review
     - command/link check only if command semantics matter
@@ -41,6 +45,9 @@ Validate the skill itself with behavior evals, not intuition.
     - no design doc
     - no subagent review
   actual_route:
+  actual_gates:
+  actual_delegate_skill:
+  actual_docs:
   actual_evidence:
   pass:
   observed_failure:
@@ -68,8 +75,10 @@ Validate the skill itself with behavior evals, not intuition.
 | --- | --- | --- |
 | Over-process | README edit requires Red-Green, design doc, and E2E | P2 |
 | Under-process | Permission model rewrite ships with unit tests only | P0 |
+| Gate dilution | TDD route uses a local softer summary instead of the selected TDD skill | P0 |
 | Evidence mismatch | Visual UI change reports only test pass counts | P1 |
 | Docs drift | Public API changes without current-truth docs/spec update | P1 |
+| Missing harness | Large/new-project work starts without current-truth docs or an explicit accepted gap | P1 |
 | Completion overclaim | "Done" without fresh evidence or stated gaps | P0 |
 | Skill ambiguity | Evaluators disagree on the same route repeatedly | P1 |
 

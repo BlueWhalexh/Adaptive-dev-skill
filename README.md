@@ -72,7 +72,9 @@ The installable skill lives at:
 skills/adaptive-dev-workflow/
 ├── SKILL.md
 ├── agents/openai.yaml
-└── references/evidence-and-validation.md
+└── references/
+    ├── complex-project-harness.md
+    └── evidence-and-validation.md
 ```
 
 Do not put project-specific rules into the skill. Put those in the target repository's `AGENTS.md`, `CLAUDE.md`, docs, hooks, scripts, or CI.
@@ -190,6 +192,21 @@ The skill treats docs as a way to reduce future action space, not as decoration:
 
 Use those paths only when the target repo follows this convention. Otherwise follow the repo's existing docs structure.
 
+For Large work, new projects, multi-agent handoff, or repos without reliable current-truth docs, the skill loads `references/complex-project-harness.md`. That reference defines a default docs/spec surface:
+
+```text
+AGENTS.md
+docs/canonical/
+docs/specs/design/
+docs/specs/plans/
+docs/specs/changes/
+docs/decisions/
+docs/runbooks/
+tests/
+```
+
+It is intentionally not loaded for Tiny/Small tasks unless the requested task is to create or repair the docs/spec harness.
+
 ## Skill Validation
 
 Validate changes to this skill with behavior evals, not just static reading:
@@ -252,7 +269,9 @@ Review this PR for correctness, scope creep, evidence gaps, security risk, and c
 ├── skills/adaptive-dev-workflow/   # installable skill source
 │   ├── SKILL.md
 │   ├── agents/openai.yaml
-│   └── references/evidence-and-validation.md
+│   └── references/
+│       ├── complex-project-harness.md
+│       └── evidence-and-validation.md
 ├── docs/                           # background essays and design notes
 ├── examples/                       # AGENTS.md / CLAUDE.md templates and request examples
 ├── CONTRIBUTING.md

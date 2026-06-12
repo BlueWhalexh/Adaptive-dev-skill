@@ -113,6 +113,8 @@ Do not pause for every mechanical step once the objective and approved plan are 
 
 Decide whether documentation is needed before implementation. Documentation should reduce future action space, not decorate the work.
 
+For Large work, new projects, multi-agent handoff, or repos without reliable current-truth docs, read `references/complex-project-harness.md` before planning. Do not load it for Tiny/Small tasks unless the task is specifically to create or repair the repo's docs/spec harness.
+
 - `AGENTS.md` / `CLAUDE.md`: durable repo rules, commands, gotchas, review expectations.
 - `docs/canonical/`: current truth for architecture, contracts, state machines, ownership, invariants.
 - `docs/specs/design/`: approved design and tradeoffs for Medium/Large work.
@@ -208,5 +210,6 @@ Do not add project-specific lessons here; put them in the repo's `AGENTS.md` or 
 
 - Too heavy: full spec/TDD/E2E for a tiny diff.
 - Too light: happy-path check for risky behavior, API, data, auth, or cross-service changes.
+- Too unanchored: Large/new-project work without current-truth docs, spec surface, or an explicit exception.
 - Too vague: many questions at once, docs as narrative, or pass/fail counts without what they prove.
 - Too trusting: self-review only for broad work, sub-skill owns lifecycle, or completion without fresh evidence.
