@@ -4,6 +4,15 @@ READ when: route/evidence choice is ambiguous, review/test evidence adequacy is 
 
 DO NOT READ for obvious Tiny/Small tasks when the validator is clear from `SKILL.md`.
 
+## Contents
+
+- Evidence Matrix
+- Skill Validation Protocol
+- Eval Case Schema
+- Seed Cases
+- Failure Classes
+- Change Rule
+
 ## Evidence Matrix
 
 | Task Type | Minimal Evidence | Escalate When |

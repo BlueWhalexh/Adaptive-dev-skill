@@ -1,6 +1,6 @@
 ---
 name: adaptive-dev-workflow
-description: Use when software implementation, fixes, refactors, design, planning, verification, review, workflow routing, gate selection, skill orchestration, right-sized evidence, or complex project harness decisions are needed.
+description: Use when software implementation, fixes, refactors, design, planning, verification, code review, PR review, plan/evidence review, workflow routing, gate selection, skill orchestration, right-sized evidence, or complex project harness decisions are needed.
 ---
 
 # Adaptive Dev Workflow
@@ -22,10 +22,10 @@ only the gates justified by the task:
 - `brainstorming` / `superpowers:brainstorming`: requirement discovery, design, UX, or meaningful tradeoffs.
 - `writing-plans` / `superpowers:writing-plans`: medium/large staged implementation.
 - `test-driven-development` / `superpowers:test-driven-development`: meaningful behavior risk, automatable regression, core logic/API/permissions/data/state-machine changes.
-- `systematic-debugging`: failures, regressions, or unexplained behavior.
-- `verification-before-completion`: before any completion claim.
-- `requesting-code-review`: high-risk or broad changes.
-- `using-git-worktrees`: dirty worktree or isolation need.
+- `systematic-debugging` / `superpowers:systematic-debugging`: failures, regressions, or unexplained behavior.
+- `verification-before-completion` / `superpowers:verification-before-completion`: before non-trivial completion claims.
+- `requesting-code-review` / `superpowers:requesting-code-review`: high-risk or broad changes.
+- `using-git-worktrees` / `superpowers:using-git-worktrees`: dirty worktree or isolation need.
 - `frontend-design`: substantial UI creation or redesign.
 - `openai-docs`: current OpenAI API or Codex product facts.
 - `openspec-workflow`: repo already uses OpenSpec and required dependencies are available.
@@ -36,11 +36,13 @@ For Tiny or mechanical changes, do not force TDD. Define the smallest validator 
 
 This skill decides whether a gate is justified; it does not lower that gate's standard. Once routed to a supporting skill, follow that skill's stronger rules.
 
-- Debug route or unexplained failure -> use `systematic-debugging`; do not propose or apply fixes before root-cause investigation.
+- Debug route or unexplained failure -> use `systematic-debugging` / `superpowers:systematic-debugging`; do not propose or apply fixes before root-cause investigation.
 - TDD route -> use `test-driven-development` / `superpowers:test-driven-development`; no production behavior change before valid Red evidence when the behavior is automatable.
 - Plan/spec gate -> use `writing-plans` / `superpowers:writing-plans` or `openspec-workflow` when available; do not replace their plan/spec method with an ad hoc summary.
-- Completion gate -> use `verification-before-completion`; do not claim success without fresh verification evidence.
-- Review gate -> use `requesting-code-review` or an isolated review pass for high-risk/broad work; do not self-approve broad changes as complete.
+- Completion gate -> use `verification-before-completion` / `superpowers:verification-before-completion` for non-trivial work; do not claim success without fresh verification evidence.
+- Review gate -> use `requesting-code-review` / `superpowers:requesting-code-review` or an isolated review pass for high-risk/broad work; do not self-approve broad changes as complete.
+
+Tiny tasks still need fresh evidence, but their completion gate can be satisfied by the explicit focused validator when no non-trivial behavior changed.
 
 If you skip a stronger gate for behavior-risk work, state why it is impractical, which alternate validator will be used, what it proves, and what remains unproven.
 
@@ -73,12 +75,12 @@ Choose exactly one process level. Explain the choice in one or two sentences whe
 | Small | Single-file, narrow reproducible bugfix, or runtime-default config change with clear behavior | objective -> inspect existing pattern -> select gates -> delegate TDD/debug if triggered -> implement -> verify -> self-review |
 | Debug | CI/test failure, production-like regression, unreproducible failure, or unexplained behavior with unknown blast radius | objective -> route to systematic-debugging -> reproduce/root cause -> minimal fix -> regression/focused validator -> verify |
 | Medium | 1-3 modules, new behavior/API, meaningful edge cases | objective -> discovery -> route to brainstorming/plan/TDD as triggered -> task gates -> phase smoke/E2E -> review |
-| Large | Cross-module feature, migration, data model change, security risk, user-facing workflow | discovery -> route to spec/plan workflow -> staged implementation -> independent review -> system verification |
+| Large | Cross-module feature, migration, data model change, security risk, or critical/cross-service user-facing workflow with data/security/state/rollback risk | discovery -> route to spec/plan workflow -> staged implementation -> independent review -> system verification |
 | OpenSpec | Repo already has OpenSpec and required workflow skills are available | delegate lifecycle to `openspec-workflow` |
 
 Avoid accidental heavyweight process: a simple fix should not require a full spec. Avoid accidental lightweight process: a risky change should not ship with only a happy-path check.
 
-Small vs Debug: use Small when the symptom is narrow, reproducible, and has an obvious local owner; use Debug when logs/CI/production behavior must be investigated or root cause is unknown.
+Small vs Debug: use Small when the symptom is narrow, reproducible, and has an obvious local owner; use Debug when logs/CI/production behavior must be investigated or root cause is unknown. Ordinary 1-3 module UI/API features stay Medium unless an escalation trigger makes the workflow critical, cross-service, data-sensitive, or rollback-sensitive.
 
 ## Escalation Triggers
 
@@ -192,7 +194,7 @@ For Tiny tasks, compress to `Changed`, `Verified`, and `Gap` while keeping evide
 
 ## Skill Validation
 
-After changing this skill, validate it with pressure scenarios instead of intuition:
+After changing this skill or any workflow router / skill orchestration rule, validate it with pressure scenarios instead of intuition:
 
 - Run static checks: frontmatter, `openai.yaml`, duplicate skill versions, key sections.
 - Dry-run Tiny/Small/Medium/Large/debug prompts and compare route, evidence, and gates.
