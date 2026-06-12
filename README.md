@@ -2,14 +2,14 @@
 
 Risk-adaptive workflow router for agentic coding.
 
-Adaptive Dev Workflow 是一个面向 Codex、Claude Code、Gemini CLI 等 AI coding agent 的轻量路由 skill。它不替代 Superpowers、OpenSpec、测试、CI 或 human review。它的职责是让 agent 在开始软件任务时先判断风险，然后选择刚好足够的 gate，并把具体执行交给更专业的 workflow skill。
+Adaptive Dev Workflow 是一个面向 Codex、Claude Code、Gemini CLI 等 AI coding agent 的轻量 workflow router / gate selector / scope guard。它不替代 Superpowers、OpenSpec、测试、CI 或 human review。它的职责是让 agent 在开始软件任务时先判断风险，然后选择刚好足够的 gate，并把具体执行交给更专业的 workflow skill。
 
 核心目标：
 
 - 小任务保持快，不把 README typo 变成完整 spec 流程。
 - 高风险任务保持稳，不让权限、数据模型、API、部署配置只靠 happy path 验收。
 - 让 agent 在编码前显式说清 Outcome、Scope、Current truth、Evidence 和 Stop condition。
-- 把 planning、TDD、debugging、verification、review、OpenSpec 等能力组合成一个统一入口，但不重写它们的内部纪律。
+- 把 planning、TDD、debugging、verification、review、OpenSpec、complex project harness 等能力组合成一个统一入口，但不重写它们的内部纪律。
 
 ## Why
 
@@ -32,6 +32,7 @@ Agentic coding 最常见的问题不是 agent 不会写代码，而是它会隐�
 - 决定是否需要 goal clarification、brainstorming、writing-plans、TDD、systematic-debugging、verification、independent review。
 - 要求每个任务都定义 evidence，但允许 Tiny / mechanical change 使用最小 validator。
 - 一旦路由到 TDD、debugging、planning、verification 或 review，继承对应 skill 的更强规则，而不是降级执行。
+- 对 Large、新项目、多 agent handoff 或缺少 current-truth docs 的仓库，加载 complex project harness。
 - 在改变 scope、public API、data model、security posture、user-facing behavior、依赖、部署或长期架构路线前暂停让人决策。
 - 将复杂证据矩阵和 skill validation protocol 放到 reference 文件，保持 `SKILL.md` 精简。
 

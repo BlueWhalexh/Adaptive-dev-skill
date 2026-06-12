@@ -1,8 +1,22 @@
 # Complex Project Harness
 
-Use this only for Large work, new projects, multi-agent handoff, or repos without reliable current-truth docs. Do not load for Tiny/Small implementation tasks unless the task is specifically to create, repair, or review the repo's docs/spec harness.
+READ when: Large work, new projects, multi-agent handoff, or repos without reliable current-truth docs.
+
+DO NOT READ for Tiny/Small implementation tasks unless the task is specifically to create, repair, or review the repo's docs/spec harness.
 
 This reference defines the default documentation surface when the repo has no stronger convention. If the repo already uses OpenSpec, follow `openspec-workflow`; use this only to map missing current-truth docs or repo memory around that lifecycle.
+
+## Contents
+
+- Trigger
+- Default Layout
+- Surface Contracts
+- Spec Template
+- Plan Template
+- Change Note Template
+- ADR Template
+- Harness Exit Gate
+- NEVER
 
 ## Trigger
 

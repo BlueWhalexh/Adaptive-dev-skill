@@ -1,7 +1,8 @@
 # Evidence And Skill Validation Reference
 
-Use this only when route/evidence choice is ambiguous, when planning Medium or
-Large work, or when changing `adaptive-dev-workflow`.
+READ when: route/evidence choice is ambiguous, review/test evidence adequacy is the task, planning Medium/Large work, or changing `adaptive-dev-workflow`.
+
+DO NOT READ for obvious Tiny/Small tasks when the validator is clear from `SKILL.md`.
 
 ## Evidence Matrix
 

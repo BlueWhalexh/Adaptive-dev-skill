@@ -1,6 +1,6 @@
 ---
 name: adaptive-dev-workflow
-description: Use when a user asks to implement, fix, refactor, design, plan, verify, or review software work and scope, risk, tests, docs, or evidence need right-sizing.
+description: Use when software implementation, fixes, refactors, design, planning, verification, review, workflow routing, gate selection, skill orchestration, right-sized evidence, or complex project harness decisions are needed.
 ---
 
 # Adaptive Dev Workflow
@@ -30,7 +30,7 @@ only the gates justified by the task:
 - `openai-docs`: current OpenAI API or Codex product facts.
 - `openspec-workflow`: repo already uses OpenSpec and required dependencies are available.
 
-For Tiny or mechanical changes, do not force TDD. Define the smallest validator that proves the claim. If a preferred skill is unavailable, keep the same gate in plain workflow form and state the fallback briefly.
+For Tiny or mechanical changes, do not force TDD. Define the smallest validator that proves the claim. If a low-risk supporting skill is unavailable, keep the same gate intent in plain workflow form and state the fallback briefly. For high-risk gates such as TDD, debugging, OpenSpec, security review, or completion verification, state the missing capability and pause or ask for approval before using a weaker substitute.
 
 ## Hard Gate Inheritance
 
@@ -69,14 +69,16 @@ Choose exactly one process level. Explain the choice in one or two sentences whe
 
 | Level | Use When | Flow |
 | --- | --- | --- |
-| Tiny | Text/docs/config change, typo, single obvious fix with no runtime blast radius | objective -> edit -> focused verification |
-| Small | Single-file or narrow bugfix with clear behavior | objective -> inspect existing pattern -> select gates -> delegate TDD/debug if triggered -> implement -> verify -> self-review |
-| Debug | CI/test failure, regression, production-like failure, or unexplained behavior | objective -> route to systematic-debugging -> reproduce/root cause -> minimal fix -> regression/focused validator -> verify |
+| Tiny | Text/docs/non-runtime config change, typo, single obvious fix with no runtime blast radius | objective -> edit -> focused verification |
+| Small | Single-file, narrow reproducible bugfix, or runtime-default config change with clear behavior | objective -> inspect existing pattern -> select gates -> delegate TDD/debug if triggered -> implement -> verify -> self-review |
+| Debug | CI/test failure, production-like regression, unreproducible failure, or unexplained behavior with unknown blast radius | objective -> route to systematic-debugging -> reproduce/root cause -> minimal fix -> regression/focused validator -> verify |
 | Medium | 1-3 modules, new behavior/API, meaningful edge cases | objective -> discovery -> route to brainstorming/plan/TDD as triggered -> task gates -> phase smoke/E2E -> review |
 | Large | Cross-module feature, migration, data model change, security risk, user-facing workflow | discovery -> route to spec/plan workflow -> staged implementation -> independent review -> system verification |
 | OpenSpec | Repo already has OpenSpec and required workflow skills are available | delegate lifecycle to `openspec-workflow` |
 
 Avoid accidental heavyweight process: a simple fix should not require a full spec. Avoid accidental lightweight process: a risky change should not ship with only a happy-path check.
+
+Small vs Debug: use Small when the symptom is narrow, reproducible, and has an obvious local owner; use Debug when logs/CI/production behavior must be investigated or root cause is unknown.
 
 ## Escalation Triggers
 
@@ -97,6 +99,8 @@ Flow: current truth -> classify risk -> inspect artifact -> report findings by s
 
 Review findings should distinguish correctness, scope, evidence gaps, security, maintainability, docs drift, and completion-claim risk.
 
+When reviewing test or evidence adequacy, read `references/evidence-and-validation.md`; do not load `complex-project-harness.md` unless the PR is Large/new-project work or changes the docs/spec harness.
+
 ## Human Decision Gates
 
 Pause for user confirmation before:
@@ -115,20 +119,11 @@ Decide whether documentation is needed before implementation. Documentation shou
 
 For Large work, new projects, multi-agent handoff, or repos without reliable current-truth docs, read `references/complex-project-harness.md` before planning. Do not load it for Tiny/Small tasks unless the task is specifically to create or repair the repo's docs/spec harness.
 
-- `AGENTS.md` / `CLAUDE.md`: durable repo rules, commands, gotchas, review expectations.
-- `docs/canonical/`: current truth for architecture, contracts, state machines, ownership, invariants.
-- `docs/specs/design/`: approved design and tradeoffs for Medium/Large work.
-- `docs/specs/plans/`: staged implementation tasks and evidence per task.
-- `docs/specs/changes/`: dated requirement deltas after approval.
-- `docs/reference/`: historical or external background; never current truth.
-- Tests: executable behavior docs for behavior changes or regressions.
-- Final/PR summary: delivery handoff; compress for Tiny.
-
-Use these paths when the repo follows this convention; otherwise follow the existing repo documentation structure. Prefer current code and canonical docs over dated/reference docs when they conflict. If docs are out of scope, state why.
+Use the repo's existing docs structure when it exists. Prefer current code and canonical docs over dated/reference docs when they conflict. If docs are out of scope, state why.
 
 ## Test And Verification Strategy
 
-Define the evidence before implementation. Good evidence constrains behavior and makes future agents understand the system, not just increase pass counts. For detailed examples and the skill validation protocol, read `references/evidence-and-validation.md` when route/evidence choice is ambiguous, when planning Medium/Large work, or when changing this skill.
+Define the evidence before implementation. Good evidence constrains behavior and makes future agents understand the system, not just increase pass counts. For detailed examples and the skill validation protocol, read `references/evidence-and-validation.md` when route/evidence choice is ambiguous, when reviewing evidence adequacy, when planning Medium/Large work, or when changing this skill. Do not load it for obvious Tiny/Small tasks where the validator is clear.
 
 ### Evidence Ladder
 
@@ -206,10 +201,12 @@ After changing this skill, validate it with pressure scenarios instead of intuit
 
 Do not add project-specific lessons here; put them in the repo's `AGENTS.md` or docs.
 
-## Common Mistakes
+## NEVER
 
-- Too heavy: full spec/TDD/E2E for a tiny diff.
-- Too light: happy-path check for risky behavior, API, data, auth, or cross-service changes.
-- Too unanchored: Large/new-project work without current-truth docs, spec surface, or an explicit exception.
-- Too vague: many questions at once, docs as narrative, or pass/fail counts without what they prove.
-- Too trusting: self-review only for broad work, sub-skill owns lifecycle, or completion without fresh evidence.
+- NEVER replace a selected TDD/debug/OpenSpec/verification skill with a softer local summary; this skill routes gates, it does not weaken them.
+- NEVER treat a Tiny/Small task as a full docs/spec harness unless the docs harness is the task.
+- NEVER ship risky API, data, auth, permission, runtime, or cross-service changes with only happy-path evidence.
+- NEVER treat dated specs, chat history, or reference docs as current truth when code or canonical docs disagree.
+- NEVER accept mock-only evidence as proof of an integration chain unless the mocked boundary and remaining risk are stated.
+- NEVER claim completion without fresh evidence, and never hide verification gaps behind "should pass" language.
+- NEVER let Large/new-project work start without current-truth docs/spec surface or an explicit user-approved exception.

@@ -1,7 +1,7 @@
 interface:
   display_name: "Adaptive Dev Workflow"
-  short_description: "Right-sized workflow for software changes"
-  default_prompt: "Use $adaptive-dev-workflow to turn this software request into a confirmed, right-sized, verified development flow."
+  short_description: "Workflow router and gate selector"
+  default_prompt: "Use $adaptive-dev-workflow to route this software request into the smallest safe workflow, select evidence gates, and preserve scope."
 
 policy:
   allow_implicit_invocation: true
