@@ -24,6 +24,7 @@ only the gates justified by the task:
 - `test-driven-development` / `superpowers:test-driven-development`: meaningful behavior risk, automatable regression, core logic/API/permissions/data/state-machine changes.
 - `systematic-debugging` / `superpowers:systematic-debugging`: failures, regressions, or unexplained behavior.
 - `verification-before-completion` / `superpowers:verification-before-completion`: before non-trivial completion claims.
+- `subagent-driven-development` / `superpowers:subagent-driven-development`: executing a written plan with independent tasks and subagent support; use its per-task spec compliance and code quality review loops.
 - `requesting-code-review` / `superpowers:requesting-code-review`: high-risk or broad changes.
 - `using-git-worktrees` / `superpowers:using-git-worktrees`: dirty worktree or isolation need.
 - `frontend-design`: substantial UI creation or redesign.
@@ -39,6 +40,7 @@ This skill decides whether a gate is justified; it does not lower that gate's st
 - Debug route or unexplained failure -> use `systematic-debugging` / `superpowers:systematic-debugging`; do not propose or apply fixes before root-cause investigation.
 - TDD route -> use `test-driven-development` / `superpowers:test-driven-development`; no production behavior change before valid Red evidence when the behavior is automatable.
 - Plan/spec gate -> use `writing-plans` / `superpowers:writing-plans` or `openspec-workflow` when available; do not replace their plan/spec method with an ad hoc summary.
+- Plan execution gate -> when a written plan has independent tasks and subagents are available, use `subagent-driven-development` / `superpowers:subagent-driven-development`; use `executing-plans` / `superpowers:executing-plans` only when subagents are unavailable or the user chooses inline execution.
 - Completion gate -> use `verification-before-completion` / `superpowers:verification-before-completion` for non-trivial work; do not claim success without fresh verification evidence.
 - Review gate -> use `requesting-code-review` / `superpowers:requesting-code-review` or an isolated review pass for high-risk/broad work; do not self-approve broad changes as complete.
 
@@ -74,8 +76,8 @@ Choose exactly one process level. Explain the choice in one or two sentences whe
 | Tiny | Text/docs/non-runtime config change, typo, single obvious fix with no runtime blast radius | objective -> edit -> focused verification |
 | Small | Single-file, narrow reproducible bugfix, or runtime-default config change with clear behavior | objective -> inspect existing pattern -> select gates -> delegate TDD/debug if triggered -> implement -> verify -> self-review |
 | Debug | CI/test failure, production-like regression, unreproducible failure, or unexplained behavior with unknown blast radius | objective -> route to systematic-debugging -> reproduce/root cause -> minimal fix -> regression/focused validator -> verify |
-| Medium | 1-3 modules, new behavior/API, meaningful edge cases | objective -> discovery -> route to brainstorming/plan/TDD as triggered -> task gates -> phase smoke/E2E -> review |
-| Large | Cross-module feature, migration, data model change, security risk, or critical/cross-service user-facing workflow with data/security/state/rollback risk | discovery -> route to spec/plan workflow -> staged implementation -> independent review -> system verification |
+| Medium | 1-3 modules, new behavior/API, meaningful edge cases | objective -> discovery -> route to brainstorming/plan/TDD as triggered -> execute plan with review gate when needed -> phase smoke/E2E |
+| Large | Cross-module feature, migration, data model change, security risk, or critical/cross-service user-facing workflow with data/security/state/rollback risk | discovery -> route to spec/plan workflow -> execute plan with subagent review when available -> system verification |
 | OpenSpec | Repo already has OpenSpec and required workflow skills are available | delegate lifecycle to `openspec-workflow` |
 
 Avoid accidental heavyweight process: a simple fix should not require a full spec. Avoid accidental lightweight process: a risky change should not ship with only a happy-path check.
@@ -167,11 +169,11 @@ Build/static checks: relevant checks run or gap explained
 Review: correctness, boundaries, security, and maintainability inspected
 ```
 
-Medium and large work should also include an independent review pass when available, preferably via a fresh subagent or separate thread. The review should focus on correctness, regressions, security, missing tests, docs drift, and scope creep, not style preferences.
+Medium and large work should also include an independent review pass when available. For written plans with independent tasks, prefer `subagent-driven-development` so each task gets spec compliance review before code quality review. For ad-hoc high-risk work, use `requesting-code-review` or a focused isolated reviewer. The review should focus on correctness, regressions, security, missing tests, docs drift, and scope creep, not style preferences.
 
 ## Context And Delegation
 
-Use read-only subagents or separate threads when a side task would flood the main context: large codebase exploration, independent review, broad test-gap analysis, or security audit. Do not delegate implementation or parallel code changes unless the user/tooling explicitly allows it and the scope is isolated. When delegating, pass minimum complete context: goal, scope, current truth sources, constraints, expected output, and what not to change.
+Use read-only subagents or separate threads when a side task would flood the main context: large codebase exploration, independent review, broad test-gap analysis, or security audit. Do not delegate implementation or parallel code changes unless the user/tooling explicitly allows it and the scope is isolated. When a selected skill provides reviewer templates, use that skill's template instead of inventing an ad hoc reviewer prompt. When delegating, pass minimum complete context: goal, scope, current truth sources, constraints, expected output, and what not to change.
 
 Do not use subagents for tiny tasks where coordination overhead exceeds value. Do not let subagents invent missing product requirements.
 
@@ -206,6 +208,7 @@ Do not add project-specific lessons here; put them in the repo's `AGENTS.md` or 
 ## NEVER
 
 - NEVER replace a selected TDD/debug/OpenSpec/verification skill with a softer local summary; this skill routes gates, it does not weaken them.
+- NEVER let implementer self-review replace a selected isolated review gate for plan-backed, Medium, Large, or high-risk work.
 - NEVER treat a Tiny/Small task as a full docs/spec harness unless the docs harness is the task.
 - NEVER ship risky API, data, auth, permission, runtime, or cross-service changes with only happy-path evidence.
 - NEVER treat dated specs, chat history, or reference docs as current truth when code or canonical docs disagree.
