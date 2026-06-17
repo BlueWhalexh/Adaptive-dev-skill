@@ -33,6 +33,7 @@ Agentic coding 最常见的问题不是 agent 不会写代码，而是它会隐�
 - 要求每个任务都定义 evidence，但允许 Tiny / mechanical change 使用最小 validator。
 - 一旦路由到 TDD、debugging、planning、verification 或 review，继承对应 skill 的更强规则，而不是降级执行。
 - 对 Large、新项目、多 agent handoff 或缺少 current-truth docs 的仓库，加载 complex project harness。
+- 对 SDK、runtime、package、artifact、external integration 等交付型任务，加载 production handoff gate。
 - 在改变 scope、public API、data model、security posture、user-facing behavior、依赖、部署或长期架构路线前暂停让人决策。
 - 将复杂证据矩阵和 skill validation protocol 放到 reference 文件，保持 `SKILL.md` 精简。
 
@@ -75,7 +76,8 @@ skills/adaptive-dev-workflow/
 ├── agents/openai.yaml
 └── references/
     ├── complex-project-harness.md
-    └── evidence-and-validation.md
+    ├── evidence-and-validation.md
+    └── production-handoff-gate.md
 ```
 
 Do not put project-specific rules into the skill. Put those in the target repository's `AGENTS.md`, `CLAUDE.md`, docs, hooks, scripts, or CI.

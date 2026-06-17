@@ -25,8 +25,10 @@ only the gates justified by the task:
 - `systematic-debugging` / `superpowers:systematic-debugging`: failures, regressions, or unexplained behavior.
 - `verification-before-completion` / `superpowers:verification-before-completion`: before non-trivial completion claims.
 - `subagent-driven-development` / `superpowers:subagent-driven-development`: executing a written plan with independent tasks and subagent support; use its per-task spec compliance and code quality review loops.
+- `executing-plans` / `superpowers:executing-plans`: executing a written plan inline when subagents are unavailable or the user chooses inline execution.
 - `requesting-code-review` / `superpowers:requesting-code-review`: high-risk or broad changes.
 - `using-git-worktrees` / `superpowers:using-git-worktrees`: dirty worktree or isolation need.
+- `finishing-a-development-branch` / `superpowers:finishing-a-development-branch`: after plan-backed development is implemented and verified, before merge/release handoff.
 - `frontend-design`: substantial UI creation or redesign.
 - `openai-docs`: current OpenAI API or Codex product facts.
 - `openspec-workflow`: repo already uses OpenSpec and required dependencies are available.
@@ -43,10 +45,26 @@ This skill decides whether a gate is justified; it does not lower that gate's st
 - Plan execution gate -> when a written plan has independent tasks and subagents are available, use `subagent-driven-development` / `superpowers:subagent-driven-development`; use `executing-plans` / `superpowers:executing-plans` only when subagents are unavailable or the user chooses inline execution.
 - Completion gate -> use `verification-before-completion` / `superpowers:verification-before-completion` for non-trivial work; do not claim success without fresh verification evidence.
 - Review gate -> use `requesting-code-review` / `superpowers:requesting-code-review` or an isolated review pass for high-risk/broad work; do not self-approve broad changes as complete.
+- Branch finishing gate -> use `finishing-a-development-branch` / `superpowers:finishing-a-development-branch` after plan-backed development is implemented, reviewed, and verified.
 
 Tiny tasks still need fresh evidence, but their completion gate can be satisfied by the explicit focused validator when no non-trivial behavior changed.
 
 If you skip a stronger gate for behavior-risk work, state why it is impractical, which alternate validator will be used, what it proves, and what remains unproven.
+
+## Route To Workflow Map
+
+Use native supporting skills as execution engines. This skill selects the route and gates; it does not recreate their internals.
+
+| Route | Native Workflow | Required Gates | Conditional Gates |
+| --- | --- | --- | --- |
+| Tiny | No Superpowers main chain | focused validator, diff/scope check | none unless command semantics or links changed |
+| Small | Local workflow; call native skill only when triggered | focused validator, self-review | `test-driven-development` for automatable behavior; `systematic-debugging` for unclear cause |
+| Debug | `systematic-debugging` | reproduce/root cause before fix, regression evidence | `test-driven-development` after root cause if adding regression guard |
+| Medium | Superpowers subset | discovery, evidence plan, focused tests, phase smoke when chain matters | `brainstorming`, `writing-plans`, TDD, `requesting-code-review` |
+| Large | Superpowers main chain | spec/design, `writing-plans`, plan execution, independent review, system verification | `subagent-driven-development` when tasks are independent; `executing-plans` when subagents are unavailable; TDD/debug/security/docs gates as risk requires |
+| OpenSpec | `openspec-workflow` lifecycle | delegate spec/change lifecycle to OpenSpec | use Superpowers for implementation execution when the OpenSpec plan calls for it |
+
+Do not treat Large as "load every skill." Treat Large as "enter the full engineering lifecycle, then call only the native sub-skills justified by the actual risk."
 
 ## First Move
 
@@ -124,6 +142,10 @@ Decide whether documentation is needed before implementation. Documentation shou
 For Large work, new projects, multi-agent handoff, or repos without reliable current-truth docs, read `references/complex-project-harness.md` before planning. Do not load it for Tiny/Small tasks unless the task is specifically to create or repair the repo's docs/spec harness.
 
 Use the repo's existing docs structure when it exists. Prefer current code and canonical docs over dated/reference docs when they conflict. If docs are out of scope, state why.
+
+## Production Handoff Gate
+
+For SDKs, runtimes, packages, CLIs, MCP servers, plugins, Docker images, artifact branches, onboarding docs, external-provider integrations, credential packaging, or claims like "import-ready" or "production-ready", read `references/production-handoff-gate.md`. Do not load it for ordinary app features or internal-only code changes.
 
 ## Test And Verification Strategy
 
@@ -215,3 +237,4 @@ Do not add project-specific lessons here; put them in the repo's `AGENTS.md` or 
 - NEVER accept mock-only evidence as proof of an integration chain unless the mocked boundary and remaining risk are stated.
 - NEVER claim completion without fresh evidence, and never hide verification gaps behind "should pass" language.
 - NEVER let Large/new-project work start without current-truth docs/spec surface or an explicit user-approved exception.
+- NEVER claim an artifact, SDK, runtime, or integration is production-ready without a delivery contract and fresh consumer evidence, unless the user accepts that gap.
