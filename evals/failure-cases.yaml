@@ -1,0 +1,20 @@
+schema_version: 1
+description: Real development failures observed while using adaptive-dev-workflow. Add a case before changing the skill so changes are driven by repeated evidence, not anecdotes.
+
+cases: []
+
+template:
+  id: "YYYY-MM-DD-short-name"
+  date: "YYYY-MM-DD"
+  prompt: ""
+  context: ""
+  expected_route: ""
+  actual_route: ""
+  failure_class: "over-process | under-process | gate-dilution | evidence-mismatch | docs-drift | missing-harness | completion-overclaim | skill-ambiguity | handoff-gap"
+  expected_behavior: []
+  actual_behavior: []
+  expected_evidence: []
+  actual_evidence: []
+  impact: ""
+  proposed_minimal_rule: ""
+  status: "captured | patch-proposed | fixed | rejected"

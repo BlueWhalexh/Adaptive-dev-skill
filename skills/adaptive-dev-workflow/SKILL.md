@@ -1,59 +1,66 @@
 ---
 name: adaptive-dev-workflow
-description: Use when software implementation, fixes, refactors, design, planning, verification, code review, PR review, plan/evidence review, workflow routing, gate selection, skill orchestration, right-sized evidence, or complex project harness decisions are needed.
+description: Use when software implementation, fixes, refactors, design, planning, verification, code review, PR review, plan/evidence review, workflow routing, gate selection, skill orchestration, right-sized evidence, test/evidence matrix selection, project harness init, project skill learning, AGENTS.md/docs/agent-team decisions, quality-feedback recovery, or complex delivery handoff decisions are needed. 当用户要开发、修复、重构、规划、验证、项目初始化、测试矩阵、交付验收、项目 skill 沉淀、AGENTS.md/docs/agent team 管理、质量反馈恢复或 AI coding workflow routing 时使用。
 ---
 
 # Adaptive Dev Workflow
 
 ## Overview
 
-Use this as the router for turning a software request into scoped, implemented, reviewed, and verified work. Pick the smallest workflow that protects correctness; add gates only when risk, ambiguity, blast radius, or handoff cost justifies them.
+把这个 skill 当成软件开发任务的 control plane：把用户请求路由成范围清晰、实现可控、review 可执行、验证有证据的工作流。默认选择能保护正确性的最小流程；只有风险、模糊度、影响面或交付成本要求时才增加 gate。
 
-Core principle: production AI coding is harness engineering: current truth, bounded action space, executable evidence, and review loops.
+核心原则：生产级 AI coding 是 harness engineering。关键不是堆流程，而是拿到 current truth，限制 action space，定义 executable evidence，并在合适位置加入 review loop。
 
-This skill coordinates other skills when available. It selects gates and preserves scope; it must not dilute or reimplement the internal discipline of stronger execution skills.
+本 skill 只负责协调和路由。它会选择 gate、保护 scope、决定是否调用 supporting skills；它不能稀释或重写更强执行 skill 的内部纪律。
+
+Control-plane split:
+
+```text
+SDD/specs = development contract; Superpowers = execution discipline; Project skills = project SOP; Evidence/eval = reality check; Knowledge promotion = durable learning.
+```
+
+## Language And Trigger Convention
+
+正文以中文为主，保留稳定英文锚点：skill `name`、gate names、workflow names、scripts、YAML/schema fields、evidence labels、route names。不要全文中英双语；使用中文解释 + 英文结构词 + 双语 `description` + 中英 eval prompts。
 
 ## Dependency Check
 
-Before development work, check which supporting skills are available and invoke
-only the gates justified by the task:
+开发任务开始前，检查有哪些 supporting skills 可用，只调用当前风险真正需要的 gate：
 
-- `define-goal`: fuzzy intent or unclear success criteria.
-- `brainstorming` / `superpowers:brainstorming`: requirement discovery, design, UX, or meaningful tradeoffs.
-- `writing-plans` / `superpowers:writing-plans`: medium/large staged implementation.
-- `test-driven-development` / `superpowers:test-driven-development`: meaningful behavior risk, automatable regression, core logic/API/permissions/data/state-machine changes.
-- `systematic-debugging` / `superpowers:systematic-debugging`: failures, regressions, or unexplained behavior.
-- `verification-before-completion` / `superpowers:verification-before-completion`: before non-trivial completion claims.
-- `subagent-driven-development` / `superpowers:subagent-driven-development`: executing a written plan with independent tasks and subagent support; use its per-task spec compliance and code quality review loops.
-- `executing-plans` / `superpowers:executing-plans`: executing a written plan inline when subagents are unavailable or the user chooses inline execution.
-- `requesting-code-review` / `superpowers:requesting-code-review`: high-risk or broad changes.
-- `using-git-worktrees` / `superpowers:using-git-worktrees`: dirty worktree or isolation need.
-- `finishing-a-development-branch` / `superpowers:finishing-a-development-branch`: after plan-backed development is implemented and verified, before merge/release handoff.
-- `frontend-design`: substantial UI creation or redesign.
-- `openai-docs`: current OpenAI API or Codex product facts.
-- `openspec-workflow`: repo already uses OpenSpec and required dependencies are available.
+- `define-goal`：目标模糊、成功标准不清。
+- `brainstorming` / `superpowers:brainstorming`：需求发现、设计、UX、关键取舍。
+- `writing-plans` / `superpowers:writing-plans`：Medium/Large 的分阶段实现。
+- `test-driven-development` / `superpowers:test-driven-development`：有行为风险、可自动化 regression、核心逻辑/API/权限/数据/状态机变更。
+- `systematic-debugging` / `superpowers:systematic-debugging`：失败、回归、原因不明的异常行为。
+- `verification-before-completion` / `superpowers:verification-before-completion`：非平凡完成声明之前。
+- `subagent-driven-development` / `superpowers:subagent-driven-development`：已有 written plan，任务可独立拆分，并适合 subagent 支持；使用它的 per-task spec compliance 和 code quality review loop。
+- `executing-plans` / `superpowers:executing-plans`：subagent 不可用，或用户选择 inline execution。
+- `requesting-code-review` / `superpowers:requesting-code-review`：高风险或大范围变更。
+- `using-git-worktrees` / `superpowers:using-git-worktrees`：dirty worktree 或需要隔离。
+- `finishing-a-development-branch` / `superpowers:finishing-a-development-branch`：plan-backed development 已实现、review、验证后，准备 merge/release handoff。
+- `frontend-design`：明显的 UI 创建或重设计。
+- `openai-docs`：当前 OpenAI API 或 Codex 产品事实。
+- `openspec-workflow`：repo 已使用 OpenSpec 且依赖可用。
 
-For Tiny or mechanical changes, do not force TDD. Define the smallest validator that proves the claim. If a low-risk supporting skill is unavailable, keep the same gate intent in plain workflow form and state the fallback briefly. For high-risk gates such as TDD, debugging, OpenSpec, security review, or completion verification, state the missing capability and pause or ask for approval before using a weaker substitute.
+Tiny 或机械改动不要强制 TDD。先定义能证明 claim 的最小 validator。低风险 supporting skill 不可用时，用 plain workflow 保留相同 gate 意图并简短说明 fallback。TDD、debugging、OpenSpec、security review、completion verification 这类高风险 gate 缺失时，要说明缺失能力，并暂停或征求是否接受更弱替代。
 
 ## Hard Gate Inheritance
 
-This skill decides whether a gate is justified; it does not lower that gate's standard. Once routed to a supporting skill, follow that skill's stronger rules.
+本 skill 只判断 gate 是否需要；一旦路由到 supporting skill，就继承该 skill 的更强标准，不能降级。
 
-- Debug route or unexplained failure -> use `systematic-debugging` / `superpowers:systematic-debugging`; do not propose or apply fixes before root-cause investigation.
-- TDD route -> use `test-driven-development` / `superpowers:test-driven-development`; no production behavior change before valid Red evidence when the behavior is automatable.
-- Plan/spec gate -> use `writing-plans` / `superpowers:writing-plans` or `openspec-workflow` when available; do not replace their plan/spec method with an ad hoc summary.
-- Plan execution gate -> when a written plan has independent tasks and subagents are available, use `subagent-driven-development` / `superpowers:subagent-driven-development`; use `executing-plans` / `superpowers:executing-plans` only when subagents are unavailable or the user chooses inline execution.
-- Completion gate -> use `verification-before-completion` / `superpowers:verification-before-completion` for non-trivial work; do not claim success without fresh verification evidence.
-- Review gate -> use `requesting-code-review` / `superpowers:requesting-code-review` or an isolated review pass for high-risk/broad work; do not self-approve broad changes as complete.
-- Branch finishing gate -> use `finishing-a-development-branch` / `superpowers:finishing-a-development-branch` after plan-backed development is implemented, reviewed, and verified.
+- Debug route 或原因不明的失败 -> 使用 `systematic-debugging` / `superpowers:systematic-debugging`；root-cause investigation 前不要猜修复。
+- TDD route -> 使用 `test-driven-development` / `superpowers:test-driven-development`；行为可自动化时，valid Red evidence 前不要改 production behavior。
+- Plan/spec gate -> 使用 `writing-plans` / `superpowers:writing-plans` 或 `openspec-workflow`；不要用随手 summary 替代它们的方法。
+- Plan execution gate -> written plan 有独立任务且 subagent 可用时，优先 `subagent-driven-development` / `superpowers:subagent-driven-development`；只有 subagent 不可用或用户选择 inline execution 时才用 `executing-plans` / `superpowers:executing-plans`。
+- Completion gate -> 非平凡工作使用 `verification-before-completion` / `superpowers:verification-before-completion`；没有 fresh verification evidence 不要声称完成。
+- Review gate -> 高风险或大范围工作使用 `requesting-code-review` / `superpowers:requesting-code-review` 或 isolated review pass；不要让实现者自审替代隔离 review。
+- Branch finishing gate -> plan-backed development 已实现、review、验证后使用 `finishing-a-development-branch` / `superpowers:finishing-a-development-branch`。
 
-Tiny tasks still need fresh evidence, but their completion gate can be satisfied by the explicit focused validator when no non-trivial behavior changed.
-
-If you skip a stronger gate for behavior-risk work, state why it is impractical, which alternate validator will be used, what it proves, and what remains unproven.
+Tiny 任务仍需要 fresh evidence，但如果没有非平凡行为变化，明确 focused validator 就可以满足 completion gate。行为风险任务跳过更强 gate 时，必须说明为什么不现实、使用什么 alternate validator、它证明什么、还剩什么未证明。
 
 ## Route To Workflow Map
 
-Use native supporting skills as execution engines. This skill selects the route and gates; it does not recreate their internals.
+使用原生 supporting skills 作为 execution engine。本 skill 选择 route 和 gates，不复刻它们的内部流程。
 
 | Route | Native Workflow | Required Gates | Conditional Gates |
 | --- | --- | --- | --- |
@@ -64,13 +71,13 @@ Use native supporting skills as execution engines. This skill selects the route 
 | Large | Superpowers main chain | spec/design, `writing-plans`, plan execution, independent review, system verification | `subagent-driven-development` when tasks are independent; `executing-plans` when subagents are unavailable; TDD/debug/security/docs gates as risk requires |
 | OpenSpec | `openspec-workflow` lifecycle | delegate spec/change lifecycle to OpenSpec | use Superpowers for implementation execution when the OpenSpec plan calls for it |
 
-Do not treat Large as "load every skill." Treat Large as "enter the full engineering lifecycle, then call only the native sub-skills justified by the actual risk."
+不要把 Large 理解成“加载所有 skill”。Large 的意思是进入完整 engineering lifecycle，然后只调用实际风险需要的 native sub-skills。
 
 ## First Move
 
-Do not start coding from a vague request. Classify the task and decide whether a question is required.
+不要从模糊请求直接开始 coding。先分类任务，并判断是否必须问问题。
 
-Ask one concise question only when the missing detail changes outcome, validation, risk, public API, data model, security posture, or user-visible behavior. Otherwise propose a concrete objective and continue or ask for confirmation when the selected process level requires a gate.
+只有缺失信息会改变结果、验证、风险、public API、data model、security posture 或 user-visible behavior 时，才问一个简短问题。否则给出具体 objective 并继续；当所选流程需要 gate 时再请求确认。
 
 Minimum objective:
 
@@ -82,105 +89,155 @@ Evidence: command, test, UI check, screenshot, diff review, or acceptance condit
 Stop condition: when to pause for user judgment
 ```
 
-For Tiny tasks, current truth can be as small as the touched file, existing
-command, or current README/config snippet.
+Tiny 任务的 current truth 可以很小，例如被修改文件、现有命令、README/config 片段。
 
 ## Process Selection
 
-Choose exactly one process level. Explain the choice in one or two sentences when the task is non-trivial.
+只选择一个 process level。非平凡任务用一两句话说明为什么这么分级。
 
 | Level | Use When | Flow |
 | --- | --- | --- |
-| Tiny | Text/docs/non-runtime config change, typo, single obvious fix with no runtime blast radius | objective -> edit -> focused verification |
-| Small | Single-file, narrow reproducible bugfix, or runtime-default config change with clear behavior | objective -> inspect existing pattern -> select gates -> delegate TDD/debug if triggered -> implement -> verify -> self-review |
-| Debug | CI/test failure, production-like regression, unreproducible failure, or unexplained behavior with unknown blast radius | objective -> route to systematic-debugging -> reproduce/root cause -> minimal fix -> regression/focused validator -> verify |
-| Medium | 1-3 modules, new behavior/API, meaningful edge cases | objective -> discovery -> route to brainstorming/plan/TDD as triggered -> execute plan with review gate when needed -> phase smoke/E2E |
-| Large | Cross-module feature, migration, data model change, security risk, or critical/cross-service user-facing workflow with data/security/state/rollback risk | discovery -> route to spec/plan workflow -> execute plan with subagent review when available -> system verification |
-| OpenSpec | Repo already has OpenSpec and required workflow skills are available | delegate lifecycle to `openspec-workflow` |
+| Tiny | 文本/docs/non-runtime config、typo、单点明显修复且没有 runtime 影响面 | objective -> edit -> focused verification |
+| Small | 单文件、窄范围可复现 bugfix，或行为清晰的 runtime-default config 变更 | objective -> inspect existing pattern -> select gates -> delegate TDD/debug if triggered -> implement -> verify -> self-review |
+| Debug | CI/test failure、production-like regression、不可复现失败、原因不明且影响面未知 | objective -> route to systematic-debugging -> reproduce/root cause -> minimal fix -> regression/focused validator -> verify |
+| Medium | 1-3 个模块、新行为/API、存在有意义边界条件 | objective -> discovery -> route to brainstorming/plan/TDD as triggered -> execute plan with review gate when needed -> phase smoke/E2E |
+| Large | 跨模块 feature、migration、data model 变更、安全风险、关键/跨服务 user workflow 且有 data/security/state/rollback 风险 | discovery -> route to spec/plan workflow -> execute plan with subagent review when available -> system verification |
+| OpenSpec | Repo 已有 OpenSpec 且 required workflow skills 可用 | delegate lifecycle to `openspec-workflow` |
 
-Avoid accidental heavyweight process: a simple fix should not require a full spec. Avoid accidental lightweight process: a risky change should not ship with only a happy-path check.
+避免 accidental heavyweight process：简单修复不需要完整 spec。也避免 accidental lightweight process：高风险变更不能只靠 happy-path check。
 
-Small vs Debug: use Small when the symptom is narrow, reproducible, and has an obvious local owner; use Debug when logs/CI/production behavior must be investigated or root cause is unknown. Ordinary 1-3 module UI/API features stay Medium unless an escalation trigger makes the workflow critical, cross-service, data-sensitive, or rollback-sensitive.
+Small vs Debug：症状窄、可复现、owner 明确时用 Small；需要读 logs/CI/production 行为或 root cause 未知时用 Debug。普通 1-3 模块 UI/API feature 默认是 Medium，除非触发 critical、cross-service、data-sensitive、rollback-sensitive 等升级条件。
 
 ## Escalation Triggers
 
-Upgrade the process level when any of these appear:
+出现以下情况时升级 process level：
 
-- Unclear acceptance criteria that changes outcome or risk.
-- Public API, auth, permissions, security, secrets, payments, PII, or data model changes.
-- Runtime, deploy, environment, availability, performance, or configuration blast-radius risk.
-- Cross-service workflow, migration, recovery path, concurrency, or state-machine behavior.
-- Multiple modules, unknown architecture boundary, or likely docs drift.
-- Verification gap that would make a completion claim misleading.
+- Acceptance criteria 不清且影响结果/风险；或存在 misleading completion claim 的验证缺口。
+- Public API、auth、permissions、security、secrets、payments、PII、data model 变更。
+- Runtime/deploy/env/availability/performance/configuration blast radius，或 cross-service/migration/recovery/concurrency/state-machine 风险。
+- 多模块、架构边界未知、可能存在 docs drift。
 
 ## Review-Only Mode
 
-When the user asks to review code, a PR, a plan, docs, evidence, or this skill itself, do not edit unless explicitly asked.
+用户要求 review code、PR、plan、docs、evidence 或本 skill 时，除非明确要求修改，否则不要编辑。
 
-Flow: current truth -> classify risk -> inspect artifact -> report findings by severity -> suggest the smallest safe changes -> state what was not validated.
+流程：current truth -> classify risk -> inspect artifact -> 按严重程度报告 findings -> 建议最小安全改动 -> 说明未验证范围。
 
-Review findings should distinguish correctness, scope, evidence gaps, security, maintainability, docs drift, and completion-claim risk.
+Review findings 要区分 correctness、scope、evidence gaps、security、maintainability、docs drift、completion-claim risk。
 
-When reviewing test or evidence adequacy, read `references/evidence-and-validation.md`; do not load `complex-project-harness.md` unless the PR is Large/new-project work or changes the docs/spec harness.
+Review test/evidence adequacy 时读取 `references/evidence-and-validation.md`。除非 PR 是 Large/new-project work 或修改 docs/spec harness，否则不要加载 `complex-project-harness.md`。
 
 ## Human Decision Gates
 
-Pause for user confirmation before:
+以下情况先暂停并请求用户确认：
 
-- Changing the goal, scope, public API, data model, security posture, or user-facing behavior.
-- Installing dependencies, using network access, writing outside the workspace, starting long-running services, or running destructive commands.
-- Choosing between architecture approaches with real tradeoffs.
-- Proceeding from design/spec into implementation for medium or large work.
-- Accepting a known verification gap as shippable.
+- 改变 goal、scope、public API、data model、security posture 或 user-facing behavior。
+- 安装依赖、联网、写 workspace 外部、启动长运行服务、运行破坏性命令。
+- 在有真实取舍的 architecture approaches 之间做选择，或 Medium/Large 从 design/spec 进入 implementation。
+- 接受已知 verification gap 作为可交付。
 
-Do not pause for every mechanical step once the objective and approved plan are clear. Continue through implementation, verification, and review.
+objective 和 approved plan 清楚后，不要每个机械步骤都暂停。继续完成 implementation、verification、review。
 
 ## Documentation Gate
 
-Decide whether documentation is needed before implementation. Documentation should reduce future action space, not decorate the work.
+先判断是否需要文档。文档的作用是减少未来 action space，不是装饰。
 
-For Large work, new projects, multi-agent handoff, or repos without reliable current-truth docs, read `references/complex-project-harness.md` before planning. Do not load it for Tiny/Small tasks unless the task is specifically to create or repair the repo's docs/spec harness.
+Large work、新项目、first MVP vertical slice、multi-agent handoff、缺失 project memory、repo 没有可靠 current-truth docs 时，在 planning 前读取 `references/complex-project-harness.md`。Tiny/Small 不要加载它，除非任务本身就是创建、修复或 review docs/spec harness。
 
-Use the repo's existing docs structure when it exists. Prefer current code and canonical docs over dated/reference docs when they conflict. If docs are out of scope, state why.
+已有 repo 文档结构时沿用现有约定。当前代码和 canonical docs 优先于过期/reference docs。文档不在 scope 时说明原因。
+## Project Harness Init Gate (项目初始化 / 项目脚手架)
+
+只在 repo 需要 durable project scaffolding 时使用，不要用于普通编辑。
+
+满足任一条件时读取 `references/complex-project-harness.md`：
+
+- 新 repo、新 product area，或 repo 内第一个严肃 feature。
+- First MVP vertical slice 需要变成可复用 development loop。
+- Large work 需要 specs、current-truth docs、agent team roles 或 repeatable evidence。
+- 用户希望项目维护 AGENTS.md、docs、project skills、evals 或 agent team。
+
+如果 init 合理且已获批准，优先使用 `scripts/init_project_harness.py` 只创建缺失 scaffold。第一版 harness 保持轻量：`AGENTS.md`、`.agent/agents.md`、project skill、knowledge candidates、evals、`docs/architecture.md`、`docs/adr`，以及可选 `docs/specs/<feature-id>`、`docs/plans/<feature-id>.md`、`docs/evidence/<feature-id>.md`。除非 docs/spec harness 就是任务本身，永远不要为 Tiny/Small 创建完整 harness。
+
+## Project Skill Learning Gate (项目 skill 沉淀 / 项目 SOP)
+
+项目学习应在 task exit 自动发生，但 promotion 必须受控。
+
+满足以下情况时读取 `references/project-skill-lifecycle.md`：
+
+- First MVP vertical slice 或 delivery chain 刚刚成功。
+- 用户提供了项目特定 process、architecture、command、testing、delivery knowledge。
+- 同类项目特定 lesson 出现两次。
+- 用户希望以后类似任务减少手动提示。
+
+Task exit 时，如果 lesson 可复用，捕获 project-local learning candidate。优先使用 `scripts/capture_learning_candidate.py`。不要把 raw lessons 直接追加到 global `AGENTS.md` 或本通用 skill。只有通过 evidence、scope、no-secret check 和 destination review 后才 promotion。
+
+## Quality Feedback Gate (质量反馈 / 不满意升级)
+
+用户表达 correctness、深度、docs、tests、delivery、over-process、under-process 或 missed context 方面的不满意时，把它视为 workflow evidence。
+
+用户说结果不完整、粗糙、不生产级、过度设计、测试不足、不符合预期，或反复纠正 route/evidence/docs choices 时，读取 `references/quality-feedback-loop.md`。
+
+继续 implementation 前先分类 failure：
+
+```text
+spec gap, grounding gap, route gap, evidence gap, review gap, handoff gap, or project-memory gap
+```
+
+第一次出现：用 explicit evidence 修复。相同 failure class 第二次出现：升级 gate 或 process level。第三次出现：进入 recovery mode，重置 objective/evidence/review plan，并捕获 failure case 或 project learning candidate。
+
+## Agent Team Gate (agent 团队 / reviewer roles)
+
+复杂工作使用结构化 reviewer/subagent roles，不要每次临时写 prompt。
+
+满足以下情况时读取 `references/agent-team.md`：
+
+- 初始化 project harness。
+- Large/complex work 需要 design、plan、evidence、security/data 或 knowledge review roles。
+- 用户要求为项目定义 agent team。
+- 重复 review gap 说明需要 durable role。
+
+优先使用项目内 `.agent/agents.md` 保存可复用 role contracts。Tiny 任务不要使用 agent team，因为协调成本超过收益。Review agents 默认只读，除非任务明确授予 scoped writes。
 
 ## Production Handoff Gate
 
-For SDKs, runtimes, packages, CLIs, MCP servers, plugins, Docker images, artifact branches, onboarding docs, external-provider integrations, credential packaging, or claims like "import-ready" or "production-ready", read `references/production-handoff-gate.md`. Do not load it for ordinary app features or internal-only code changes.
+当工作交付 SDK、runtime、package、CLI、MCP server、plugin、Docker image、artifact branch、onboarding docs、external-provider integration、credential-packaged artifact，或声称 "import-ready"、"drop-in"、"production-ready" 时，读取 `references/production-handoff-gate.md`。
 
-## Test And Verification Strategy
+普通 app feature、internal-only refactor、没有 consumer-facing delivery surface 的 Tiny/Small 不要加载它。
 
-Define the evidence before implementation. Good evidence constrains behavior and makes future agents understand the system, not just increase pass counts. For detailed examples and the skill validation protocol, read `references/evidence-and-validation.md` when route/evidence choice is ambiguous, when reviewing evidence adequacy, when planning Medium/Large work, or when changing this skill. Do not load it for obvious Tiny/Small tasks where the validator is clear.
+## Test And Verification Strategy (测试矩阵 / 验收证据)
+
+实现前先定义 evidence。好的 evidence 会约束行为，让未来 agent 理解系统，而不是只增加 pass count。用户不需要自己判断什么场景跑什么测试；由 agent 根据 changed surface 选择 evidence。
+
+当 route/evidence choice 模糊、review evidence adequacy、planning Medium/Large、质量反馈提到 testing，或修改本 skill 时，读取 `references/evidence-and-validation.md`。明显 Tiny/Small 且 validator 清楚时不要加载它。
+
+非平凡工作要显式写 evidence plan：risk type、pre-implementation evidence、post-implementation evidence、chain evidence、handoff evidence，以及当前 evidence 允许的最高 completion claim。
 
 ### Evidence Ladder
 
-Use the smallest evidence set that can catch the likely failure:
+用能抓住主要失败模式的最小 evidence set：
 
-- Tiny/mechanical: diff review plus command/link check only if semantics matter.
-- Small bug/behavior: reproduction evidence or focused validator; automate regression when feasible.
-- Medium feature/API/UI: focused tests plus phase smoke/E2E when a chain matters.
-- Large/high-risk: staged tests, independent review, system verification, and docs handoff.
+- Tiny/mechanical：diff review；只有 command/link semantics 变化时检查命令或链接。
+- Small bug/behavior：reproduction evidence 或 focused validator；可行时自动化 regression。
+- Medium feature/API/UI：focused tests；模块链路或用户链路重要时加 phase smoke/E2E。
+- Large/high-risk：staged tests、independent review、system verification、docs handoff。
 
 ### Red Evidence And Alternate Validators
 
-- Every task must define evidence before implementation, but not every task needs Red.
-- Route to TDD when changed behavior can be captured at reasonable cost, especially automatable bugs, core logic, API contracts, permissions, data, and state-machine behavior.
-- A valid Red must fail on the current code for the expected reason. If the selected TDD skill is available, follow it instead of this summary.
-- Use an alternate validator for Tiny/mechanical changes, visual-only checks, unavailable test environments, or cases where automation would be more expensive than the risk.
-- Never use "no TDD" as "no evidence"; always state what the validator proves and what remains unproven.
+- 每个任务都要先定义 evidence，但不是每个任务都需要 Red。
+- changed behavior 能以合理成本捕获时，路由到 TDD，尤其是 automatable bugs、core logic、API contracts、permissions、data、state-machine behavior。
+- 有效 Red 必须在当前代码上因预期原因失败。如果选中了 TDD skill，遵循该 skill，不用本摘要替代。
+- Tiny/mechanical、visual-only、测试环境不可用、或自动化成本高于风险时，使用 alternate validator。
+- "no TDD" 绝不等于 "no evidence"。必须说明 validator 证明什么、还剩什么未证明。
 
 ### Cadence
 
-- Every task: run focused tests or the explicit validator for the changed behavior.
-- Every task exit: run relevant build/lint/type checks when the stack supports them, inspect touched files, and do a consistency check.
-- Every medium feature phase: run a smoke or E2E check that exercises the user-visible or system-visible chain.
-- Before final completion: run the highest-signal relevant suite available within time and environment constraints.
-- If a check is too expensive or unavailable, state the substitute evidence and the remaining risk.
+每个 task 运行 focused tests 或 explicit validator；task exit 时运行相关 build/lint/type checks、检查 touched files、做 consistency check；Medium phase 加覆盖 user-visible/system-visible chain 的 smoke/E2E；最终完成前跑当前环境内最高信号 suite。检查太贵或不可用时，说明 substitute evidence 和 remaining risk。
 
-Good tests cover behavior from acceptance criteria, not private implementation details. Prefer real code and realistic fixtures; mock only external boundaries or slow/non-deterministic dependencies. Name tests so they encode state, trigger, expected behavior, and what failure would block.
+好的测试来自 acceptance criteria，不测 private implementation details。优先 real code 和 realistic fixtures；只 mock 外部边界或慢/不稳定依赖。测试名应编码 state、trigger、expected behavior 和 failure impact。
 
 ## Task Exit Gate
 
-For each implementation task, check:
+每个 implementation task 退出前检查：
 
 ```text
 Scope: diff only touches expected files and modules
@@ -189,52 +246,52 @@ Docs consistency: affected docs are updated or explicitly not needed
 Tests: focused validator run and result recorded
 Build/static checks: relevant checks run or gap explained
 Review: correctness, boundaries, security, and maintainability inspected
+Project learning: candidate captured or explicitly not needed for MVP/repeated project lessons
 ```
 
-Medium and large work should also include an independent review pass when available. For written plans with independent tasks, prefer `subagent-driven-development` so each task gets spec compliance review before code quality review. For ad-hoc high-risk work, use `requesting-code-review` or a focused isolated reviewer. The review should focus on correctness, regressions, security, missing tests, docs drift, and scope creep, not style preferences.
+Medium 和 Large 工作应尽量加入 independent review pass。written plan 有独立任务时，优先 `subagent-driven-development`，让每个 task 先做 spec compliance review，再做 code quality review。临时高风险工作使用 `requesting-code-review` 或 focused isolated reviewer。Review 关注 correctness、regressions、security、missing tests、docs drift、scope creep，不做风格偏好争论。
 
 ## Context And Delegation
 
-Use read-only subagents or separate threads when a side task would flood the main context: large codebase exploration, independent review, broad test-gap analysis, or security audit. Do not delegate implementation or parallel code changes unless the user/tooling explicitly allows it and the scope is isolated. When a selected skill provides reviewer templates, use that skill's template instead of inventing an ad hoc reviewer prompt. When delegating, pass minimum complete context: goal, scope, current truth sources, constraints, expected output, and what not to change.
+当 side task 会淹没主上下文时，使用 read-only subagents 或 separate threads：大代码库探索、独立 review、大范围 test-gap analysis、security audit。不要委派 implementation 或并行 code changes，除非用户/工具明确允许且 scope 隔离。若 selected skill 提供 reviewer templates，使用该模板，不要自造 prompt。委派时只传最小完整上下文：goal、scope、current truth sources、constraints、expected output、what not to change。
 
-Do not use subagents for tiny tasks where coordination overhead exceeds value. Do not let subagents invent missing product requirements.
+项目有 `.agent/agents.md` 时，复用其中的 role contracts。Tiny 任务不要使用 subagents。不要让 subagents 发明缺失的 product requirements。
 
 ## Automation Gate
 
-If a rule must happen every time and can be checked deterministically, prefer a hook, CI check, script, or lint rule over more prompt text. Skills and instruction files guide judgment; hooks and CI enforce mechanics.
+如果某条规则每次都要发生且可确定性检查，优先用 hook、CI check、script 或 lint rule，而不是继续加 prompt text。Skills 和 instruction files 负责 judgment；hooks 和 CI 负责 mechanics enforcement。
 
-Examples:
-
-- Repeated format/lint/test commands -> hook or CI.
-- Secret or PII blocking -> pre-tool/pre-commit/CI check.
-- Stable PR review checklist -> review instruction file referenced from `AGENTS.md`.
-- Repeated multi-step judgment workflow -> skill.
+Examples: 重复 format/lint/test commands -> hook/CI；secret 或 PII 阻断 -> pre-tool/pre-commit/CI；稳定 PR review checklist -> `AGENTS.md` 引用的 review instruction file；重复 multi-step judgment workflow -> skill。
 
 ## Completion Contract
 
-Never claim completion without evidence. Final responses should include the fields that apply: changed files, verification evidence and what it proves, user-visible outcome, agent-readable/system outcome, backend capability outcome if relevant, integration-chain changes, remaining gaps, and review points.
+没有 evidence 不要声称完成。最终回复按需包含：changed files、verification evidence 及其证明内容、user-visible outcome、agent-readable/system outcome、backend capability outcome、integration-chain changes、remaining gaps、review points。
 
-For Tiny tasks, compress to `Changed`, `Verified`, and `Gap` while keeping evidence and residual risk explicit.
+Tiny 任务可压缩成 `Changed`、`Verified`、`Gap`，但仍要明确 evidence 和 residual risk。
 
 ## Skill Validation
 
-After changing this skill or any workflow router / skill orchestration rule, validate it with pressure scenarios instead of intuition:
+修改本 skill 或任何 workflow router / skill orchestration rule 后，用 pressure scenarios 验证，而不是凭直觉：
 
-- Run static checks: frontmatter, `openai.yaml`, duplicate skill versions, key sections.
-- Dry-run Tiny/Small/Medium/Large/debug prompts and compare route, evidence, and gates.
-- For major changes, ask a fresh subagent to route cases using only this `SKILL.md`.
-- If the same misroute appears twice, update the smallest rule that prevents it.
+- Static checks：frontmatter、`openai.yaml`、duplicate skill versions、key sections。
+- Route dry-run：Tiny/Small/Medium/Large/debug prompts 的 route、evidence、gates 是否符合预期。
+- Major changes：让 fresh subagent 只用这个 `SKILL.md` 路由 cases。
+- 同类 misroute 出现两次：更新能阻止它的最小规则。
 
-Do not add project-specific lessons here; put them in the repo's `AGENTS.md` or docs.
+真实开发暴露 route、evidence、review 或 handoff failure 且发生在本 skill repo 时，先把 minimal case 记录到 `evals/failure-cases.yaml`，再改规则。一次失败记录 evidence；重复失败才 justify minimal patch；机械重复失败应变成 hooks、scripts 或 CI，而不是更多 prompt text。
+
+不要把项目特定 lessons 加进本通用 skill。它们应先进入 project learning candidates，再 promotion 到 repo 的 `AGENTS.md`、`.agent/skills/<project-domain>`、docs、scripts、hooks 或 CI。
 
 ## NEVER
 
-- NEVER replace a selected TDD/debug/OpenSpec/verification skill with a softer local summary; this skill routes gates, it does not weaken them.
-- NEVER let implementer self-review replace a selected isolated review gate for plan-backed, Medium, Large, or high-risk work.
-- NEVER treat a Tiny/Small task as a full docs/spec harness unless the docs harness is the task.
-- NEVER ship risky API, data, auth, permission, runtime, or cross-service changes with only happy-path evidence.
-- NEVER treat dated specs, chat history, or reference docs as current truth when code or canonical docs disagree.
-- NEVER accept mock-only evidence as proof of an integration chain unless the mocked boundary and remaining risk are stated.
-- NEVER claim completion without fresh evidence, and never hide verification gaps behind "should pass" language.
-- NEVER let Large/new-project work start without current-truth docs/spec surface or an explicit user-approved exception.
-- NEVER claim an artifact, SDK, runtime, or integration is production-ready without a delivery contract and fresh consumer evidence, unless the user accepts that gap.
+- NEVER 用更软的本地 summary 替代已选中的 TDD/debug/OpenSpec/verification skill；本 skill 只路由 gate，不能削弱 gate。
+- NEVER 让 implementer self-review 替代 plan-backed、Medium、Large 或 high-risk 工作的 isolated review gate。
+- NEVER 把 Tiny/Small 任务膨胀成完整 docs/spec harness，除非 docs harness 就是任务。
+- NEVER 用 happy-path evidence 交付 risky API、data、auth、permission、runtime 或 cross-service changes。
+- NEVER 在 code 或 canonical docs 不一致时，把 dated specs、chat history、reference docs 当 current truth。
+- NEVER 把 mock-only evidence 说成 integration chain 已证明，除非明确 mocked boundary 和 remaining risk。
+- NEVER 没有 fresh evidence 就声称完成，也不要用 "should pass" 掩盖 verification gaps。
+- NEVER 在没有 current-truth docs/spec surface 或用户明确接受 gap 的情况下启动 Large/new-project work。
+- NEVER 在没有 delivery contract 和 fresh consumer evidence 的情况下声称 artifact、SDK、runtime 或 integration production-ready，除非用户接受该 gap。
+- NEVER 让用户质量不满意重复出现却不分类 failure，也不改变 gate、evidence 或 project memory。
+- NEVER 把 raw project lessons 直接 promotion 到 global `AGENTS.md` 或本通用 skill。

@@ -33,6 +33,9 @@ Agentic coding 最常见的问题不是 agent 不会写代码，而是它会隐�
 - 要求每个任务都定义 evidence，但允许 Tiny / mechanical change 使用最小 validator。
 - 一旦路由到 TDD、debugging、planning、verification 或 review，继承对应 skill 的更强规则，而不是降级执行。
 - 对 Large、新项目、多 agent handoff 或缺少 current-truth docs 的仓库，加载 complex project harness。
+- 对 first MVP vertical slice、项目 SOP、重复项目经验，加载 project skill lifecycle，并把经验先记录成 candidate。
+- 对复杂工作，使用 `.agent/agents.md` 维护可复用 reviewer/subagent roles，而不是每次临时写 prompt。
+- 对质量不满意、mock 冒充真实链路、completion overclaim 等问题，进入 quality feedback / evidence recovery。
 - 对 SDK、runtime、package、artifact、external integration 等交付型任务，加载 production handoff gate。
 - 在改变 scope、public API、data model、security posture、user-facing behavior、依赖、部署或长期架构路线前暂停让人决策。
 - 将复杂证据矩阵和 skill validation protocol 放到 reference 文件，保持 `SKILL.md` 精简。
@@ -74,10 +77,17 @@ The installable skill lives at:
 skills/adaptive-dev-workflow/
 ├── SKILL.md
 ├── agents/openai.yaml
+├── scripts/
+│   ├── capture_learning_candidate.py
+│   ├── init_project_harness.py
+│   └── validate_evidence_manifest.py
 └── references/
+    ├── agent-team.md
     ├── complex-project-harness.md
     ├── evidence-and-validation.md
-    └── production-handoff-gate.md
+    ├── production-handoff-gate.md
+    ├── project-skill-lifecycle.md
+    └── quality-feedback-loop.md
 ```
 
 Do not put project-specific rules into the skill. Put those in the target repository's `AGENTS.md`, `CLAUDE.md`, docs, hooks, scripts, or CI.
@@ -185,11 +195,18 @@ The skill treats docs as a way to reduce future action space, not as decoration:
 | Doc surface | Purpose |
 | --- | --- |
 | `AGENTS.md` / `CLAUDE.md` | Durable repo rules, commands, gotchas, review expectations |
-| `docs/canonical/` | Current truth for architecture, contracts, state machines, invariants |
-| `docs/specs/design/` | Approved design and tradeoffs for Medium/Large work |
-| `docs/specs/plans/` | Staged implementation plan and evidence per task |
-| `docs/specs/changes/` | Dated requirement deltas after approval |
-| `docs/reference/` | Historical or external background, not current truth |
+| `.agent/agents.md` | Project-local reviewer/subagent role contracts |
+| `.agent/knowledge/candidates/` | Unpromoted project lessons with evidence and scope |
+| `.agent/skills/<project-domain>/` | Project-specific SOP, testing context, delivery lessons |
+| `docs/architecture.md` | Current truth for architecture, contracts, state machines, invariants |
+| `docs/adr/` | Durable architecture decisions |
+| `docs/specs/<feature-id>/spec.md` | Goals, non-goals, scope, behavior, acceptance |
+| `docs/specs/<feature-id>/design.md` | Current truth, options, decision, risks |
+| `docs/specs/<feature-id>/acceptance.yaml` | Machine-readable acceptance and claim ceiling |
+| `docs/specs/<feature-id>/changes/` | Dated requirement deltas after approval |
+| `docs/specs/archived/` | Completed or retired specs |
+| `docs/plans/<feature-id>.md` | Staged implementation plan and evidence per task |
+| `docs/evidence/<feature-id>.md` | Validators, results, gaps, claim ceiling |
 | Tests | Executable behavior docs |
 | Final/PR summary | Delivery handoff |
 
@@ -199,13 +216,15 @@ For Large work, new projects, multi-agent handoff, or repos without reliable cur
 
 ```text
 AGENTS.md
-docs/canonical/
-docs/specs/design/
-docs/specs/plans/
-docs/specs/changes/
-docs/decisions/
-docs/runbooks/
-tests/
+.agent/agents.md
+.agent/knowledge/candidates/
+.agent/skills/<project-domain>/
+docs/architecture.md
+docs/adr/
+docs/specs/<feature-id>/
+docs/specs/archived/
+docs/plans/
+docs/evidence/
 ```
 
 It is intentionally not loaded for Tiny/Small tasks unless the requested task is to create or repair the docs/spec harness.
@@ -218,8 +237,10 @@ Validate changes to this skill with behavior evals, not just static reading:
 - Route dry run: route representative prompts and compare expected route/evidence.
 - Blind subagent eval: give only `SKILL.md` and pressure prompts to a fresh reviewer.
 - Developer/Auditor simulation: one session executes, another reviews only output, diff, and evidence.
+- Sandbox eval: run `python3 scripts/run-skill-sandbox-eval.py`.
+- Package validation: run `python3 /Users/didi/.codex/skills/.system/skill-creator/scripts/quick_validate.py skills/adaptive-dev-workflow` when that helper is available locally.
 
-Seed prompts are documented in `skills/adaptive-dev-workflow/references/evidence-and-validation.md`.
+Seed prompts live in `evals/seed-cases.yaml`. Real misroutes or evidence failures should be recorded in `evals/failure-cases.yaml` before changing general routing rules.
 
 ## Examples
 

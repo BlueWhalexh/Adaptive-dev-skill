@@ -1,0 +1,150 @@
+schema_version: 1
+description: Stable adaptive-dev-workflow regression scenarios. These cases test routing, evidence, and completion-claim boundaries.
+
+cases:
+  - id: tiny-readme-command
+    prompt: "README 里把 npm 改成 pnpm"
+    expected_route: Tiny
+    risk_type: docs
+    expected_gates:
+      - focused verification
+    expected_delegate_skill: []
+    expected_evidence:
+      pre:
+        - none
+      post:
+        - diff review
+        - command/link check only if command semantics changed
+    claim_ceiling: Dev Done
+    expected_no:
+      - no TDD
+      - no design doc
+      - no subagent review
+
+  - id: tiny-css-spacing
+    prompt: "把按钮间距调大 4px"
+    expected_route: Tiny/Small
+    risk_type: UI
+    expected_gates:
+      - focused verification
+    expected_delegate_skill: []
+    expected_evidence:
+      pre:
+        - none unless current visual state is ambiguous
+      post:
+        - screenshot or visual inspection
+    claim_ceiling: Dev Done
+    expected_no:
+      - no unit test by default
+      - no full E2E by default
+
+  - id: small-login-bug
+    prompt: "修登录按钮点击没反应"
+    expected_route: Small
+    risk_type: UI behavior
+    expected_gates:
+      - reproduction or focused validator
+      - regression evidence when automatable
+    expected_delegate_skill:
+      - test-driven-development when automatable
+      - systematic-debugging when root cause is unclear
+    expected_evidence:
+      pre:
+        - reproduce failed click path or Red test
+      post:
+        - focused validator covering click to expected state/request/navigation
+        - relevant build/lint/type checks
+    claim_ceiling: Dev Done
+    expected_no:
+      - no broad redesign
+      - no handoff claim
+
+  - id: medium-api-contract
+    prompt: "给导出接口加 format 参数"
+    expected_route: Medium
+    risk_type: API
+    expected_gates:
+      - evidence plan
+      - focused contract tests
+      - compatibility check
+    expected_delegate_skill:
+      - test-driven-development
+    expected_evidence:
+      pre:
+        - Red request/response or contract case
+      post:
+        - request/response test
+        - error case test
+        - compatibility check for existing clients
+    claim_ceiling: Integration Done
+    expected_no:
+      - no unit-only completion claim
+      - no public API docs drift
+
+  - id: large-permission-model
+    prompt: "把用户权限模型从 role 改成 policy"
+    expected_route: Large
+    risk_type: permission
+    expected_gates:
+      - spec/design
+      - written plan
+      - negative permission tests
+      - independent review
+      - system verification
+    expected_delegate_skill:
+      - writing-plans
+      - subagent-driven-development when tasks are independent
+      - requesting-code-review
+    expected_evidence:
+      pre:
+        - approved objective/spec
+        - Red or reproducing cases for changed authorization behavior where feasible
+      post:
+        - positive and negative permission tests
+        - migration/backward compatibility checks if data changes
+        - E2E or system verification for critical workflows
+    claim_ceiling: Integration Done
+    expected_no:
+      - no happy-path-only evidence
+      - no self-review-only completion
+
+  - id: package-handoff
+    prompt: "把这个 Python SDK 打成 wheel，保证新项目可以 pip install 后直接 import 使用"
+    expected_route: Medium/Large
+    risk_type: delivery
+    expected_gates:
+      - delivery contract
+      - evidence matrix
+      - fresh consumer verification
+    expected_delegate_skill: []
+    expected_evidence:
+      pre:
+        - delivery contract with consumer, artifact, install path, allowed and forbidden dependencies
+      post:
+        - build artifact command and artifact identity
+        - fresh venv or clean consumer installs and imports the wheel
+        - docs/onboarding matches tested path
+    claim_ceiling: Handoff Done
+    expected_no:
+      - no production-ready claim from producer tests only
+      - no hidden local source path dependency
+
+  - id: debug-ci
+    prompt: "CI 挂了修一下"
+    expected_route: Debug
+    risk_type: unknown failure
+    expected_gates:
+      - reproduce or inspect failing logs first
+      - root-cause hypothesis before fix
+      - focused validator after fix
+    expected_delegate_skill:
+      - systematic-debugging
+    expected_evidence:
+      pre:
+        - failing CI log or local reproduction
+      post:
+        - same check passes or exact blocker stated
+    claim_ceiling: Dev Done
+    expected_no:
+      - no guessing fix before root cause
+      - no suppressing errors without justification

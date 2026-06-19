@@ -35,8 +35,9 @@ PR 应重点检查：
 当前项目没有 build step。提交 PR 前请运行：
 
 ```sh
-find . -name '*.md' -o -name '*.yaml'
+python3 scripts/run-skill-sandbox-eval.py
+python3 /Users/didi/.codex/skills/.system/skill-creator/scripts/quick_validate.py skills/adaptive-dev-workflow
 git diff --check
 ```
 
-同时扫描文档，确认没有 placeholders、夸大表述，或假设不可用工具的安装说明。
+如果本机没有 Codex skill-creator helper，至少运行 sandbox eval 和 `git diff --check`。同时扫描文档，确认没有 placeholders、夸大表述，或假设不可用工具的安装说明。
