@@ -41,6 +41,7 @@ SDD/specs = development contract; Superpowers = execution discipline; Project sk
 - `frontend-design`：明显的 UI 创建或重设计。
 - `openai-docs`：当前 OpenAI API 或 Codex 产品事实。
 - `openspec-workflow`：repo 已使用 OpenSpec 且依赖可用。
+- `project-harness-init`：新项目、first MVP vertical slice、Large work 缺 current-truth docs、需要 AGENTS.md/docs/spec/plan/evidence/agent team/project skill 初始化。
 
 Tiny 或机械改动不要强制 TDD。先定义能证明 claim 的最小 validator。低风险 supporting skill 不可用时，用 plain workflow 保留相同 gate 意图并简短说明 fallback。TDD、debugging、OpenSpec、security review、completion verification 这类高风险 gate 缺失时，要说明缺失能力，并暂停或征求是否接受更弱替代。
 
@@ -90,6 +91,27 @@ Stop condition: when to pause for user judgment
 ```
 
 Tiny 任务的 current truth 可以很小，例如被修改文件、现有命令、README/config 片段。
+## Route And Evidence Cards
+非 Tiny 任务在 implementation 前先写一个短 `route_card` 和 `evidence_card`，可以放在计划、spec、PR 描述或最终回复草稿里。Tiny 任务可以内联成一句话，但仍要明确 evidence。
+```yaml
+route_card:
+  route: Tiny | Small | Debug | Medium | Large | OpenSpec
+  risk_type:
+  changed_surfaces: []
+  required_gates: []
+  delegated_skills: []
+  loaded_references: []
+  stop_gates: []
+evidence_card:
+  claim_ceiling: Dev Done | Integration Done | Handoff Done
+  pre_implementation:
+  post_implementation:
+  chain:
+  handoff:
+  review:
+  gaps:
+```
+Task exit 和 final claim 必须回看这两张卡：如果实际 evidence 弱于 `claim_ceiling`，降低 claim；如果触发了未执行的 required gate，先补 gate 或声明 gap。可用时运行 `scripts/validate_workflow_cards.py` 检查结构。
 
 ## Process Selection
 
@@ -142,21 +164,21 @@ objective 和 approved plan 清楚后，不要每个机械步骤都暂停。继�
 
 先判断是否需要文档。文档的作用是减少未来 action space，不是装饰。
 
-Large work、新项目、first MVP vertical slice、multi-agent handoff、缺失 project memory、repo 没有可靠 current-truth docs 时，在 planning 前读取 `references/complex-project-harness.md`。Tiny/Small 不要加载它，除非任务本身就是创建、修复或 review docs/spec harness。
+Large work、新项目、first MVP vertical slice、multi-agent handoff、缺失 project memory、repo 没有可靠 current-truth docs 时，在 planning 前优先路由到 `project-harness-init`。如果该 skill 不可用，再读取 `references/complex-project-harness.md` 作为 fallback。Tiny/Small 不要加载它，除非任务本身就是创建、修复或 review docs/spec harness。
 
 已有 repo 文档结构时沿用现有约定。当前代码和 canonical docs 优先于过期/reference docs。文档不在 scope 时说明原因。
 ## Project Harness Init Gate (项目初始化 / 项目脚手架)
 
-只在 repo 需要 durable project scaffolding 时使用，不要用于普通编辑。
-
-满足任一条件时读取 `references/complex-project-harness.md`：
+只在 repo 需要 durable project scaffolding 时使用，不要用于普通编辑。满足任一条件时使用 `project-harness-init`：
 
 - 新 repo、新 product area，或 repo 内第一个严肃 feature。
 - First MVP vertical slice 需要变成可复用 development loop。
 - Large work 需要 specs、current-truth docs、agent team roles 或 repeatable evidence。
 - 用户希望项目维护 AGENTS.md、docs、project skills、evals 或 agent team。
 
-如果 init 合理且已获批准，优先使用 `scripts/init_project_harness.py` 只创建缺失 scaffold。第一版 harness 保持轻量：`AGENTS.md`、`.agent/agents.md`、project skill、knowledge candidates、evals、`docs/architecture.md`、`docs/adr`，以及可选 `docs/specs/<feature-id>`、`docs/plans/<feature-id>.md`、`docs/evidence/<feature-id>.md`。除非 docs/spec harness 就是任务本身，永远不要为 Tiny/Small 创建完整 harness。
+`project-harness-init` 是唯一 scaffold source of truth，负责创建或修复 `AGENTS.md`、`.agent/agents.md`、Goal Loop Mode prompt、project skill、knowledge candidates、evals、`docs/architecture.md`、`docs/adr`、`docs/specs/<feature-id>`、`docs/plans/<feature-id>.md`、`docs/evidence/<feature-id>.md`。如果该 skill 不可用，才读取 `references/complex-project-harness.md` 作为概念 fallback，并手动保持同样边界；不要运行本 skill 内的旧 scaffold。除非 docs/spec harness 就是任务本身，永远不要为 Tiny/Small 创建完整 harness。
+
+Harness 初始化本身的 `claim_ceiling` 是 `Dev Done`：它只证明项目协作基座、spec/plan/evidence 模板和 agent roles 已创建/验证。不要把初始化说成 `Integration Done`，除非真实 MVP 或系统链路已经实现并通过 integration/smoke/E2E 证据。
 
 ## Project Skill Learning Gate (项目 skill 沉淀 / 项目 SOP)
 

@@ -32,7 +32,7 @@ Agentic coding 最常见的问题不是 agent 不会写代码，而是它会隐�
 - 决定是否需要 goal clarification、brainstorming、writing-plans、TDD、systematic-debugging、verification、independent review。
 - 要求每个任务都定义 evidence，但允许 Tiny / mechanical change 使用最小 validator。
 - 一旦路由到 TDD、debugging、planning、verification 或 review，继承对应 skill 的更强规则，而不是降级执行。
-- 对 Large、新项目、多 agent handoff 或缺少 current-truth docs 的仓库，加载 complex project harness。
+- 对 Large、新项目、多 agent handoff 或缺少 current-truth docs 的仓库，路由到 `project-harness-init` 创建项目 harness。
 - 对 first MVP vertical slice、项目 SOP、重复项目经验，加载 project skill lifecycle，并把经验先记录成 candidate。
 - 对复杂工作，使用 `.agent/agents.md` 维护可复用 reviewer/subagent roles，而不是每次临时写 prompt。
 - 对质量不满意、mock 冒充真实链路、completion overclaim 等问题，进入 quality feedback / evidence recovery。
@@ -62,6 +62,8 @@ Install for Codex:
 ```sh
 mkdir -p ~/.codex/skills/adaptive-dev-workflow
 rsync -a skills/adaptive-dev-workflow/ ~/.codex/skills/adaptive-dev-workflow/
+mkdir -p ~/.codex/skills/project-harness-init
+rsync -a skills/project-harness-init/ ~/.codex/skills/project-harness-init/
 ```
 
 Optional install for an `.agents` skill directory:
@@ -69,9 +71,11 @@ Optional install for an `.agents` skill directory:
 ```sh
 mkdir -p ~/.agents/skills/adaptive-dev-workflow
 rsync -a skills/adaptive-dev-workflow/ ~/.agents/skills/adaptive-dev-workflow/
+mkdir -p ~/.agents/skills/project-harness-init
+rsync -a skills/project-harness-init/ ~/.agents/skills/project-harness-init/
 ```
 
-The installable skill lives at:
+The installable skills live at:
 
 ```text
 skills/adaptive-dev-workflow/
@@ -79,8 +83,8 @@ skills/adaptive-dev-workflow/
 ├── agents/openai.yaml
 ├── scripts/
 │   ├── capture_learning_candidate.py
-│   ├── init_project_harness.py
-│   └── validate_evidence_manifest.py
+│   ├── validate_evidence_manifest.py
+│   └── validate_workflow_cards.py
 └── references/
     ├── agent-team.md
     ├── complex-project-harness.md
@@ -88,6 +92,17 @@ skills/adaptive-dev-workflow/
     ├── production-handoff-gate.md
     ├── project-skill-lifecycle.md
     └── quality-feedback-loop.md
+
+skills/project-harness-init/
+├── SKILL.md
+├── agents/openai.yaml
+├── scripts/
+│   ├── init_project_harness.py
+│   └── validate_project_harness.py
+└── references/
+    ├── agent-team-roles.md
+    ├── goal-loop-mode.md
+    └── harness-contract.md
 ```
 
 Do not put project-specific rules into the skill. Put those in the target repository's `AGENTS.md`, `CLAUDE.md`, docs, hooks, scripts, or CI.
@@ -116,10 +131,11 @@ For Claude Code or tools without native skill loading, use the same policy in `C
 This project is designed to sit above Superpowers, not replace it.
 
 ```text
-Adaptive Dev Workflow = Router + Gate Selector + Scope Guard
+adaptive-dev-workflow = Router + Gate Selector + Scope Guard
+project-harness-init = Project docs/spec/agent/evidence/Goal Loop initializer
 Superpowers = Discipline Executor
 OpenSpec = Spec Lifecycle Executor
-Project AGENTS.md / CLAUDE.md = Repo-specific Constraints
+Project skill = Repo-specific SOP and learned constraints
 CI / hooks / tests = Mechanical Enforcement
 ```
 
@@ -132,6 +148,23 @@ When a stronger skill is selected, this router must not weaken it:
 - Review gate uses `requesting-code-review` or an isolated review pass for high-risk or broad changes.
 
 The router may decide that a Tiny or mechanical task does not need TDD. It should not decide to run a weaker version of TDD after selecting the TDD gate.
+
+## Methodology
+
+The split is intentional:
+
+```text
+SDD/specs = development contract
+Superpowers = execution discipline
+project-harness-init = durable project harness
+Project skill = project SOP and lessons
+Evidence/eval = reality check
+Knowledge promotion = long-term learning
+```
+
+`adaptive-dev-workflow` decides whether a task is Tiny/Small/Debug/Medium/Large and whether a harness is needed. `project-harness-init` creates the harness: `AGENTS.md`, `.agent/agents.md`, `.agent/goal-loop-mode.md`, project skill, docs/specs/plans/evidence, and acceptance templates with claim ceiling. After that, ordinary development routes back through adaptive and the native execution skills.
+
+For non-Tiny tasks, produce a compact `route_card` and `evidence_card` before implementation. These cards record the selected route, changed surfaces, required gates, delegated skills, claim ceiling, and gaps. Final completion claims must not exceed the cards or the evidence manifest.
 
 ## Workflow
 
@@ -212,7 +245,7 @@ The skill treats docs as a way to reduce future action space, not as decoration:
 
 Use those paths only when the target repo follows this convention. Otherwise follow the repo's existing docs structure.
 
-For Large work, new projects, multi-agent handoff, or repos without reliable current-truth docs, the skill loads `references/complex-project-harness.md`. That reference defines a default docs/spec surface:
+For Large work, new projects, first MVP vertical slices, multi-agent handoff, or repos without reliable current-truth docs, adaptive routes to `project-harness-init`. That skill defines the default docs/spec surface:
 
 ```text
 AGENTS.md
@@ -238,9 +271,30 @@ Validate changes to this skill with behavior evals, not just static reading:
 - Blind subagent eval: give only `SKILL.md` and pressure prompts to a fresh reviewer.
 - Developer/Auditor simulation: one session executes, another reviews only output, diff, and evidence.
 - Sandbox eval: run `python3 scripts/run-skill-sandbox-eval.py`.
-- Package validation: run `python3 /Users/didi/.codex/skills/.system/skill-creator/scripts/quick_validate.py skills/adaptive-dev-workflow` when that helper is available locally.
+- Workflow E2E eval: run `python3 scripts/run-workflow-e2e-eval.py` to initialize a temporary harness, validate route/evidence cards, ensure claim ceilings fail for mock-only integration or non-fresh handoff evidence, and prove the local fresh-consumer artifact install/import pattern.
+- Fresh consumer handoff eval: run `python3 scripts/run-handoff-fresh-consumer-eval.py` when changing handoff rules or package-delivery examples.
+- Fresh agent semantic route eval: run `python3 scripts/run-fresh-agent-route-eval.py --case tiny-readme-command --case package-handoff --case project-harness-init-goal-loop` when changing route semantics. This uses fresh `codex exec` sessions and is not part of the default deterministic sandbox path.
+- Package validation: run `python3 /Users/didi/.codex/skills/.system/skill-creator/scripts/quick_validate.py skills/adaptive-dev-workflow` and the same command for `skills/project-harness-init` when that helper is available locally.
 
 Seed prompts live in `evals/seed-cases.yaml`. Real misroutes or evidence failures should be recorded in `evals/failure-cases.yaml` before changing general routing rules.
+
+Fresh consumer evidence only proves artifact/onboarding mechanics. Real external
+handoff still belongs to the concrete project: provider, auth source, network,
+platform behavior, and consumer path must be proven with project-specific real
+external or sandbox-provider evidence.
+
+### Validation Scripts
+
+| Script | Purpose | Default cadence |
+| --- | --- | --- |
+| `scripts/run-skill-sandbox-eval.py` | Static package checks, seed/failure case schema checks, and deterministic workflow E2E | Run before every skill change commit |
+| `scripts/run-workflow-e2e-eval.py` | Initializes a temporary project harness, validates route/evidence cards, checks claim-ceiling failures, and runs fresh-consumer handoff proof | Run before every workflow or handoff change |
+| `scripts/run-handoff-fresh-consumer-eval.py` | Builds a tiny wheel, installs it in a clean venv, and imports it without producer source paths or network | Run when handoff rules/examples change |
+| `scripts/run-fresh-agent-route-eval.py` | Starts fresh Codex sessions to classify seed prompts using only the local skill, without leaking expected answers | Run for route semantics changes or release checks |
+
+Use the fresh-agent route eval selectively because it needs a working Codex CLI
+session and model access. The deterministic sandbox path remains the fast local
+check.
 
 ## Examples
 
@@ -286,16 +340,30 @@ Use $adaptive-dev-workflow.
 Review this PR for correctness, scope creep, evidence gaps, security risk, and completion claims. Do not edit files.
 ```
 
+Project harness init:
+
+```text
+Use $project-harness-init.
+Initialize this repo for Goal Loop Mode with docs/specs/plans/evidence, AGENTS.md, agent team roles, and a project-local skill for the first Login MVP vertical slice.
+```
+
 ## Repository Layout
 
 ```text
 .
-├── skills/adaptive-dev-workflow/   # installable skill source
-│   ├── SKILL.md
-│   ├── agents/openai.yaml
-│   └── references/
-│       ├── complex-project-harness.md
-│       └── evidence-and-validation.md
+├── skills/
+│   ├── adaptive-dev-workflow/      # router / gate selector
+│   │   ├── SKILL.md
+│   │   ├── agents/openai.yaml
+│   │   ├── scripts/
+│   │   └── references/
+│   └── project-harness-init/       # project harness initializer
+│       ├── SKILL.md
+│       ├── agents/openai.yaml
+│       ├── scripts/
+│       └── references/
+├── scripts/                        # sandbox, workflow E2E, fresh-agent, fresh-consumer evals
+├── evals/                          # seed route cases and captured failure cases
 ├── docs/                           # background essays and design notes
 ├── examples/                       # AGENTS.md / CLAUDE.md templates and request examples
 ├── CONTRIBUTING.md

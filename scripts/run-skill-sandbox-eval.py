@@ -1,15 +1,18 @@
 #!/usr/bin/env python3
-"""Lightweight sandbox checks for adaptive-dev-workflow skill changes.
+"""Lightweight sandbox checks for adaptive dev skills.
 
 This intentionally avoids third-party YAML dependencies. It checks that the
-skill package keeps its routing/evidence scaffolding discoverable and that eval
-case files contain the fields needed for manual or subagent-based forward tests.
+skill packages keep their routing/evidence/harness scaffolding discoverable and
+that eval case files contain the fields needed for manual or subagent-based
+forward tests.
 """
 
 from __future__ import annotations
 
 import re
+import subprocess
 import sys
+import os
 from pathlib import Path
 
 
@@ -19,6 +22,19 @@ SKILL = SKILL_DIR / "SKILL.md"
 OPENAI_YAML = SKILL_DIR / "agents" / "openai.yaml"
 EVIDENCE = SKILL_DIR / "references" / "evidence-and-validation.md"
 HANDOFF = SKILL_DIR / "references" / "production-handoff-gate.md"
+EVIDENCE_VALIDATE = SKILL_DIR / "scripts" / "validate_evidence_manifest.py"
+CARDS_VALIDATE = SKILL_DIR / "scripts" / "validate_workflow_cards.py"
+PROJECT_HARNESS_DIR = ROOT / "skills" / "project-harness-init"
+PROJECT_HARNESS_SKILL = PROJECT_HARNESS_DIR / "SKILL.md"
+PROJECT_HARNESS_OPENAI = PROJECT_HARNESS_DIR / "agents" / "openai.yaml"
+PROJECT_HARNESS_CONTRACT = PROJECT_HARNESS_DIR / "references" / "harness-contract.md"
+PROJECT_HARNESS_GOAL = PROJECT_HARNESS_DIR / "references" / "goal-loop-mode.md"
+PROJECT_HARNESS_AGENT_TEAM = PROJECT_HARNESS_DIR / "references" / "agent-team-roles.md"
+PROJECT_HARNESS_INIT = PROJECT_HARNESS_DIR / "scripts" / "init_project_harness.py"
+PROJECT_HARNESS_VALIDATE = PROJECT_HARNESS_DIR / "scripts" / "validate_project_harness.py"
+WORKFLOW_E2E = ROOT / "scripts" / "run-workflow-e2e-eval.py"
+FRESH_AGENT_ROUTE_EVAL = ROOT / "scripts" / "run-fresh-agent-route-eval.py"
+HANDOFF_FRESH_CONSUMER_EVAL = ROOT / "scripts" / "run-handoff-fresh-consumer-eval.py"
 SEED = ROOT / "evals" / "seed-cases.yaml"
 FAILURES = ROOT / "evals" / "failure-cases.yaml"
 
@@ -28,6 +44,7 @@ REQUIRED_SKILL_SECTIONS = [
     "## Process Selection",
     "## Production Handoff Gate",
     "## Test And Verification Strategy",
+    "## Route And Evidence Cards",
     "## Task Exit Gate",
     "## Skill Validation",
 ]
@@ -35,16 +52,28 @@ REQUIRED_SKILL_SECTIONS = [
 REQUIRED_EVIDENCE_SECTIONS = [
     "## Evidence Matrix",
     "## Evidence Plan Shape",
+    "## Route And Evidence Cards",
     "## Completion Claim Levels",
     "## Skill Iteration Protocol",
     "## Eval Case Schema",
     "## Failure Classes",
 ]
 
+REQUIRED_PROJECT_HARNESS_SECTIONS = [
+    "## Route Boundary",
+    "## First Decision",
+    "## Creation Flow",
+    "## Contracts",
+    "## Output Contract",
+    "## Integration",
+    "## NEVER",
+]
+
 REQUIRED_CASE_FIELDS = [
     "id",
     "prompt",
     "expected_route",
+    "expected_cards",
     "risk_type",
     "expected_gates",
     "expected_evidence",
@@ -153,23 +182,84 @@ def validate_failure_cases() -> int:
     return len(blocks)
 
 
+def run_workflow_e2e() -> None:
+    result = subprocess.run(
+        [sys.executable, str(WORKFLOW_E2E)],
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        check=False,
+    )
+    if result.returncode != 0:
+        print(result.stdout)
+        fail("workflow E2E eval failed")
+
+
+def run_fresh_agent_route_eval() -> bool:
+    if os.environ.get("RUN_FRESH_AGENT_ROUTE_EVAL") != "1":
+        return False
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(FRESH_AGENT_ROUTE_EVAL),
+            "--case",
+            "tiny-readme-command",
+            "--case",
+            "package-handoff",
+            "--case",
+            "project-harness-init-goal-loop",
+        ],
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        check=False,
+    )
+    if result.returncode != 0:
+        print(result.stdout)
+        fail("fresh agent route eval failed")
+    return True
+
+
 def main() -> int:
     assert_contains(SKILL, REQUIRED_SKILL_SECTIONS)
     assert_contains(EVIDENCE, REQUIRED_EVIDENCE_SECTIONS)
     assert_contains(HANDOFF, ["## Delivery Contract", "## Handoff Exit Gate"])
+    assert_contains(EVIDENCE_VALIDATE, ["CLAIM_REQUIRED_TYPES", "Integration Done", "Handoff Done"])
+    assert_contains(CARDS_VALIDATE, ["route_card", "evidence_card", "CLAIM_LEVELS"])
+    assert_contains(WORKFLOW_E2E, ["HANDOFF_FRESH_CONSUMER", "run-handoff-fresh-consumer-eval.py"])
+    assert_contains(FRESH_AGENT_ROUTE_EVAL, ["codex", "exec", "--output-schema", "needs_project_harness"])
+    assert_contains(HANDOFF_FRESH_CONSUMER_EVAL, ["fresh virtual", "pip", "--no-index"])
     read(OPENAI_YAML)
+    assert_contains(PROJECT_HARNESS_SKILL, REQUIRED_PROJECT_HARNESS_SECTIONS)
+    assert_contains(PROJECT_HARNESS_CONTRACT, ["## Spec Contract", "## Acceptance Contract", "## Evidence Contract", "## Current Truth Routing"])
+    assert_contains(PROJECT_HARNESS_GOAL, ["## Prompt Template", "## Claim Ceiling"])
+    assert_contains(PROJECT_HARNESS_AGENT_TEAM, ["## Default Roles", "## Invocation Guidelines"])
+    read(PROJECT_HARNESS_OPENAI)
+    read(PROJECT_HARNESS_INIT)
+    assert_contains(PROJECT_HARNESS_VALIDATE, ["FORBIDDEN_LOCAL_PATH_MARKERS", "require_no_local_paths"])
 
     skill_lines = line_count(SKILL)
     if skill_lines > 320:
         fail(f"SKILL.md is getting heavy for a router skill: {skill_lines} lines")
+    harness_lines = line_count(PROJECT_HARNESS_SKILL)
+    if harness_lines > 220:
+        fail(f"project-harness-init/SKILL.md is getting heavy: {harness_lines} lines")
 
     seed_count, route_counts = validate_seed_cases()
     failure_count = validate_failure_cases()
+    run_workflow_e2e()
+    fresh_agent_ran = run_fresh_agent_route_eval()
 
     print("Sandbox eval passed")
     print(f"- SKILL.md lines: {skill_lines}")
+    print(f"- project-harness-init SKILL.md lines: {harness_lines}")
     print(f"- seed cases: {seed_count}")
     print(f"- failure cases captured: {failure_count}")
+    print("- workflow e2e: pass")
+    if fresh_agent_ran:
+        print("- fresh agent route eval: pass")
+    else:
+        print("- fresh agent route eval: skipped (set RUN_FRESH_AGENT_ROUTE_EVAL=1)")
     print("- route coverage:")
     for route, count in sorted(route_counts.items()):
         print(f"  - {route}: {count}")

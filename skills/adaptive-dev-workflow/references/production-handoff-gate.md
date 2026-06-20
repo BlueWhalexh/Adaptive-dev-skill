@@ -66,7 +66,18 @@ For delivery claims, run at least one verification from outside the producer con
 - Follow onboarding docs exactly; record deviations as docs gaps.
 - Prefer subagents as read-only consumers when isolation helps: artifact reviewer, fresh Python/Go/JS consumer, docs/onboarding reviewer, secret/auth reviewer.
 
+For this skill repository, `scripts/run-handoff-fresh-consumer-eval.py` is the
+reference local proof pattern for package-like handoff: build an artifact,
+install it into a clean consumer, and import/invoke it without network or
+producer source paths.
+
 If fresh consumer verification is too expensive or blocked, state what was substituted and what remains unproven.
+
+Fresh consumer verification is not real external verification. If the handoff
+claim includes a provider, hosted service, MCP server, cloud runtime, or
+credentialed platform, the concrete project must still run a real external or
+sandbox-provider call and record auth source, provider, command, result, and
+remaining gaps.
 
 ## Secret And Auth Gate
 

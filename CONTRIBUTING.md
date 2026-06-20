@@ -36,8 +36,19 @@ PR 应重点检查：
 
 ```sh
 python3 scripts/run-skill-sandbox-eval.py
+python3 scripts/run-workflow-e2e-eval.py
+python3 scripts/run-handoff-fresh-consumer-eval.py
 python3 /Users/didi/.codex/skills/.system/skill-creator/scripts/quick_validate.py skills/adaptive-dev-workflow
+python3 /Users/didi/.codex/skills/.system/skill-creator/scripts/quick_validate.py skills/project-harness-init
 git diff --check
 ```
 
-如果本机没有 Codex skill-creator helper，至少运行 sandbox eval 和 `git diff --check`。同时扫描文档，确认没有 placeholders、夸大表述，或假设不可用工具的安装说明。
+如果修改了路由语义，再运行 fresh agent 语义路由 eval：
+
+```sh
+python3 scripts/run-fresh-agent-route-eval.py --case tiny-readme-command --case package-handoff --case project-harness-init-goal-loop
+```
+
+这个命令会启动 fresh `codex exec` sessions，可能消耗模型调用或需要本机审批，所以不放进默认 deterministic 检查。
+
+如果本机没有 Codex skill-creator helper，至少运行 sandbox eval、workflow E2E eval、fresh consumer handoff eval 和 `git diff --check`。同时扫描文档，确认没有 placeholders、夸大表述，或假设不可用工具的安装说明。

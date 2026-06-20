@@ -9,6 +9,7 @@ DO NOT READ for obvious Tiny/Small tasks when the validator is clear from `SKILL
 - Evidence Matrix
 - Evidence Selection Algorithm
 - Evidence Plan Shape
+- Route And Evidence Cards
 - Completion Claim Levels
 - Evidence Manifest
 - Skill Validation Protocol
@@ -68,6 +69,31 @@ Handoff evidence: fresh consumer or real external call only when delivery claims
 Claim ceiling: Dev Done, Integration Done, or Handoff Done
 ```
 
+## Route And Evidence Cards
+
+Use cards before implementation for non-Tiny work and before final claims for any task where the evidence could be misread.
+
+```yaml
+route_card:
+  route: Tiny | Small | Debug | Medium | Large | OpenSpec
+  risk_type: logic | UI | API | data | permission | workflow | delivery | external integration
+  changed_surfaces: []
+  required_gates: []
+  delegated_skills: []
+  loaded_references: []
+  stop_gates: []
+evidence_card:
+  claim_ceiling: Dev Done | Integration Done | Handoff Done
+  pre_implementation:
+  post_implementation:
+  chain:
+  handoff:
+  review:
+  gaps:
+```
+
+Run `scripts/validate_workflow_cards.py <file>` when a card is written to disk. The card is not the evidence itself; it is the contract that prevents route drift and completion overclaim.
+
 ## Completion Claim Levels
 
 | Claim | Required Evidence | Do Not Claim When |
@@ -99,7 +125,7 @@ deferred:
 review_focus:
 ```
 
-Use `scripts/validate_evidence_manifest.py` when available to catch missing fields before completion.
+Use `scripts/validate_evidence_manifest.py` when available to catch missing fields before completion. The validator requires final `result` values by default and rejects `Integration Done` without integration/e2e/real/fresh-consumer evidence and `Handoff Done` without fresh-consumer or real-external evidence. Use `--allow-pending` only for draft review, not completion.
 
 ## Skill Validation Protocol
 
@@ -110,6 +136,21 @@ Validate the skill itself with behavior evals, not intuition.
 3. Blind subagent eval: a fresh subagent routes cases using only `SKILL.md`.
 4. Developer/auditor simulation: one session executes, another audits output,
    evidence, route choice, docs, and completion claims.
+5. Workflow E2E eval: initialize a temp harness, validate cards, and verify claim ceilings fail for mock-only integration or non-fresh handoff evidence.
+6. Fresh agent semantic route eval: run `scripts/run-fresh-agent-route-eval.py`
+   for representative seed cases when routing semantics change. This starts
+   fresh `codex exec` sessions, gives only the raw task prompt plus the local
+   skill path, and compares the returned route/evidence JSON to seed-case
+   expectations without leaking expected answers.
+7. Handoff fresh consumer eval: run
+   `scripts/run-handoff-fresh-consumer-eval.py` or the default workflow E2E to
+   prove a package-like artifact can be installed and imported from a clean
+   consumer environment without producer source paths or network.
+
+Fresh consumer evidence proves artifact/onboarding mechanics. It does not prove
+provider correctness, credentials, latency, permissions, or real external
+behavior. If the delivery claim depends on an external provider or platform,
+the concrete project still needs real external or sandbox-provider evidence.
 
 When working in this skill repository, use `evals/seed-cases.yaml` for stable
 regression scenarios and `evals/failure-cases.yaml` for real cases captured
@@ -130,8 +171,10 @@ Do not self-modify the skill from a single anecdote.
 | Project-specific lesson | Put it in the repo `AGENTS.md` or docs, not this general skill |
 
 Before accepting a skill patch, run static validation, the sandbox eval script,
-route dry-runs for seed cases, and an independent review or skill-judge pass when
-the patch changes routing semantics.
+workflow E2E, route dry-runs for seed cases, and an independent review or
+skill-judge pass when the patch changes routing semantics. When a patch changes
+route selection, project harness behavior, or handoff claims, add fresh agent
+semantic route eval if the local model/CLI is available.
 
 ## Eval Case Schema
 
@@ -139,6 +182,9 @@ the patch changes routing semantics.
 - id: tiny-readme-command
   prompt: "README 里把 npm 改成 pnpm"
   expected_route: Tiny
+  expected_cards:
+    route_card: inline_ok
+    evidence_card: inline_ok
   expected_gates:
     - focused verification
   expected_delegate_skill: []

@@ -62,7 +62,7 @@ Prefer existing project conventions. If none exist, propose the smallest useful 
 │       └── <feature-id>.md
 ```
 
-Use `scripts/init_project_harness.py` when available to create only missing files. The script must not overwrite existing project docs unless explicitly requested.
+Use the standalone `project-harness-init` skill when available to create or repair the harness. Do not keep a second scaffold script in `adaptive-dev-workflow`; this lifecycle file describes where project learning should live, not how to generate the scaffold.
 
 ## Learning Candidate
 

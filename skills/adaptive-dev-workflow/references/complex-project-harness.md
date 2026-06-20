@@ -49,7 +49,7 @@ Proposed surfaces: only the missing files needed now
 Human gate: broad docs or policy files require approval before creation
 ```
 
-Use `scripts/init_project_harness.py` when available to create missing files deterministically. The script is scaffold-only; it must not overwrite existing project files unless explicitly requested.
+Prefer the standalone `project-harness-init` skill when available. This reference is a conceptual fallback only; it is not a second scaffold implementation. If the standalone skill is unavailable, create missing files manually with the same overwrite, evidence, and local-path hygiene boundaries.
 
 ## Default Layout
 

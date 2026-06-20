@@ -5,6 +5,9 @@ cases:
   - id: tiny-readme-command
     prompt: "README 里把 npm 改成 pnpm"
     expected_route: Tiny
+    expected_cards:
+      route_card: inline_ok
+      evidence_card: inline_ok
     risk_type: docs
     expected_gates:
       - focused verification
@@ -24,6 +27,9 @@ cases:
   - id: tiny-css-spacing
     prompt: "把按钮间距调大 4px"
     expected_route: Tiny/Small
+    expected_cards:
+      route_card: inline_ok
+      evidence_card: inline_ok
     risk_type: UI
     expected_gates:
       - focused verification
@@ -41,6 +47,9 @@ cases:
   - id: small-login-bug
     prompt: "修登录按钮点击没反应"
     expected_route: Small
+    expected_cards:
+      route_card: required
+      evidence_card: required
     risk_type: UI behavior
     expected_gates:
       - reproduction or focused validator
@@ -62,6 +71,9 @@ cases:
   - id: medium-api-contract
     prompt: "给导出接口加 format 参数"
     expected_route: Medium
+    expected_cards:
+      route_card: required
+      evidence_card: required
     risk_type: API
     expected_gates:
       - evidence plan
@@ -84,6 +96,9 @@ cases:
   - id: large-permission-model
     prompt: "把用户权限模型从 role 改成 policy"
     expected_route: Large
+    expected_cards:
+      route_card: required
+      evidence_card: required
     risk_type: permission
     expected_gates:
       - spec/design
@@ -111,6 +126,9 @@ cases:
   - id: package-handoff
     prompt: "把这个 Python SDK 打成 wheel，保证新项目可以 pip install 后直接 import 使用"
     expected_route: Medium/Large
+    expected_cards:
+      route_card: required
+      evidence_card: required
     risk_type: delivery
     expected_gates:
       - delivery contract
@@ -132,6 +150,9 @@ cases:
   - id: debug-ci
     prompt: "CI 挂了修一下"
     expected_route: Debug
+    expected_cards:
+      route_card: required
+      evidence_card: required
     risk_type: unknown failure
     expected_gates:
       - reproduce or inspect failing logs first
@@ -148,3 +169,30 @@ cases:
     expected_no:
       - no guessing fix before root cause
       - no suppressing errors without justification
+
+  - id: project-harness-init-goal-loop
+    prompt: "新项目要做 first MVP vertical slice，以后希望进入目标模式持续迭代，并初始化 docs/spec/plan/evidence、AGENTS.md、agent team 和项目 skill"
+    expected_route: Medium/Large + harness
+    expected_cards:
+      route_card: required
+      evidence_card: required
+    risk_type: project harness
+    expected_gates:
+      - inspect existing conventions
+      - create only missing harness files
+      - validate harness scaffold
+    expected_delegate_skill:
+      - project-harness-init
+    expected_evidence:
+      pre:
+        - repo docs/agent convention inspection
+      post:
+        - generated AGENTS.md, .agent/agents.md, .agent/goal-loop-mode.md
+        - generated docs/specs/<feature-id>/spec.md, design.md, acceptance.yaml
+        - generated docs/plans/<feature-id>.md and docs/evidence/<feature-id>.md
+        - project harness validator passes
+    claim_ceiling: Dev Done
+    expected_no:
+      - no implementation before approved target/spec
+      - no overwrite without explicit approval
+      - no production-ready claim from scaffold creation
