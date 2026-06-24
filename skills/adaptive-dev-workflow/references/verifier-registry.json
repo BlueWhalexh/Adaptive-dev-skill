@@ -1,0 +1,35 @@
+{
+  "registry_version": 1,
+  "verifiers": [
+    {
+      "id": "focused-validator",
+      "trust_level": "trusted",
+      "allowed_claims": ["dev_done"],
+      "allowed_evidence_types": ["unit", "manual", "diff_review", "build", "lint", "typecheck"]
+    },
+    {
+      "id": "evidence-manifest-validator",
+      "trust_level": "trusted",
+      "allowed_claims": ["dev_done", "integration_done"],
+      "allowed_evidence_types": ["unit", "manual", "diff_review", "build", "lint", "typecheck", "integration", "e2e", "system"]
+    },
+    {
+      "id": "fresh-consumer-verifier",
+      "trust_level": "trusted",
+      "allowed_claims": ["handoff_done"],
+      "allowed_evidence_types": ["fresh_consumer"]
+    },
+    {
+      "id": "real-external-verifier",
+      "trust_level": "trusted",
+      "allowed_claims": ["handoff_done"],
+      "allowed_evidence_types": ["real_external"]
+    },
+    {
+      "id": "human-reviewer",
+      "trust_level": "human",
+      "allowed_claims": ["dev_done", "integration_done"],
+      "allowed_evidence_types": ["human_review", "integration", "e2e", "system"]
+    }
+  ]
+}

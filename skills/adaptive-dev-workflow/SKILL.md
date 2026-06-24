@@ -15,11 +15,16 @@ description: Use when software implementation, fixes, refactors, design, plannin
 
 ```json
 {
+  "schema_version": 3,
+  "skill_suite_version": "2026-06-24",
+  "run_id": "run-001",
+  "strategy_version": "1.0",
   "workflow_state": "intake | routed | active | blocked | review_ready | closed",
   "classification": {},
   "routing": {},
   "selected_strategy": "focused-change",
   "current_stage": "ground",
+  "resume": {},
   "design_control": {
     "documentation_topology": "compact | single_file_design | split_design_workspace"
   },
@@ -81,6 +86,8 @@ L2/L3 SpecFlow that changes runtime architecture, delivery contract, public API,
 - `review-only`: `mode=review` 或用户明确只审不改。
 
 每个 strategy 自己拥有 stages。主控只记录 `selected_strategy` 和 `current_stage`，不要维护全局复杂状态机。
+
+`selected_strategy`、`strategy_version`、`current_stage` 和 `resume.resume_from_stage` 必须来自 strategy registry；恢复任务时先校验 manifest，再继续执行，不要从聊天记忆猜当前阶段。
 
 ## Narrow Skill Delegation
 
@@ -181,6 +188,8 @@ Claim 口径：
 - `handoff_done`: fresh consumer 或 real external evidence。
 
 During route-only, review-only, spec-only, or analysis-only work, set `claims.requested` to `none`. Analysis Pack、SpecFlow、Plan 只能产生 artifact，不能产生 validated delivery claim。最终回复必须说明 requested claim、validated claim、evidence ids 和 remaining gaps。
+
+Validated claim 必须由 `references/verifier-registry.json` 里的 trusted/human verifier 签发，且 verifier 只能签自己被授权的 claim level。`handoff_done` 只能由 fresh consumer 或 real external 类 verifier 支撑。
 
 ## Context Runtime Rule
 

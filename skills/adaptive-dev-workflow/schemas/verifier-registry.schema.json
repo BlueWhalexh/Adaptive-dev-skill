@@ -1,0 +1,44 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["registry_version", "verifiers"],
+  "properties": {
+    "registry_version": { "type": "integer", "enum": [1] },
+    "verifiers": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "trust_level", "allowed_claims", "allowed_evidence_types"],
+        "properties": {
+          "id": { "type": "string" },
+          "trust_level": { "type": "string", "enum": ["trusted", "human", "blocked"] },
+          "allowed_claims": {
+            "type": "array",
+            "items": { "type": "string", "enum": ["dev_done", "integration_done", "handoff_done"] }
+          },
+          "allowed_evidence_types": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "unit",
+                "manual",
+                "diff_review",
+                "build",
+                "lint",
+                "typecheck",
+                "integration",
+                "e2e",
+                "system",
+                "fresh_consumer",
+                "real_external",
+                "human_review"
+              ]
+            }
+          }
+        }
+      }
+    }
+  }
+}

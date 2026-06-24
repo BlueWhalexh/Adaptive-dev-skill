@@ -49,6 +49,10 @@ def sha256(path: Path) -> str:
 
 def workflow_manifest(*, requested: str = "integration_done", validated_claim: str = "integration_done") -> dict[str, Any]:
     return {
+        "schema_version": 3,
+        "skill_suite_version": "2026-06-24",
+        "run_id": "run-control-plane-e2e",
+        "strategy_version": "1.0",
         "workflow_state": "review_ready",
         "classification": {
             "risk": "L3",
@@ -65,6 +69,12 @@ def workflow_manifest(*, requested: str = "integration_done", validated_claim: s
         },
         "selected_strategy": "complex-real-slice",
         "current_stage": "delivery_review",
+        "resume": {
+            "checkpoint_id": "cp-delivery-review",
+            "resume_from_stage": "delivery_review",
+            "last_validated_artifact_ids": ["ap-001", "ctx-001", "spec-001", "td-001", "plan-001", "task-001", "impl-001", "ev-001"],
+            "blocked_reason": "",
+        },
         "design_control": {
             "policy": "standalone",
             "review": "independent",
@@ -235,14 +245,36 @@ def main() -> int:
         spec_file = write_text(repo / "docs" / "superpowers" / "specs" / "2026-06-23-feature-spec.md", "# Spec\n")
 
         wf_ok = write_json(root / "workflow-ok.json", workflow_manifest())
+        wf_handoff_ok = workflow_manifest(requested="handoff_done", validated_claim="handoff_done")
+        wf_handoff_ok["claims"]["validated"][0]["verifier"] = "fresh-consumer-verifier"
+        wf_handoff_ok_path = write_json(root / "workflow-handoff-ok.json", wf_handoff_ok)
         wf_old_route_bad = write_json(root / "workflow-old-route-bad.json", {"route": "Medium/Large + harness", **workflow_manifest()})
         wf_spec_only_bad = workflow_manifest(requested="dev_done", validated_claim="dev_done")
         wf_spec_only_bad["artifacts"] = [item for item in wf_spec_only_bad["artifacts"] if item["type"] in {"analysis_pack", "spec", "plan"}]
         wf_spec_only_bad["claims"]["validated"] = []
+        wf_spec_only_bad["resume"]["last_validated_artifact_ids"] = ["ap-001", "spec-001", "plan-001"]
         wf_spec_only_bad_path = write_json(root / "workflow-spec-only-bad.json", wf_spec_only_bad)
         wf_self_signed_bad = workflow_manifest()
         wf_self_signed_bad["claims"]["validated"][0]["verifier"] = "agent"
         wf_self_signed_bad_path = write_json(root / "workflow-self-signed-bad.json", wf_self_signed_bad)
+        wf_unknown_verifier_bad = workflow_manifest()
+        wf_unknown_verifier_bad["claims"]["validated"][0]["verifier"] = "unregistered-verifier"
+        wf_unknown_verifier_bad_path = write_json(root / "workflow-unknown-verifier-bad.json", wf_unknown_verifier_bad)
+        wf_handoff_wrong_verifier_bad = workflow_manifest(requested="handoff_done", validated_claim="handoff_done")
+        wf_handoff_wrong_verifier_bad["claims"]["validated"][0]["verifier"] = "evidence-manifest-validator"
+        wf_handoff_wrong_verifier_bad_path = write_json(root / "workflow-handoff-wrong-verifier-bad.json", wf_handoff_wrong_verifier_bad)
+        wf_strategy_version_bad = workflow_manifest()
+        wf_strategy_version_bad["strategy_version"] = "9.9"
+        wf_strategy_version_bad_path = write_json(root / "workflow-strategy-version-bad.json", wf_strategy_version_bad)
+        wf_stage_bad = workflow_manifest()
+        wf_stage_bad["current_stage"] = "GLOBAL_SPEC_READY"
+        wf_stage_bad_path = write_json(root / "workflow-stage-bad.json", wf_stage_bad)
+        wf_resume_bad = workflow_manifest()
+        wf_resume_bad["resume"]["last_validated_artifact_ids"] = ["missing-artifact"]
+        wf_resume_bad_path = write_json(root / "workflow-resume-bad.json", wf_resume_bad)
+        wf_profile_mix_bad = workflow_manifest()
+        wf_profile_mix_bad["classification"]["profiles"] = ["superpowers"]
+        wf_profile_mix_bad_path = write_json(root / "workflow-profile-mix-bad.json", wf_profile_mix_bad)
         wf_plan_missing_spec_bad = workflow_manifest()
         for item in wf_plan_missing_spec_bad["artifacts"]:
             if item["type"] == "plan":
@@ -256,6 +288,9 @@ def main() -> int:
         wf_embedded_bad = workflow_manifest()
         wf_embedded_bad["selected_strategy"] = "spec-driven-feature"
         wf_embedded_bad["routing"]["strategy_id"] = "spec-driven-feature"
+        wf_embedded_bad["current_stage"] = "plan"
+        wf_embedded_bad["resume"]["resume_from_stage"] = "plan"
+        wf_embedded_bad["resume"]["last_validated_artifact_ids"] = ["ap-001", "ctx-001", "spec-001", "plan-001"]
         wf_embedded_bad["classification"]["risk"] = "L2"
         wf_embedded_bad["classification"]["scope"] = "module"
         wf_embedded_bad["design_control"] = {
@@ -283,6 +318,9 @@ def main() -> int:
         wf_split_embedded_bad = workflow_manifest()
         wf_split_embedded_bad["selected_strategy"] = "spec-driven-feature"
         wf_split_embedded_bad["routing"]["strategy_id"] = "spec-driven-feature"
+        wf_split_embedded_bad["current_stage"] = "plan"
+        wf_split_embedded_bad["resume"]["resume_from_stage"] = "plan"
+        wf_split_embedded_bad["resume"]["last_validated_artifact_ids"] = ["ap-001", "ctx-001", "spec-001", "plan-001"]
         wf_split_embedded_bad["classification"]["risk"] = "L2"
         wf_split_embedded_bad["classification"]["scope"] = "module"
         wf_split_embedded_bad["design_control"] = {
@@ -314,9 +352,17 @@ def main() -> int:
         graph_validator = ADAPTIVE / "scripts" / "validate_artifact_graph.py"
         run([sys.executable, str(manifest_validator), str(wf_ok)])
         run([sys.executable, str(graph_validator), str(wf_ok)])
+        run([sys.executable, str(manifest_validator), str(wf_handoff_ok_path)])
+        run([sys.executable, str(graph_validator), str(wf_handoff_ok_path)])
         run([sys.executable, str(manifest_validator), str(wf_old_route_bad)], expect_ok=False)
         run([sys.executable, str(manifest_validator), str(wf_spec_only_bad_path)], expect_ok=False)
         run([sys.executable, str(manifest_validator), str(wf_self_signed_bad_path)], expect_ok=False)
+        run([sys.executable, str(manifest_validator), str(wf_unknown_verifier_bad_path)], expect_ok=False)
+        run([sys.executable, str(manifest_validator), str(wf_handoff_wrong_verifier_bad_path)], expect_ok=False)
+        run([sys.executable, str(manifest_validator), str(wf_strategy_version_bad_path)], expect_ok=False)
+        run([sys.executable, str(manifest_validator), str(wf_stage_bad_path)], expect_ok=False)
+        run([sys.executable, str(manifest_validator), str(wf_resume_bad_path)], expect_ok=False)
+        run([sys.executable, str(manifest_validator), str(wf_profile_mix_bad_path)], expect_ok=False)
         run([sys.executable, str(graph_validator), str(wf_plan_missing_spec_bad_path)], expect_ok=False)
         run([sys.executable, str(graph_validator), str(wf_design_missing_spec_bad_path)], expect_ok=False)
         run([sys.executable, str(manifest_validator), str(wf_embedded_bad_path)], expect_ok=False)
@@ -371,6 +417,7 @@ def main() -> int:
     print("Workflow E2E eval passed")
     print("- project harness init + validate: pass")
     print("- workflow manifest + artifact graph positive/negative checks: pass")
+    print("- version/stage/resume/verifier false-claim checks: pass")
     print("- JSON evidence manifest claim checks: pass")
     print("- context static/freshness/runtime/sufficiency checks: pass")
     print("- learning candidate path-safety checks: pass")

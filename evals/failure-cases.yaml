@@ -100,6 +100,48 @@ cases:
     impact: "Small tasks become slow and noisy without reducing delivery risk."
     status: "covered"
 
+  - id: classification-routing-mix
+    prompt: "Agent puts superpowers or complex-real-slice inside classification.profiles"
+    expected_behavior: "Reject routing/execution/strategy tokens inside classification facts."
+    failure_class: "classification_dimension_mix"
+    impact: "Router facts become polluted by execution choices and cannot be compared reliably."
+    status: "covered"
+
+  - id: strategy-version-drift
+    prompt: "Workflow manifest says selected_strategy=complex-real-slice but strategy_version=9.9"
+    expected_behavior: "Reject manifests whose pinned strategy_version does not match registry."
+    failure_class: "strategy_registry_bypass"
+    impact: "Agent can resume against a different strategy than the one originally selected."
+    status: "covered"
+
+  - id: invalid-current-stage
+    prompt: "Workflow manifest uses a global stage like SPEC_READY instead of a stage from the selected strategy."
+    expected_behavior: "Reject stages not declared by the selected strategy."
+    failure_class: "ambiguous_strategy_stage"
+    impact: "Workflow cannot be resumed or audited deterministically."
+    status: "covered"
+
+  - id: resume-missing-artifact
+    prompt: "Resume checkpoint references an artifact id that is not present in the artifact graph."
+    expected_behavior: "Reject stale or non-recoverable resume manifests."
+    failure_class: "unrecoverable_workflow_state"
+    impact: "Agent may continue from a fabricated or lost checkpoint."
+    status: "covered"
+
+  - id: unknown-verifier-claim
+    prompt: "Validated claim is signed by an unregistered verifier."
+    expected_behavior: "Reject signed claims whose verifier is not in verifier-registry.json."
+    failure_class: "claim_trust_model_bypass"
+    impact: "Any actor could mint delivery claims."
+    status: "covered"
+
+  - id: handoff-signed-by-integration-verifier
+    prompt: "handoff_done is signed by evidence-manifest-validator with only integration authority."
+    expected_behavior: "Reject handoff_done unless signed by fresh-consumer or real-external verifier."
+    failure_class: "false_handoff_claim"
+    impact: "Integration success can be overstated as consumer-ready delivery."
+    status: "covered"
+
 template:
   required_fields:
     - id

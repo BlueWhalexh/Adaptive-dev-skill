@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import re
 from pathlib import Path
 
 from validate_json_artifact import load_json, validate_instance
@@ -34,6 +35,8 @@ KNOWN_ARTIFACTS = {
     "implementation",
     "decision_record",
 }
+SAFE_ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,80}$")
+VERSION = re.compile(r"^\d+\.\d+(?:\.\d+)?$")
 
 
 def validate(root: Path = STRATEGIES) -> list[str]:
@@ -44,11 +47,26 @@ def validate(root: Path = STRATEGIES) -> list[str]:
         strategy = load_json(path)
         errors.extend(f"{path.name}: {error}" for error in validate_instance(strategy, schema))
         strategy_id = strategy.get("id")
+        if strategy_id != path.stem:
+            errors.append(f"{path.name}: strategy id must match file stem")
         if strategy_id in found:
             errors.append(f"duplicate strategy id: {strategy_id}")
         found.add(strategy_id)
+        if not SAFE_ID.match(str(strategy_id)):
+            errors.append(f"{strategy_id}: strategy id is unsafe")
+        if not VERSION.match(str(strategy.get("version", ""))):
+            errors.append(f"{strategy_id}: version must be semver-like major.minor[.patch]")
         if not strategy.get("stages"):
             errors.append(f"{strategy_id}: stages cannot be empty")
+        if len(strategy.get("stages", [])) != len(set(strategy.get("stages", []))):
+            errors.append(f"{strategy_id}: stages must be unique")
+        for stage in strategy.get("stages", []):
+            if not SAFE_ID.match(str(stage)):
+                errors.append(f"{strategy_id}: stage id is unsafe: {stage}")
+        for field in ["risk", "modes", "required_artifacts", "required_skills"]:
+            values = strategy.get(field, [])
+            if len(values) != len(set(values)):
+                errors.append(f"{strategy_id}: {field} must not contain duplicates")
         unknown_artifacts = sorted(set(strategy.get("required_artifacts", [])) - KNOWN_ARTIFACTS)
         if unknown_artifacts:
             errors.append(f"{strategy_id}: unknown required_artifacts: {', '.join(unknown_artifacts)}")

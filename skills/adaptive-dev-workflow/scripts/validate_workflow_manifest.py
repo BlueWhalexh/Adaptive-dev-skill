@@ -12,6 +12,8 @@ from validate_json_artifact import load_json, validate_instance
 
 SKILL_DIR = Path(__file__).resolve().parents[1]
 SCHEMA = SKILL_DIR / "schemas" / "workflow-manifest.schema.json"
+VERIFIER_SCHEMA = SKILL_DIR / "schemas" / "verifier-registry.schema.json"
+VERIFIER_REGISTRY = SKILL_DIR / "references" / "verifier-registry.json"
 STRATEGIES = SKILL_DIR / "references" / "strategies"
 FORBIDDEN_TOP_LEVEL = {
     "route",
@@ -23,6 +25,22 @@ FORBIDDEN_TOP_LEVEL = {
 }
 SELF_VERIFIERS = {"agent", "implementer", "self", "coding-agent", "developer"}
 SAFE_ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,80}$")
+VERSION = re.compile(r"^\d+\.\d+(?:\.\d+)?$")
+CLAIM_RANK = {"none": 0, "dev_done": 1, "integration_done": 2, "handoff_done": 3}
+ROUTING_TOKENS = {
+    "openspec",
+    "repo_native",
+    "fallback",
+    "superpowers",
+    "quick-change",
+    "focused-change",
+    "root-cause-debug",
+    "spec-driven-feature",
+    "complex-real-slice",
+    "migration-critical",
+    "spike",
+    "review-only",
+}
 HARD_DESIGN_TRIGGERS = {
     "new_boundary",
     "cross_module_flow",
@@ -55,6 +73,21 @@ def load_strategy(strategy_id: str) -> tuple[dict, str | None]:
     return load_json(path), None
 
 
+def load_verifiers() -> tuple[dict[str, dict], list[str]]:
+    registry = load_json(VERIFIER_REGISTRY)
+    schema = load_json(VERIFIER_SCHEMA)
+    errors = validate_instance(registry, schema)
+    by_id: dict[str, dict] = {}
+    for verifier in registry.get("verifiers", []):
+        verifier_id = str(verifier.get("id", "")).strip()
+        if verifier_id in by_id:
+            errors.append(f"duplicate verifier id: {verifier_id}")
+        by_id[verifier_id] = verifier
+        if not SAFE_ID.match(verifier_id):
+            errors.append(f"verifier id is unsafe: {verifier_id}")
+    return by_id, errors
+
+
 def validate(path: Path) -> list[str]:
     errors: list[str] = []
     manifest = load_json(path)
@@ -67,6 +100,18 @@ def validate(path: Path) -> list[str]:
         if key in manifest:
             errors.append(f"forbidden old control-plane field: {key}")
 
+    if not SAFE_ID.match(manifest["run_id"]):
+        errors.append(f"run_id is unsafe: {manifest['run_id']}")
+    if not VERSION.match(manifest["strategy_version"]):
+        errors.append(f"strategy_version must be semver-like major.minor[.patch]: {manifest['strategy_version']}")
+    if not manifest["skill_suite_version"].strip():
+        errors.append("skill_suite_version must be non-empty")
+
+    classification = manifest["classification"]
+    mixed_profiles = sorted(set(classification["profiles"]) & ROUTING_TOKENS)
+    if mixed_profiles:
+        errors.append("classification.profiles must not contain routing/strategy tokens: " + ", ".join(mixed_profiles))
+
     routing = manifest["routing"]
     if routing["strategy_id"] != manifest["selected_strategy"]:
         errors.append("routing.strategy_id must match selected_strategy")
@@ -74,14 +119,31 @@ def validate(path: Path) -> list[str]:
     if strategy_error:
         errors.append(strategy_error)
     if strategy:
+        if manifest["strategy_version"] != strategy["version"]:
+            errors.append(f"strategy_version must match registry version {strategy['version']}")
+        if manifest["current_stage"] not in strategy["stages"]:
+            errors.append(f"current_stage {manifest['current_stage']!r} is not in selected strategy stages")
+        if classification["risk"] not in strategy["risk"]:
+            errors.append(f"classification.risk {classification['risk']} is not allowed by selected strategy")
+        if classification["mode"] not in strategy["modes"]:
+            errors.append(f"classification.mode {classification['mode']} is not allowed by selected strategy")
         design = manifest["design_control"]
         if design["policy"] != strategy["design_policy"]:
             errors.append(f"design_control.policy must match selected strategy: expected {strategy['design_policy']}")
         if design["review"] != strategy["design_review"]:
             errors.append(f"design_control.review must match selected strategy: expected {strategy['design_review']}")
 
+    resume = manifest["resume"]
+    if not SAFE_ID.match(resume["checkpoint_id"]):
+        errors.append(f"resume.checkpoint_id is unsafe: {resume['checkpoint_id']}")
+    if strategy and resume["resume_from_stage"] not in strategy["stages"]:
+        errors.append(f"resume.resume_from_stage {resume['resume_from_stage']!r} is not in selected strategy stages")
+
     artifact_types = [artifact["type"] for artifact in manifest["artifacts"]]
     artifact_ids = {artifact["id"] for artifact in manifest["artifacts"]}
+    for artifact_id in resume["last_validated_artifact_ids"]:
+        if artifact_id not in artifact_ids:
+            errors.append(f"resume references missing artifact id: {artifact_id}")
     for artifact in manifest["artifacts"]:
         if not SAFE_ID.match(artifact["id"]):
             errors.append(f"artifact id is unsafe: {artifact['id']}")
@@ -141,13 +203,27 @@ def validate(path: Path) -> list[str]:
         errors.append("L3, migration, or hard design triggers require standalone technical design")
 
     requested = manifest["claims"]["requested"]
+    if strategy and CLAIM_RANK[requested] > CLAIM_RANK[strategy["max_claim_request"]]:
+        errors.append(f"{manifest['selected_strategy']} cannot request {requested}; max is {strategy['max_claim_request']}")
     if requested != "none" and not any(kind in artifact_types for kind in ["implementation", "evidence_manifest", "task_packet"]):
         errors.append(f"{requested} cannot be requested by analysis/spec/plan artifacts alone")
 
+    verifiers, verifier_errors = load_verifiers()
+    errors.extend(verifier_errors)
     for signed in manifest["claims"]["validated"]:
         verifier = signed["verifier"].strip().lower()
         if verifier in SELF_VERIFIERS:
             errors.append(f"validated claim cannot be self-signed by {signed['verifier']!r}")
+        if signed["verifier"] not in verifiers:
+            errors.append(f"unknown claim verifier: {signed['verifier']}")
+        else:
+            verifier_record = verifiers[signed["verifier"]]
+            if verifier_record["trust_level"] == "blocked":
+                errors.append(f"claim verifier is blocked: {signed['verifier']}")
+            if signed["claim"] not in verifier_record["allowed_claims"]:
+                errors.append(f"verifier {signed['verifier']} cannot sign {signed['claim']}")
+        if strategy and CLAIM_RANK[signed["claim"]] > CLAIM_RANK[strategy["max_claim_request"]]:
+            errors.append(f"{manifest['selected_strategy']} cannot validate {signed['claim']}; max is {strategy['max_claim_request']}")
         if signed["status"] == "validated" and not signed["evidence_ids"]:
             errors.append(f"validated {signed['claim']} requires evidence_ids")
         if signed["claim"] in {"integration_done", "handoff_done"} and "evidence_manifest" not in artifact_types:

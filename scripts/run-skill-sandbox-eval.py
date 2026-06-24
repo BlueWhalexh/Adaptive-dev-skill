@@ -31,6 +31,7 @@ REQUIRED_SCHEMAS = [
     "evidence-manifest.schema.json",
     "learning-candidate.schema.json",
     "strategy.schema.json",
+    "verifier-registry.schema.json",
 ]
 REQUIRED_ADAPTIVE_SECTIONS = [
     "## Core Model",
@@ -172,6 +173,7 @@ def main() -> int:
 
     for schema in REQUIRED_SCHEMAS:
         read(ADAPTIVE / "schemas" / schema)
+    read(ADAPTIVE / "references" / "verifier-registry.json")
     for script in ["validate_json_artifact.py", "validate_workflow_manifest.py", "validate_artifact_graph.py", "validate_strategy_registry.py"]:
         read(ADAPTIVE / "scripts" / script)
 
