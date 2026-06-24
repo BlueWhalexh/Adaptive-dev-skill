@@ -115,18 +115,26 @@ Generic CI failure prompt:
 
 Set `design_control` from selected strategy:
 
-| Strategy | design_policy | design_review |
-| --- | --- | --- |
-| `quick-change` | `none` | `none` |
-| `focused-change` | `embedded` | `self` |
-| `root-cause-debug` | `embedded` | `self` |
-| `spec-driven-feature` | `embedded` | `self` |
-| `complex-real-slice` | `standalone` | `independent` |
-| `migration-critical` | `standalone` | `human` |
-| `spike` | `none` | `independent` |
-| `review-only` | `none` | `independent` |
+| Strategy | design_policy | design_review | default topology |
+| --- | --- | --- | --- |
+| `quick-change` | `none` | `none` | `compact` |
+| `focused-change` | `embedded` | `self` | `compact` |
+| `root-cause-debug` | `embedded` | `self` | `compact` |
+| `spec-driven-feature` | `embedded` | `self` | `compact` |
+| `complex-real-slice` | `standalone` | `independent` | `single_file_design` or `split_design_workspace` |
+| `migration-critical` | `standalone` | `human` | `split_design_workspace` |
+| `spike` | `none` | `independent` | `compact` |
+| `review-only` | `none` | `independent` | `compact` |
 
 Escalate to a standalone technical design when a task introduces a new responsibility boundary, cross-module/service flow, public API/event contract, data model/migration, auth/security/privacy boundary, state machine, concurrency/idempotency/recovery behavior, external integration, runtime/observability concern, or several viable technical approaches with material tradeoffs.
+
+Set `documentation_topology` by slice size:
+
+- `compact`: one module, `<5` files, `<3` days; design notes stay inside spec or plan.
+- `single_file_design`: standalone design is needed, but one canonical design doc can hold the decisions.
+- `split_design_workspace`: multi-module, multi-phase, `>1` week, first MVP, migration, or repo-native request to split `docs/specs/<feature>`, `docs/design/<feature>`, `docs/plans/<feature>.md`, and `docs/adr/`.
+
+Do not confuse `split_design_workspace` with a new route. It is only the shape of the design/spec/plan artifacts.
 
 ## Anti-Patterns
 
@@ -136,3 +144,4 @@ Escalate to a standalone technical design when a task introduces a new responsib
 - Do not request `dev_done` for analysis/spec/plan-only work.
 - Do not request any delivery claim during a route-only eval or before evidence exists.
 - Do not create duplicate fallback technical design when OpenSpec/repo-native already has a canonical design document.
+- Do not create split docs for a tiny change; topology should reduce risk, not add ceremony.

@@ -20,7 +20,9 @@ description: Use when software implementation, fixes, refactors, design, plannin
   "routing": {},
   "selected_strategy": "focused-change",
   "current_stage": "ground",
-  "design_control": {},
+  "design_control": {
+    "documentation_topology": "compact | single_file_design | split_design_workspace"
+  },
   "artifacts": [],
   "claims": { "requested": "none", "validated": [] }
 }
@@ -86,7 +88,7 @@ L2/L3 SpecFlow that changes runtime architecture, delivery contract, public API,
 
 - `context-grounding`: current truth 不清、L2/L3、复杂前端/链路、多模态、需要 Context Pack。
 - `specflow`: intent 未变成可执行 spec，或用户要求先写 spec。OpenSpec repo 走 adapter，不生成第二套 product spec。
-- `technical-design`: approved product spec 之后、implementation planning 之前，生成或审阅目标架构、边界、契约、状态/数据流、错误恢复、安全、迁移、可观测性、回滚和设计批准。它不写 implementation plan，不写生产代码。
+- `technical-design`: approved product spec 之后、implementation planning 之前，生成或审阅目标架构、边界、契约、状态/数据流、文档拓扑、错误恢复、安全、迁移、可观测性、回滚和设计批准。它不写 implementation plan，不写生产代码。
 - `delivery-verification`: evidence manifest、claim 验证、handoff/fresh consumer/real external。
 - `knowledge-promotion`: 发现可复用 SOP、重复踩坑、多次质量反馈、项目 skill 候选。
 - `project-harness-init`: 新项目、first MVP vertical slice、缺 AGENTS.md/spec/evidence/agent team/project skill、或需要 Goal Loop Mode。
@@ -109,6 +111,12 @@ Product Spec、Technical Design、Implementation Plan 不能混成一份文档�
 - `none`: L0 或 review/spec/context-only，不创建 design artifact。
 - `embedded`: L1/L2 普通变更，在 plan 中保留 compact technical-design section，并在 manifest 写 `embedded_in` 和 `section_ref`。
 - `standalone`: L2 hard trigger、L3、migration、public API、data/auth/security、状态机、跨服务、外部集成、runtime/operability 或多方案重大取舍，必须有 approved `technical_design` artifact，plan 依赖它。
+
+设置 `design_control.documentation_topology`：
+
+- `compact`: 小切片，约 `<5` 文件、单一模块、`<3` 天；不要拆多层 docs，design notes 放进 spec 或 plan。
+- `single_file_design`: 普通 standalone design；一份 canonical technical design 足够。
+- `split_design_workspace`: 大切片、Feature 级、多模块、多 phase、`>1` 周、长期 MVP 或迁移；拆成 spec/acceptance、design overview/parts、plan、ADR。
 
 OpenSpec/repo-native 已有 canonical design surface 时复用原路径，例如 OpenSpec `design.md`；不要生成第二套 fallback design。
 
@@ -190,7 +198,7 @@ L2/L3 或复杂任务必须把 Context Pack 分成四类验证：
 3. Create or update `workflow_manifest.json` when task不是纯 L0 口头答复。
 4. Set `design_control` from selected strategy.
 5. Load only required narrow skill/reference.
-6. Produce/approve required artifacts: Analysis/Context -> Spec -> Technical Design when required -> Plan -> Task Packet.
+6. Produce/approve required artifacts: Analysis/Context -> Spec -> Technical Design with chosen documentation topology when required -> Plan -> Task Packet.
 7. Execute through selected engine.
 8. Run evidence validator and artifact graph validator.
 9. Request verifier-signed claim.

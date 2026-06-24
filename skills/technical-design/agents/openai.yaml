@@ -1,7 +1,7 @@
 interface:
   display_name: "Technical Design"
-  short_description: "Spec-to-plan technical design gate"
-  default_prompt: "Use $technical-design after an approved product spec and before implementation planning to produce or review none/embedded/standalone technical design, canonical design paths, architecture boundaries, contracts, failure handling, security, migration, observability, rollback, and design approval."
+  short_description: "Spec-to-plan design and documentation topology gate"
+  default_prompt: "Use $technical-design after an approved product spec and before implementation planning to choose documentation topology, produce or review none/embedded/standalone technical design, canonical design paths, architecture boundaries, contracts, failure handling, security, migration, observability, rollback, and design approval."
 
 policy:
   allow_implicit_invocation: true

@@ -20,6 +20,7 @@ DEFAULT_CASES = [
     "debug-ci",
     "specflow-intent-to-spec",
     "complex-frontend-context-pack",
+    "large-feature-doc-topology",
     "package-handoff",
     "large-permission-model",
     "review-only-no-edit",
@@ -59,10 +60,11 @@ OUTPUT_SCHEMA: dict[str, Any] = {
         "design_control": {
             "type": "object",
             "additionalProperties": False,
-            "required": ["policy", "review"],
+            "required": ["policy", "review", "documentation_topology"],
             "properties": {
                 "policy": {"type": "string"},
                 "review": {"type": "string"},
+                "documentation_topology": {"type": "string"},
             },
         },
         "claims": {
@@ -151,6 +153,7 @@ def load_cases() -> dict[str, dict[str, Any]]:
             "design_control": {
                 "policy": scalar_value(block, "policy"),
                 "review": scalar_value(block, "review"),
+                "documentation_topology": scalar_value(block, "documentation_topology"),
             },
             "claim_requested": scalar_value(block, "expected_claim_requested"),
         }
@@ -172,7 +175,7 @@ User task:
 Return only JSON with:
 - classification: risk, mode, scope, uncertainty, profiles
 - routing: spec_system, execution_engine, strategy_id, required_skills
-- design_control: policy, review
+- design_control: policy, review, documentation_topology
 - claims: requested. Because this is route-only and you are not implementing or verifying, set requested to "none".
 - reason: one short sentence
 """
@@ -260,6 +263,7 @@ def stable_key(case: dict[str, Any], actual: dict[str, Any]) -> dict[str, Any]:
         "strategy_id": canonical_expected(case["routing"]["strategy_id"], routing.get("strategy_id")),
         "design_policy": canonical_expected(case["design_control"]["policy"], (actual.get("design_control") or {}).get("policy")),
         "design_review": canonical_expected(case["design_control"]["review"], (actual.get("design_control") or {}).get("review")),
+        "documentation_topology": canonical_expected(case["design_control"]["documentation_topology"], (actual.get("design_control") or {}).get("documentation_topology")),
         "claim": canonical_expected(case["claim_requested"], (actual.get("claims") or {}).get("requested")),
     }
 
@@ -282,7 +286,7 @@ def validate_result(case: dict[str, Any], actual: dict[str, Any]) -> list[str]:
     if not contains_all(actual.get("routing", {}).get("required_skills") or [], case["routing"]["required_skills"]):
         errors.append(f"routing.required_skills missing expected {case['routing']['required_skills']!r}")
 
-    for field in ["policy", "review"]:
+    for field in ["policy", "review", "documentation_topology"]:
         got = actual.get("design_control", {}).get(field)
         want = case["design_control"][field]
         if not value_matches(want, got):

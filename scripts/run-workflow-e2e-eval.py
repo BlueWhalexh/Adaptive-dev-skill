@@ -68,6 +68,7 @@ def workflow_manifest(*, requested: str = "integration_done", validated_claim: s
         "design_control": {
             "policy": "standalone",
             "review": "independent",
+            "documentation_topology": "split_design_workspace",
             "triggers": ["cross_service_flow"],
             "artifact_id": "td-001",
             "approval": {
@@ -260,6 +261,7 @@ def main() -> int:
         wf_embedded_bad["design_control"] = {
             "policy": "embedded",
             "review": "self",
+            "documentation_topology": "compact",
             "triggers": [],
             "embedded_in": "plan-001",
             "section_ref": "",
@@ -275,6 +277,33 @@ def main() -> int:
             if item["type"] == "plan":
                 item["depends_on"] = ["spec-001"]
         wf_embedded_bad_path = write_json(root / "workflow-embedded-missing-section-bad.json", wf_embedded_bad)
+        wf_compact_standalone_bad = workflow_manifest()
+        wf_compact_standalone_bad["design_control"]["documentation_topology"] = "compact"
+        wf_compact_standalone_bad_path = write_json(root / "workflow-compact-standalone-bad.json", wf_compact_standalone_bad)
+        wf_split_embedded_bad = workflow_manifest()
+        wf_split_embedded_bad["selected_strategy"] = "spec-driven-feature"
+        wf_split_embedded_bad["routing"]["strategy_id"] = "spec-driven-feature"
+        wf_split_embedded_bad["classification"]["risk"] = "L2"
+        wf_split_embedded_bad["classification"]["scope"] = "module"
+        wf_split_embedded_bad["design_control"] = {
+            "policy": "embedded",
+            "review": "self",
+            "documentation_topology": "split_design_workspace",
+            "triggers": [],
+            "embedded_in": "plan-001",
+            "section_ref": "docs/superpowers/plans/2026-06-23-feature.md#technical-design",
+            "approval": {
+                "status": "approved",
+                "reviewer": "superpowers:writing-plans",
+                "reviewer_kind": "agent",
+                "evidence_ids": [],
+            },
+        }
+        wf_split_embedded_bad["artifacts"] = [item for item in wf_split_embedded_bad["artifacts"] if item["type"] != "technical_design"]
+        for item in wf_split_embedded_bad["artifacts"]:
+            if item["type"] == "plan":
+                item["depends_on"] = ["spec-001"]
+        wf_split_embedded_bad_path = write_json(root / "workflow-split-embedded-bad.json", wf_split_embedded_bad)
         wf_stale_bad = workflow_manifest()
         for item in wf_stale_bad["artifacts"]:
             if item["id"] == "spec-001":
@@ -291,6 +320,8 @@ def main() -> int:
         run([sys.executable, str(graph_validator), str(wf_plan_missing_spec_bad_path)], expect_ok=False)
         run([sys.executable, str(graph_validator), str(wf_design_missing_spec_bad_path)], expect_ok=False)
         run([sys.executable, str(manifest_validator), str(wf_embedded_bad_path)], expect_ok=False)
+        run([sys.executable, str(manifest_validator), str(wf_compact_standalone_bad_path)], expect_ok=False)
+        run([sys.executable, str(manifest_validator), str(wf_split_embedded_bad_path)], expect_ok=False)
         run([sys.executable, str(graph_validator), str(wf_stale_bad_path)], expect_ok=False)
 
         evidence_validator = DELIVERY / "scripts" / "validate_evidence_manifest.py"

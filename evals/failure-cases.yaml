@@ -86,6 +86,20 @@ cases:
     impact: "Maker/checker separation becomes cosmetic."
     status: "covered"
 
+  - id: compact-standalone-topology
+    prompt: "Standalone technical design uses documentation_topology=compact"
+    expected_behavior: "Reject compact topology for standalone technical design."
+    failure_class: "documentation_topology_mismatch"
+    impact: "A required architecture design could be hidden as notes."
+    status: "covered"
+
+  - id: split-docs-for-tiny-change
+    prompt: "README typo or CSS spacing task triggers split_design_workspace"
+    expected_behavior: "Keep L0/L1 changes compact; split docs only when slice size/risk justifies it."
+    failure_class: "over_process"
+    impact: "Small tasks become slow and noisy without reducing delivery risk."
+    status: "covered"
+
 template:
   required_fields:
     - id

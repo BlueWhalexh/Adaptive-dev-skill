@@ -90,11 +90,16 @@ def validate(path: Path) -> list[str]:
 
     design = manifest["design_control"]
     approval = design["approval"]
+    topology = design["documentation_topology"]
     if design["policy"] == "none":
         for forbidden in ["artifact_id", "embedded_in", "section_ref"]:
             if design.get(forbidden):
                 errors.append(f"design_control.{forbidden} must be empty when policy is none")
+        if topology != "compact":
+            errors.append("design policy none requires documentation_topology=compact")
     if design["policy"] == "embedded":
+        if topology != "compact":
+            errors.append("embedded design requires documentation_topology=compact")
         if not design.get("embedded_in"):
             errors.append("embedded design requires design_control.embedded_in")
         elif design["embedded_in"] not in artifact_ids:
@@ -102,11 +107,15 @@ def validate(path: Path) -> list[str]:
         if not design.get("section_ref"):
             errors.append("embedded design requires non-empty design_control.section_ref")
     if design["policy"] == "standalone":
+        if topology == "compact":
+            errors.append("standalone design requires single_file_design or split_design_workspace topology")
         artifact_id = design.get("artifact_id")
         if not artifact_id:
             errors.append("standalone design requires design_control.artifact_id")
         elif artifact_id not in artifact_ids:
             errors.append(f"standalone design references missing technical_design artifact: {artifact_id}")
+    if topology == "split_design_workspace" and design["policy"] != "standalone":
+        errors.append("split_design_workspace requires standalone technical design")
 
     if design["review"] == "none" and approval["status"] != "approved":
         errors.append("design review none still requires an approved no-op approval record")

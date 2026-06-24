@@ -181,13 +181,14 @@ def main() -> int:
     read(CONTEXT / "scripts" / "run_context_sufficiency_eval.py")
     read(DELIVERY / "scripts" / "validate_evidence_manifest.py")
     read(TECHNICAL_DESIGN / "references" / "design-contract.md")
+    read(TECHNICAL_DESIGN / "references" / "documentation-topology.md")
     read(TECHNICAL_DESIGN / "references" / "design-review.md")
     read(TECHNICAL_DESIGN / "references" / "spec-system-adapters.md")
     read(KNOWLEDGE / "scripts" / "capture_learning_candidate.py")
     read(KNOWLEDGE / "scripts" / "validate_learning_candidate.py")
 
     skill_lines = line_count(ADAPTIVE / "SKILL.md")
-    if skill_lines > 220:
+    if skill_lines > 240:
         fail(f"adaptive SKILL.md is too heavy for the router: {skill_lines} lines")
 
     seed_count, strategy_counts = validate_seed_cases()

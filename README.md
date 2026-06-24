@@ -53,6 +53,7 @@ Superpowers 仍然是执行纪律，不被重写：TDD、systematic debugging、
   "design_control": {
     "policy": "embedded",
     "review": "self",
+    "documentation_topology": "compact",
     "triggers": [],
     "embedded_in": "plan-001",
     "section_ref": "docs/superpowers/plans/2026-06-23-feature.md#technical-design",
@@ -113,6 +114,18 @@ Strategy manifests live in `skills/adaptive-dev-workflow/references/strategies/*
 The strategy owns stages. The router only records `selected_strategy` and `current_stage`.
 
 Project harness initialization is a local scaffold operation: route it with `execution_engine: local` and `project-harness-init`. Use `superpowers` later when executing the product implementation plan, not while merely creating AGENTS.md, Goal Loop Mode, project skill, spec/design/plan surfaces, and evidence docs.
+
+## Documentation Topology
+
+`design_control.documentation_topology` decides how many document layers the slice needs:
+
+| Topology | Use when | Shape |
+| --- | --- | --- |
+| `compact` | Small slice: `<5` files, one module, `<3` days | design notes inside spec or plan |
+| `single_file_design` | Standalone design is required but one design doc is enough | one canonical technical design artifact |
+| `split_design_workspace` | Large feature, multi-module, multi-phase, `>1` week, first MVP, migration, or repo-native split-doc request | spec/acceptance, design overview/parts, plan, ADR |
+
+For OpenSpec, reuse `proposal.md`, `design.md`, and `tasks.md`. For Superpowers fallback, use `docs/superpowers/specs`, `docs/superpowers/designs`, and `docs/superpowers/plans`. For repo-native large slices, use `docs/specs/<feature>/`, `docs/design/<feature>/`, `docs/plans/<feature>.md`, and `docs/adr/`.
 
 ## Artifact Graph
 

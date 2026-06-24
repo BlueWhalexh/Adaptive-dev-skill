@@ -18,6 +18,7 @@ cases:
     expected_design_control:
       policy: none
       review: none
+      documentation_topology: compact
     expected_claim_requested: none
     expected_no:
       - no context-grounding
@@ -40,6 +41,7 @@ cases:
     expected_design_control:
       policy: none
       review: none
+      documentation_topology: compact
     expected_claim_requested: none
     expected_no:
       - no unit test by default
@@ -61,6 +63,7 @@ cases:
     expected_design_control:
       policy: embedded
       review: self
+      documentation_topology: compact
     expected_claim_requested: none
     expected_no:
       - no handoff claim
@@ -82,6 +85,7 @@ cases:
     expected_design_control:
       policy: standalone
       review: independent
+      documentation_topology: single_file_design
     expected_claim_requested: none
     expected_no:
       - no unit-only completion claim
@@ -102,6 +106,7 @@ cases:
     expected_design_control:
       policy: standalone
       review: human
+      documentation_topology: split_design_workspace
     expected_claim_requested: none
     expected_no:
       - no self-review-only completion
@@ -122,6 +127,7 @@ cases:
     expected_design_control:
       policy: standalone
       review: independent
+      documentation_topology: split_design_workspace
     expected_claim_requested: none
     expected_no:
       - no direct broad implementation
@@ -142,6 +148,7 @@ cases:
     expected_design_control:
       policy: none|embedded
       review: none|self
+      documentation_topology: compact
     expected_claim_requested: none
     expected_no:
       - no production code
@@ -162,6 +169,7 @@ cases:
     expected_design_control:
       policy: standalone
       review: independent
+      documentation_topology: single_file_design
     expected_claim_requested: none
     expected_no:
       - no producer-tests-only handoff claim
@@ -182,6 +190,7 @@ cases:
     expected_design_control:
       policy: embedded
       review: self
+      documentation_topology: compact
     expected_claim_requested: none
     expected_no:
       - no guessing fix
@@ -202,6 +211,7 @@ cases:
     expected_design_control:
       policy: none
       review: independent
+      documentation_topology: compact
     expected_claim_requested: none
     expected_no:
       - no implementation
@@ -222,6 +232,7 @@ cases:
     expected_design_control:
       policy: none
       review: independent
+      documentation_topology: compact
     expected_claim_requested: none
     expected_no:
       - no delivery claim
@@ -242,6 +253,7 @@ cases:
     expected_design_control:
       policy: standalone
       review: human
+      documentation_topology: split_design_workspace
     expected_claim_requested: none
     expected_no:
       - no happy-path-only evidence
@@ -262,6 +274,7 @@ cases:
     expected_design_control:
       policy: standalone
       review: independent
+      documentation_topology: split_design_workspace
     expected_claim_requested: none
     expected_no:
       - no production-ready claim from scaffold creation
@@ -282,6 +295,28 @@ cases:
     expected_design_control:
       policy: standalone
       review: independent
+      documentation_topology: split_design_workspace
     expected_claim_requested: none
     expected_no:
       - no duplicate product spec system
+
+  - id: large-feature-doc-topology
+    prompt: "这个 feature 预计两周，涉及前端、API、数据展示和灰度发布。请不要把 spec.md 写胖，按 docs/specs/<feature>、docs/design/<feature>、docs/plans/<feature>.md 和 docs/adr/ 先设计文档分层。"
+    expected_classification:
+      risk: L3
+      mode: implement
+      scope: cross_module|cross_service
+      uncertainty: medium|high
+      profiles: [frontend, api, data]
+    expected_routing:
+      spec_system: fallback|repo_native
+      execution_engine: none
+      strategy_id: complex-real-slice
+      required_skills: [context-grounding, specflow, technical-design, delivery-verification]
+    expected_design_control:
+      policy: standalone
+      review: independent
+      documentation_topology: split_design_workspace
+    expected_claim_requested: none
+    expected_no:
+      - no single swollen spec

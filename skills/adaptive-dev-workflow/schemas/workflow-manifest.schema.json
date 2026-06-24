@@ -35,10 +35,14 @@
     "design_control": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["policy", "review", "triggers", "approval"],
+      "required": ["policy", "review", "documentation_topology", "triggers", "approval"],
       "properties": {
         "policy": { "type": "string", "enum": ["none", "embedded", "standalone"] },
         "review": { "type": "string", "enum": ["none", "self", "independent", "human"] },
+        "documentation_topology": {
+          "type": "string",
+          "enum": ["compact", "single_file_design", "split_design_workspace"]
+        },
         "triggers": {
           "type": "array",
           "items": {
