@@ -1,400 +1,279 @@
-# Adaptive Dev Workflow
+# Adaptive Dev Skill
 
-Risk-adaptive workflow router for agentic coding.
+Adaptive Dev Skill 是一组面向 Codex / Claude Code / Gemini CLI 的 AI coding workflow skills。它的目标不是把所有流程写进一个大 prompt，而是提供一个小型控制面：
 
-Adaptive Dev Workflow 是一个面向 Codex、Claude Code、Gemini CLI 等 AI coding agent 的轻量 workflow router / gate selector / scope guard。它不替代 Superpowers、OpenSpec、测试、CI 或 human review。它的职责是让 agent 在开始软件任务时先判断风险，然后选择刚好足够的 gate，并把具体执行交给更专业的 workflow skill。
+```text
+Router + Strategy Registry + Technical Design Gate + Artifact Graph + Verifier-signed Claims + Eval Harness
+```
 
-核心目标：
+核心判断：
 
-- 小任务保持快，不把 README typo 变成完整 spec 流程。
-- 高风险任务保持稳，不让权限、数据模型、API、部署配置只靠 happy path 验收。
-- 让 agent 在编码前显式说清 Outcome、Scope、Current truth、Evidence 和 Stop condition。
-- 把 planning、TDD、debugging、verification、review、OpenSpec、complex project harness 等能力组合成一个统一入口，但不重写它们的内部纪律。
+- 轻任务保持快：不用为了文档或机械修改强行进入完整 SDD。
+- 高风险任务保持稳：权限、数据、API、迁移、handoff 不允许只靠 happy path 或口头完成。
+- 复杂任务先固定 current truth：用 Analysis Pack / Context Manifest 裁剪上下文，再写 spec、technical design 和 plan。
+- 交付声明由证据签发：实现者只能 request claim，不能 self-sign validated claim。
+- 中文团队的人读项目文档默认中文；文件名、路径、schema keys、命令、validator types、skill names 和工具报错保留英文。
 
-## Why
+## Skill Suite
 
-Agentic coding 最常见的问题不是 agent 不会写代码，而是它会隐式做产品、架构、范围和验收决策：
+| Skill | Responsibility |
+| --- | --- |
+| `adaptive-dev-workflow` | 主控 router：classification、routing、strategy selection、workflow manifest、artifact graph、claim request |
+| `context-grounding` | Analysis Pack、Context Manifest、static/freshness/runtime/sufficiency 验证 |
+| `specflow` | 把 intent 或 Analysis Pack 转成 reviewed spec artifact；OpenSpec repo 走 adapter |
+| `technical-design` | 在 approved spec 和 implementation plan 之间生成/审查 technical design、设计边界、契约、回滚和 approval |
+| `delivery-verification` | JSON evidence manifest、claim level、fresh consumer / real external / integration 证据验证 |
+| `knowledge-promotion` | 把重复 SOP、踩坑、用户反馈沉淀为 learning candidate，再进入项目 skill / AGENTS.md |
+| `project-harness-init` | 初始化项目级 harness：AGENTS.md、agent team、Goal Loop Mode、spec/technical design/plan/evidence 结构、项目 skill |
 
-- 需求还没澄清就开始改。
-- 小修复扩成无关重构。
-- 行为改了但没有 regression evidence。
-- CI 或生产类问题凭直觉修，没有先复现和定位。
-- 最终回复声称完成，但没有 fresh verification。
-- `AGENTS.md` / `CLAUDE.md` 写了很多规则，agent 仍然不知道当前任务该走轻流程还是重流程。
+Superpowers 仍然是执行纪律，不被重写：TDD、systematic debugging、writing plans、requesting code review、verification before completion 等由原生 skill 执行。
 
-这个 skill 的设计点是：**用风险决定流程强度，而不是对所有任务套同一套仪式。**
+## Control Plane Model
 
-## What It Is
+`adaptive-dev-workflow` 生成或更新 `workflow_manifest.json`。机器校验 artifact 使用 JSON，Markdown 只做人读说明。
 
-`adaptive-dev-workflow` 是一个 coordinator skill：
+```json
+{
+  "workflow_state": "intake",
+  "classification": {
+    "risk": "L2",
+    "mode": "implement",
+    "scope": "module",
+    "uncertainty": "medium",
+    "profiles": ["api"]
+  },
+  "routing": {
+    "spec_system": "fallback",
+    "execution_engine": "superpowers",
+    "strategy_id": "spec-driven-feature",
+    "required_skills": ["specflow", "delivery-verification"]
+  },
+  "selected_strategy": "spec-driven-feature",
+  "current_stage": "ground",
+  "design_control": {
+    "policy": "embedded",
+    "review": "self",
+    "triggers": [],
+    "embedded_in": "plan-001",
+    "section_ref": "docs/superpowers/plans/2026-06-23-feature.md#technical-design",
+    "approval": {
+      "status": "approved",
+      "reviewer": "superpowers:writing-plans",
+      "reviewer_kind": "agent",
+      "evidence_ids": []
+    }
+  },
+  "artifacts": [],
+  "claims": { "requested": "none", "validated": [] }
+}
+```
 
-- 根据任务选择 Tiny / Small / Debug / Medium / Large / OpenSpec。
-- 决定是否需要 goal clarification、brainstorming、writing-plans、TDD、systematic-debugging、verification、independent review。
-- 要求每个任务都定义 evidence，但允许 Tiny / mechanical change 使用最小 validator。
-- 一旦路由到 TDD、debugging、planning、verification 或 review，继承对应 skill 的更强规则，而不是降级执行。
-- 对 Large、新项目、多 agent handoff 或缺少 current-truth docs 的仓库，路由到 `project-harness-init` 创建项目 harness。
-- 对 first MVP vertical slice、项目 SOP、重复项目经验，加载 project skill lifecycle，并把经验先记录成 candidate。
-- 对复杂工作，使用 `.agent/agents.md` 维护可复用 reviewer/subagent roles，而不是每次临时写 prompt。
-- 对质量不满意、mock 冒充真实链路、completion overclaim 等问题，进入 quality feedback / evidence recovery。
-- 对 SDK、runtime、package、artifact、external integration 等交付型任务，加载 production handoff gate。
-- 在改变 scope、public API、data model、security posture、user-facing behavior、依赖、部署或长期架构路线前暂停让人决策。
-- 将复杂证据矩阵和 skill validation protocol 放到 reference 文件，保持 `SKILL.md` 精简。
+Deprecated and intentionally unsupported as canonical artifacts:
 
-它不是：
+- `route_card`
+- `evidence_card`
+- `artifact_state`
+- `delivery_claim`
+- `claim_ceiling`
 
-- 代码正确性的保证。
-- human review 的替代品。
-- 每个任务都必须执行的重型 SDD 流程。
-- productivity benchmark。
-- 可以替代 tests、CI、observability 或 release discipline 的 prompt。
+## Classification And Routing
+
+Classification describes task facts:
+
+- `risk`: `L0 | L1 | L2 | L3`
+- `mode`: `implement | debug | review | spike | mvp | migration`
+- `scope`: `local | module | cross_module | cross_service`
+- `uncertainty`: `low | medium | high`
+- `profiles`: `frontend | api | data | auth | security | release | docs | delivery | infra`
+
+Routing describes execution choices:
+
+- `spec_system`: `none | openspec | repo_native | fallback`
+- `execution_engine`: `none | local | superpowers`
+- `strategy_id`: selected strategy
+- `required_skills`: narrow skills to load
+
+`OpenSpec` is a spec system. `Superpowers` is an execution engine. `debug/review/spike/mvp/migration` are modes.
+
+## Strategies
+
+Strategy manifests live in `skills/adaptive-dev-workflow/references/strategies/*.json`.
+
+| Strategy | Use when |
+| --- | --- |
+| `quick-change` | L0 docs/mechanical/local work |
+| `focused-change` | L1 local implementation or narrow bugfix |
+| `root-cause-debug` | debug mode or unknown failure |
+| `spec-driven-feature` | L2 behavior/API/UI feature; embedded design |
+| `complex-real-slice` | L3 complex workflow, first MVP vertical slice, package handoff, long loop; standalone design |
+| `migration-critical` | data/auth/security/migration/public protocol; standalone + human design review |
+| `spike` | bounded exploration, decision record, no delivery claim |
+| `review-only` | review without edits |
+
+The strategy owns stages. The router only records `selected_strategy` and `current_stage`.
+
+Project harness initialization is a local scaffold operation: route it with `execution_engine: local` and `project-harness-init`. Use `superpowers` later when executing the product implementation plan, not while merely creating AGENTS.md, Goal Loop Mode, project skill, spec/design/plan surfaces, and evidence docs.
+
+## Artifact Graph
+
+Artifacts are independent from workflow state:
+
+```json
+{
+  "id": "ctx-001",
+  "type": "context_manifest",
+  "status": "ready",
+  "version": 1,
+  "producer": "context-grounding",
+  "depends_on": ["ap-001"],
+  "covers_acceptance": ["AC-1"],
+  "path": "docs/context/ctx-001.json"
+}
+```
+
+Graph rules:
+
+- `spec` depends on approved `analysis_pack`, unless there is a declared lightweight exception.
+- embedded `plan` depends on approved `spec` and declares a stable technical design section.
+- standalone `technical_design` depends on approved `spec`, approved `analysis_pack`, and ready/approved `context_manifest`.
+- standalone `plan` depends on approved `technical_design`.
+- `task_packet` depends on approved `plan` and ready/approved `context_manifest`.
+- validated claims require ready/approved `evidence_manifest`.
+- stale upstream artifacts force downstream artifacts to become `stale` or `rejected`.
+
+## Claims
+
+Agents request claims; verifiers sign claims.
+
+| Claim | Evidence requirement |
+| --- | --- |
+| `dev_done` | implementation artifact plus focused passing validator |
+| `integration_done` | passing integration/e2e/system/fresh-consumer/real-external evidence |
+| `handoff_done` | passing fresh consumer or real external evidence |
+
+Analysis Pack, SpecFlow, and Plan artifacts cannot by themselves request or validate delivery completion.
+
+For L2/L3 SpecFlow that changes runtime architecture, delivery contracts, public API, data/auth/security model, project priority, or implementation engine, use maker/checker separation: a spec writer drafts, an isolated spec reviewer checks, and the user or project approval flow decides whether the spec is approved.
+
+## Context Pack Verification
+
+`context-grounding` splits context validation into four checks:
+
+- Static validation: completeness, minimality, allowed/forbidden paths.
+- Freshness validation: repo commit and file hash freshness.
+- Runtime audit: actual reads stay inside allowed paths or update the pack first.
+- Sufficiency eval: fresh plan agent can plan from Spec + Context Pack without reading the repo.
+
+This is the main guard against complex tasks drifting back into “read everything and improvise”.
 
 ## Install
-
-Clone this repository:
 
 ```sh
 git clone https://github.com/BlueWhalexh/Adaptive-dev-skill.git
 cd Adaptive-dev-skill
+for skill in adaptive-dev-workflow context-grounding specflow technical-design delivery-verification knowledge-promotion project-harness-init; do
+  mkdir -p "$HOME/.codex/skills/$skill"
+  rsync -a "skills/$skill/" "$HOME/.codex/skills/$skill/"
+done
 ```
 
-Install for Codex:
+Optional `.agents` install:
 
 ```sh
-mkdir -p ~/.codex/skills/adaptive-dev-workflow
-rsync -a skills/adaptive-dev-workflow/ ~/.codex/skills/adaptive-dev-workflow/
-mkdir -p ~/.codex/skills/project-harness-init
-rsync -a skills/project-harness-init/ ~/.codex/skills/project-harness-init/
+for skill in adaptive-dev-workflow context-grounding specflow technical-design delivery-verification knowledge-promotion project-harness-init; do
+  mkdir -p "$HOME/.agents/skills/$skill"
+  rsync -a "skills/$skill/" "$HOME/.agents/skills/$skill/"
+done
 ```
-
-Optional install for an `.agents` skill directory:
-
-```sh
-mkdir -p ~/.agents/skills/adaptive-dev-workflow
-rsync -a skills/adaptive-dev-workflow/ ~/.agents/skills/adaptive-dev-workflow/
-mkdir -p ~/.agents/skills/project-harness-init
-rsync -a skills/project-harness-init/ ~/.agents/skills/project-harness-init/
-```
-
-The installable skills live at:
-
-```text
-skills/adaptive-dev-workflow/
-├── SKILL.md
-├── agents/openai.yaml
-├── scripts/
-│   ├── capture_learning_candidate.py
-│   ├── validate_evidence_manifest.py
-│   └── validate_workflow_cards.py
-└── references/
-    ├── agent-team.md
-    ├── complex-project-harness.md
-    ├── evidence-and-validation.md
-    ├── production-handoff-gate.md
-    ├── project-skill-lifecycle.md
-    └── quality-feedback-loop.md
-
-skills/project-harness-init/
-├── SKILL.md
-├── agents/openai.yaml
-├── scripts/
-│   ├── init_project_harness.py
-│   └── validate_project_harness.py
-└── references/
-    ├── agent-team-roles.md
-    ├── goal-loop-mode.md
-    └── harness-contract.md
-```
-
-Do not put project-specific rules into the skill. Put those in the target repository's `AGENTS.md`, `CLAUDE.md`, docs, hooks, scripts, or CI.
 
 ## Use
 
-Direct invocation:
+Direct:
 
 ```text
 Use $adaptive-dev-workflow.
-Add status filtering to the order page. Preserve the current API unless a change is necessary.
+给导出接口加 format 参数，保持旧客户端兼容，并说明怎么验证。
 ```
 
-Implicit project rule for `AGENTS.md`:
+Recommended project `AGENTS.md` line:
 
 ```md
-For implementation, fix, refactor, design, planning, verification, or review tasks, use adaptive-dev-workflow.
-Choose Tiny/Small/Debug/Medium/Large/OpenSpec based on ambiguity, blast radius, and verification risk.
-Do not claim completion without fresh evidence.
+For implementation, fix, refactor, design, planning, verification, review, or handoff tasks, use adaptive-dev-workflow to classify L0-L3 risk, select strategy, create/update workflow_manifest.json when needed, and request verifier-signed claims only after evidence.
+Human-facing docs default to Chinese; keep commands, paths, schema keys, validator types, skill names, and tool errors in English.
 ```
 
-For Claude Code or tools without native skill loading, use the same policy in `CLAUDE.md` or project memory, and link to `skills/adaptive-dev-workflow/SKILL.md` as the workflow source.
-
-## Relationship To Superpowers
-
-This project is designed to sit above Superpowers, not replace it.
-
-```text
-adaptive-dev-workflow = Router + Gate Selector + Scope Guard
-project-harness-init = Project docs/spec/agent/evidence/Goal Loop initializer
-Superpowers = Discipline Executor
-OpenSpec = Spec Lifecycle Executor
-Project skill = Repo-specific SOP and learned constraints
-CI / hooks / tests = Mechanical Enforcement
-```
-
-When a stronger skill is selected, this router must not weaken it:
-
-- Debug route uses `systematic-debugging`: no fix before root-cause investigation.
-- TDD route uses `test-driven-development` / `superpowers:test-driven-development`: no production behavior change before valid Red evidence when the behavior is automatable.
-- Plan/spec gate uses `writing-plans`, `superpowers:writing-plans`, or `openspec-workflow` when available.
-- Completion gate uses `verification-before-completion`: no success claim without fresh evidence.
-- Review gate uses `requesting-code-review` or an isolated review pass for high-risk or broad changes.
-
-The router may decide that a Tiny or mechanical task does not need TDD. It should not decide to run a weaker version of TDD after selecting the TDD gate.
-
-## Methodology
-
-The split is intentional:
-
-```text
-SDD/specs = development contract
-Superpowers = execution discipline
-project-harness-init = durable project harness
-Project skill = project SOP and lessons
-Evidence/eval = reality check
-Knowledge promotion = long-term learning
-```
-
-`adaptive-dev-workflow` decides whether a task is Tiny/Small/Debug/Medium/Large and whether a harness is needed. `project-harness-init` creates the harness: `AGENTS.md`, `.agent/agents.md`, `.agent/goal-loop-mode.md`, project skill, docs/specs/plans/evidence, and acceptance templates with claim ceiling. After that, ordinary development routes back through adaptive and the native execution skills.
-
-For non-Tiny tasks, produce a compact `route_card` and `evidence_card` before implementation. These cards record the selected route, changed surfaces, required gates, delegated skills, claim ceiling, and gaps. Final completion claims must not exceed the cards or the evidence manifest.
-
-## Workflow
-
-```mermaid
-flowchart TD
-    A["User request"] --> B["Classify scope, risk, and ambiguity"]
-    B --> C{"Decision-changing info missing?"}
-    C -- "Yes" --> D["Ask one concise question"]
-    D --> B
-    C -- "No" --> E["Define Outcome / Scope / Current truth / Evidence / Stop condition"]
-    E --> F{"Route"}
-    F -- "Tiny" --> T["Edit or answer with focused verification"]
-    F -- "Small" --> S["Inspect pattern, select gates, delegate TDD/debug if triggered, verify"]
-    F -- "Debug" --> G["Route to systematic-debugging"]
-    F -- "Medium" --> M["Discovery, route to planning/TDD/review gates, smoke/E2E"]
-    F -- "Large" --> L["Route to spec/plan workflow, staged implementation, independent review"]
-    F -- "OpenSpec" --> O["Delegate lifecycle to repo OpenSpec workflow"]
-    T --> Z["Final: changed files, evidence, gaps, review points"]
-    S --> Z
-    G --> Z
-    M --> Z
-    L --> Z
-    O --> Z
-```
-
-## Route Table
-
-| Route | Use when | Evidence expectation |
-| --- | --- | --- |
-| Tiny | Text/docs/config typo, single obvious fix, no runtime blast radius | Diff review, command/link check only if semantics matter |
-| Small | Narrow behavior change or single-file bugfix | Focused validator; route to TDD/debug when behavior or root cause risk justifies it |
-| Debug | CI/test failure, regression, production-like failure, unexplained behavior | Use systematic debugging; reproduce and isolate root cause before fixes |
-| Medium | 1-3 modules, new behavior/API, meaningful edge cases | Route to brainstorming/planning/TDD as triggered; add smoke/E2E when a chain matters |
-| Large | Cross-module feature, migration, auth/security/data-model/user workflow | Route to spec/plan workflow, docs handoff, independent review, system verification |
-| OpenSpec | Repository already uses OpenSpec and the workflow is available | Delegate lifecycle to the repo's OpenSpec process |
-
-Escalate the route when the task touches public API, auth, permissions, secrets, payments, PII, data model, runtime/deploy/environment config, availability, performance, cross-service workflow, migration, concurrency, or state-machine behavior.
-
-## Testing And Verification
-
-This skill uses evidence before claims:
-
-- Tiny/mechanical: smallest validator that proves the claim.
-- Small bug/behavior: reproduce or define focused validator before implementation; automate regression when feasible.
-- Medium feature/API/UI: focused tests plus smoke/E2E when a user-visible or system-visible chain matters.
-- Large/high-risk: staged tests, independent review, system verification, and docs handoff.
-
-Red evidence is right-sized:
-
-- Every task must define evidence before implementation, but not every task needs Red.
-- Route to TDD when the project has a suitable harness and changed behavior can be captured at reasonable cost.
-- Prefer TDD for automatable bugs, core logic, API contracts, permissions, data, and state machines.
-- Once TDD is selected, follow the selected TDD skill's Red-Green-Refactor process; do not substitute an ad hoc weaker version.
-- Use alternate validators for Tiny/mechanical changes, visual-only checks, unavailable test environments, or cases where automation cost exceeds risk.
-- Never treat "no TDD" as "no evidence".
-
-## Documentation Model
-
-The skill treats docs as a way to reduce future action space, not as decoration:
-
-| Doc surface | Purpose |
-| --- | --- |
-| `AGENTS.md` / `CLAUDE.md` | Durable repo rules, commands, gotchas, review expectations |
-| `.agent/agents.md` | Project-local reviewer/subagent role contracts |
-| `.agent/knowledge/candidates/` | Unpromoted project lessons with evidence and scope |
-| `.agent/skills/<project-domain>/` | Project-specific SOP, testing context, delivery lessons |
-| `docs/architecture.md` | Current truth for architecture, contracts, state machines, invariants |
-| `docs/adr/` | Durable architecture decisions |
-| `docs/specs/<feature-id>/spec.md` | Goals, non-goals, scope, behavior, acceptance |
-| `docs/specs/<feature-id>/design.md` | Current truth, options, decision, risks |
-| `docs/specs/<feature-id>/acceptance.yaml` | Machine-readable acceptance and claim ceiling |
-| `docs/specs/<feature-id>/changes/` | Dated requirement deltas after approval |
-| `docs/specs/archived/` | Completed or retired specs |
-| `docs/plans/<feature-id>.md` | Staged implementation plan and evidence per task |
-| `docs/evidence/<feature-id>.md` | Validators, results, gaps, claim ceiling |
-| Tests | Executable behavior docs |
-| Final/PR summary | Delivery handoff |
-
-Use those paths only when the target repo follows this convention. Otherwise follow the repo's existing docs structure.
-
-For Large work, new projects, first MVP vertical slices, multi-agent handoff, or repos without reliable current-truth docs, adaptive routes to `project-harness-init`. That skill defines the default docs/spec surface:
-
-```text
-AGENTS.md
-.agent/agents.md
-.agent/knowledge/candidates/
-.agent/skills/<project-domain>/
-docs/architecture.md
-docs/adr/
-docs/specs/<feature-id>/
-docs/specs/archived/
-docs/plans/
-docs/evidence/
-```
-
-It is intentionally not loaded for Tiny/Small tasks unless the requested task is to create or repair the docs/spec harness.
-
-## Skill Validation
-
-Validate changes to this skill with behavior evals, not just static reading:
-
-- Static check: frontmatter, `agents/openai.yaml`, reference paths, duplicate installed versions.
-- Route dry run: route representative prompts and compare expected route/evidence.
-- Blind subagent eval: give only `SKILL.md` and pressure prompts to a fresh reviewer.
-- Developer/Auditor simulation: one session executes, another reviews only output, diff, and evidence.
-- Sandbox eval: run `python3 scripts/run-skill-sandbox-eval.py`.
-- Workflow E2E eval: run `python3 scripts/run-workflow-e2e-eval.py` to initialize a temporary harness, validate route/evidence cards, ensure claim ceilings fail for mock-only integration or non-fresh handoff evidence, and prove the local fresh-consumer artifact install/import pattern.
-- Fresh consumer handoff eval: run `python3 scripts/run-handoff-fresh-consumer-eval.py` when changing handoff rules or package-delivery examples.
-- Fresh agent semantic route eval: run `python3 scripts/run-fresh-agent-route-eval.py --case tiny-readme-command --case package-handoff --case project-harness-init-goal-loop` when changing route semantics. This uses fresh `codex exec` sessions and is not part of the default deterministic sandbox path.
-- Package validation: run `python3 /Users/didi/.codex/skills/.system/skill-creator/scripts/quick_validate.py skills/adaptive-dev-workflow` and the same command for `skills/project-harness-init` when that helper is available locally.
-
-Seed prompts live in `evals/seed-cases.yaml`. Real misroutes or evidence failures should be recorded in `evals/failure-cases.yaml` before changing general routing rules.
-
-Fresh consumer evidence only proves artifact/onboarding mechanics. Real external
-handoff still belongs to the concrete project: provider, auth source, network,
-platform behavior, and consumer path must be proven with project-specific real
-external or sandbox-provider evidence.
-
-### Validation Scripts
-
-| Script | Purpose | Default cadence |
-| --- | --- | --- |
-| `scripts/run-skill-sandbox-eval.py` | Static package checks, seed/failure case schema checks, and deterministic workflow E2E | Run before every skill change commit |
-| `scripts/run-workflow-e2e-eval.py` | Initializes a temporary project harness, validates route/evidence cards, checks claim-ceiling failures, and runs fresh-consumer handoff proof | Run before every workflow or handoff change |
-| `scripts/run-handoff-fresh-consumer-eval.py` | Builds a tiny wheel, installs it in a clean venv, and imports it without producer source paths or network | Run when handoff rules/examples change |
-| `scripts/run-fresh-agent-route-eval.py` | Starts fresh Codex sessions to classify seed prompts using only the local skill, without leaking expected answers | Run for route semantics changes or release checks |
-
-Use the fresh-agent route eval selectively because it needs a working Codex CLI
-session and model access. The deterministic sandbox path remains the fast local
-check.
-
-## Examples
-
-Tiny:
-
-```text
-Use $adaptive-dev-workflow.
-Fix the install command in README.md. Verify the command text is consistent with the repo layout.
-```
-
-Small:
-
-```text
-Use $adaptive-dev-workflow.
-Fix the login button not submitting. Reproduce or add a focused validator before changing implementation.
-```
-
-Debug:
-
-```text
-Use $adaptive-dev-workflow.
-CI is failing on the auth tests. Read the failure, reproduce locally if possible, isolate the cause, then fix.
-```
-
-Medium:
-
-```text
-Use $adaptive-dev-workflow.
-Add status filtering to the order page. Confirm UX/API boundaries, add focused tests, and run a browser or E2E smoke check.
-```
-
-Large:
-
-```text
-Use $adaptive-dev-workflow.
-Refactor the permission model from role-based checks to policy checks. Stop before implementation if the API or data model must change.
-```
-
-Review-only:
-
-```text
-Use $adaptive-dev-workflow.
-Review this PR for correctness, scope creep, evidence gaps, security risk, and completion claims. Do not edit files.
-```
-
-Project harness init:
+Complex project start:
 
 ```text
 Use $project-harness-init.
-Initialize this repo for Goal Loop Mode with docs/specs/plans/evidence, AGENTS.md, agent team roles, and a project-local skill for the first Login MVP vertical slice.
+Initialize this repo for Goal Loop Mode with OpenSpec-first spec routing, Superpowers fallback specs/plans when OpenSpec is absent, docs/evidence, AGENTS.md, agent team roles, and a project-local skill.
 ```
+
+## Eval And Validation
+
+Deterministic checks:
+
+```sh
+PYTHONPYCACHEPREFIX=/private/tmp/adaptive-skill-pycache python3 -m py_compile scripts/*.py skills/*/scripts/*.py
+python3 scripts/run-skill-sandbox-eval.py
+python3 scripts/run-workflow-e2e-eval.py
+python3 scripts/run-handoff-fresh-consumer-eval.py
+python3 /Users/didi/.codex/skills/.system/skill-creator/scripts/quick_validate.py skills/adaptive-dev-workflow
+python3 /Users/didi/.codex/skills/.system/skill-creator/scripts/quick_validate.py skills/context-grounding
+python3 /Users/didi/.codex/skills/.system/skill-creator/scripts/quick_validate.py skills/specflow
+python3 /Users/didi/.codex/skills/.system/skill-creator/scripts/quick_validate.py skills/technical-design
+python3 /Users/didi/.codex/skills/.system/skill-creator/scripts/quick_validate.py skills/delivery-verification
+python3 /Users/didi/.codex/skills/.system/skill-creator/scripts/quick_validate.py skills/knowledge-promotion
+git diff --check
+```
+
+Fresh semantic route eval:
+
+```sh
+python3 scripts/run-fresh-agent-route-eval.py --repeat 3 --case tiny-readme-command
+python3 scripts/run-fresh-agent-route-eval.py --repeat 3 --case debug-ci
+python3 scripts/run-fresh-agent-route-eval.py --repeat 3 --case specflow-intent-to-spec
+python3 scripts/run-fresh-agent-route-eval.py --repeat 3 --case complex-frontend-context-pack
+python3 scripts/run-fresh-agent-route-eval.py --repeat 3 --case package-handoff
+python3 scripts/run-fresh-agent-route-eval.py --repeat 3 --case large-permission-model
+python3 scripts/run-fresh-agent-route-eval.py --repeat 3 --case review-only-no-edit
+python3 scripts/run-fresh-agent-route-eval.py --repeat 3 --case spike-unknown-architecture
+python3 scripts/run-fresh-agent-route-eval.py --repeat 3 --case migration-critical-data
+```
+
+The deterministic E2E checks verify JSON schema parsing, artifact graph rules, evidence claim rules, context validation, learning candidate path safety, project harness init, and fresh consumer package handoff. Real external handoff still belongs to each concrete project.
 
 ## Repository Layout
 
 ```text
-.
-├── skills/
-│   ├── adaptive-dev-workflow/      # router / gate selector
-│   │   ├── SKILL.md
-│   │   ├── agents/openai.yaml
-│   │   ├── scripts/
-│   │   └── references/
-│   └── project-harness-init/       # project harness initializer
-│       ├── SKILL.md
-│       ├── agents/openai.yaml
-│       ├── scripts/
-│       └── references/
-├── scripts/                        # sandbox, workflow E2E, fresh-agent, fresh-consumer evals
-├── evals/                          # seed route cases and captured failure cases
-├── docs/                           # background essays and design notes
-├── examples/                       # AGENTS.md / CLAUDE.md templates and request examples
-├── CONTRIBUTING.md
-├── LICENSE
-└── README.md
+skills/
+  adaptive-dev-workflow/
+    SKILL.md
+    schemas/
+    scripts/
+    references/
+      routing-model.md
+      strategy-registry.md
+      strategies/*.json
+  context-grounding/
+  specflow/
+  technical-design/
+  delivery-verification/
+  knowledge-promotion/
+  project-harness-init/
+scripts/
+evals/
+docs/
+examples/
 ```
 
 ## Design Sources
 
-This project follows these public design constraints:
-
-- [OpenAI Codex skills](https://developers.openai.com/codex/skills): skills should be concise, focused, and progressively disclose references.
-- [OpenAI Codex AGENTS.md](https://developers.openai.com/codex/guides/agents-md): project instructions should encode durable repo rules and scope.
-- [OpenAI Codex subagents](https://developers.openai.com/codex/subagents): subagents are useful for isolated exploration/review, with clear boundaries.
-- [OpenAI Codex best practices](https://developers.openai.com/codex/learn/best-practices): successful agent work depends on clear tasks, repo context, and verification.
-- [Claude Code best practices](https://code.claude.com/docs/en/best-practices) and [memory docs](https://code.claude.com/docs/en/memory): project memory should capture durable context and workflow expectations.
+- OpenAI Codex skills: concise skills with progressive disclosure.
+- OpenAI Codex AGENTS.md: durable project rules should live near the project.
+- Superpowers: execution discipline such as TDD, systematic debugging, writing plans, and review.
+- OpenSpec: preferred product behavior spec lifecycle when the repo already uses it.
 
 ## Contributing
 
-Good contributions keep the core idea intact: adaptive discipline, not fixed ceremony.
-
-Useful changes:
-
-- Clearer route triggers.
-- Better pressure scenarios.
-- More precise install notes for Codex, Claude Code, Gemini CLI, or other agent tools.
-- Practical examples showing when to pause, when to TDD, and when to use alternate evidence.
-
-Avoid:
-
-- Adding project-specific rules to the generic skill.
-- Expanding `SKILL.md` into a large essay.
-- Turning every task into a mandatory spec/TDD/E2E workflow.
-- Making benchmark or productivity claims without evidence.
+Good changes should improve measured behavior, not just add wording. Compare with old versions or no-skill baselines using seed cases, failure cases, deterministic validators, fresh-agent route evals, and human review notes.

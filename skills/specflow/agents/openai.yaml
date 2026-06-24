@@ -1,0 +1,2 @@
+allow_implicit_invocation: true
+description: SpecFlow mode for turning intent or Analysis Pack into reviewed spec artifacts, with OpenSpec adapter support.

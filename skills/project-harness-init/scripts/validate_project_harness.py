@@ -15,8 +15,15 @@ FORBIDDEN_LOCAL_PATH_MARKERS = [
     "/var/folders/",
 ]
 
-CLAIM_LEVELS = {"Dev Done", "Integration Done", "Handoff Done"}
-EVIDENCE_TYPES = {"unit", "mock", "fake", "integration", "e2e", "real external", "fresh consumer", "manual"}
+OPEN_SPEC_MARKERS = [
+    "openspec",
+    ".openspec",
+    "open-spec",
+    "openspec.yaml",
+    "openspec.yml",
+    "open-spec.yaml",
+    "open-spec.yml",
+]
 
 
 def slug(value: str) -> str:
@@ -32,6 +39,16 @@ def slug(value: str) -> str:
     return result or "project"
 
 
+def has_openspec(root: Path) -> bool:
+    return any((root / marker).exists() for marker in OPEN_SPEC_MARKERS)
+
+
+def resolve_spec_system(root: Path, requested: str) -> str:
+    if requested != "auto":
+        return requested
+    return "openspec" if has_openspec(root) else "superpowers"
+
+
 def read(path: Path) -> str:
     if not path.exists():
         raise FileNotFoundError(str(path))
@@ -41,6 +58,17 @@ def read(path: Path) -> str:
 def require_file(errors: list[str], path: Path) -> None:
     if not path.exists():
         errors.append(f"missing {path}")
+
+
+def require_dated_file(errors: list[str], directory: Path, pattern: str, label: str) -> Path | None:
+    if not directory.exists():
+        errors.append(f"missing {directory}")
+        return None
+    candidates = sorted(directory.glob(pattern))
+    if not candidates:
+        errors.append(f"missing {label}: expected {directory / pattern}")
+        return None
+    return candidates[-1]
 
 
 def require_contains(errors: list[str], path: Path, needles: list[str]) -> None:
@@ -74,46 +102,46 @@ def require_no_local_paths(errors: list[str], root: Path) -> None:
                 errors.append(f"{path} contains local-only path marker(s): {', '.join(found)}")
 
 
-def require_acceptance_shape(errors: list[str], path: Path) -> None:
-    try:
-        lines = read(path).splitlines()
-    except FileNotFoundError:
-        errors.append(f"missing {path}")
-        return
-
-    claim = None
-    ids = 0
-    evidence_types: list[str] = []
-    for line in lines:
-        stripped = line.strip()
-        if stripped.startswith("claim_ceiling:"):
-            claim = stripped.split(":", 1)[1].strip().strip('"')
-        elif stripped.startswith("- id:"):
-            ids += 1
-        elif stripped.startswith("type:"):
-            evidence_types.append(stripped.split(":", 1)[1].strip().strip('"'))
-
-    if claim not in CLAIM_LEVELS:
-        errors.append(f"{path} has invalid claim_ceiling: {claim}")
-    if ids < 1:
-        errors.append(f"{path} must contain at least one acceptance item with '- id:'")
-    invalid_types = [item for item in evidence_types if item not in EVIDENCE_TYPES]
-    if invalid_types:
-        errors.append(f"{path} has invalid evidence type(s): {', '.join(invalid_types)}")
-
-
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--root", default=".", help="Project root")
     parser.add_argument("--feature-id", default="first-mvp", help="Feature id to validate")
     parser.add_argument("--project-skill", default="project-domain", help="Project skill folder name")
+    parser.add_argument(
+        "--spec-system",
+        choices=["auto", "superpowers", "openspec"],
+        default="auto",
+        help="Product spec system to validate. auto detects explicit OpenSpec markers.",
+    )
     args = parser.parse_args()
 
     root = Path(args.root).resolve()
     feature = slug(args.feature_id)
     project_skill = slug(args.project_skill)
-    spec_dir = root / "docs" / "specs" / feature
+    spec_system = resolve_spec_system(root, args.spec_system)
     errors: list[str] = []
+    spec_path = None
+    design_path = None
+    plan_path = None
+    if spec_system == "superpowers":
+        spec_path = require_dated_file(
+            errors,
+            root / "docs" / "superpowers" / "specs",
+            f"*-{feature}-spec.md",
+            "Superpowers product spec file",
+        )
+        design_path = require_dated_file(
+            errors,
+            root / "docs" / "superpowers" / "designs",
+            f"*-{feature}-technical-design.md",
+            "Superpowers technical design file",
+        )
+        plan_path = require_dated_file(
+            errors,
+            root / "docs" / "superpowers" / "plans",
+            f"*-{feature}.md",
+            "Superpowers implementation plan file",
+        )
 
     for path in [
         root / "AGENTS.md",
@@ -123,49 +151,71 @@ def main() -> int:
         root / ".agent" / "knowledge" / "candidates" / ".gitkeep",
         root / ".agent" / "skills" / project_skill / "SKILL.md",
         root / "docs" / "architecture.md",
-        spec_dir / "spec.md",
-        spec_dir / "design.md",
-        spec_dir / "acceptance.yaml",
-        root / "docs" / "plans" / f"{feature}.md",
         root / "docs" / "evidence" / f"{feature}.md",
     ]:
         require_file(errors, path)
 
-    require_contains(errors, spec_dir / "spec.md", [
-        "## Intent",
-        "## Scope",
-        "## Non-goals",
-        "## Current Truth",
-        "## Delivery Verification",
-        "## Acceptance Criteria",
-        "## Stop / Continue Conditions",
-    ])
+    if spec_path:
+        require_contains(errors, spec_path, [
+            "## 意图",
+            "## 范围",
+            "## 非目标",
+            "## 当前事实",
+            "## 交付验证",
+            "## 验收标准",
+            "## 技术设计入口",
+            "Technical design owner",
+            "## 停止 / 继续条件",
+        ])
+    if design_path:
+        require_contains(errors, design_path, [
+            "## 输入与事实来源",
+            "## 设计目标",
+            "## 当前到目标架构 Delta",
+            "## 边界与职责",
+            "## 契约",
+            "## 控制流 / 数据流",
+            "## 错误 / 重试 / 恢复 / 并发 / 幂等",
+            "## 安全 / 隐私 / 权限",
+            "## 验收到设计到证据",
+            "## 设计 Review",
+        ])
+    if plan_path:
+        require_contains(errors, plan_path, [
+            "实施计划",
+            "REQUIRED SUB-SKILL",
+            "## 已批准 Spec",
+            "## 已批准 Technical Design",
+            "## 任务表",
+            "## Review 重点",
+            "## 风险 / 缺口",
+        ])
+    if spec_system == "openspec":
+        require_contains(errors, root / "docs" / "architecture.md", [
+            "Product spec system: `openspec`",
+            "OpenSpec changes/<change-id>",
+            "design.md",
+        ])
     require_contains(errors, root / ".gitignore", [
         ".env",
         ".env.*",
         ".agent/runs/*",
         "!.agent/runs/.gitkeep",
     ])
-    require_contains(errors, spec_dir / "acceptance.yaml", [
-        "feature_id:",
-        "claim_ceiling:",
-        "acceptance:",
-        "evidence:",
-        "type:",
-        "stop_conditions:",
-        "continue_conditions:",
-    ])
-    require_acceptance_shape(errors, spec_dir / "acceptance.yaml")
     require_contains(errors, root / "docs" / "evidence" / f"{feature}.md", [
-        "## Claim Ceiling",
+        "## 产品规格系统",
+        f"`{spec_system}`",
+        "## Claim 上限",
         "## Validators",
-        "## Red / Reproduction Evidence",
-        "## Green / Final Evidence",
-        "## Deferred / Accepted Gaps",
+        "## Red / 复现证据",
+        "## Green / 最终证据",
+        "## Deferred / 已接受缺口",
     ])
     require_contains(errors, root / ".agent" / "agents.md", [
         "repo-grounder",
         "spec-reviewer",
+        "technical-design-writer",
+        "technical-design-reviewer",
         "plan-reviewer",
         "evidence-reviewer",
         "security-data-reviewer",
@@ -187,6 +237,7 @@ def main() -> int:
     print(f"- root: {root}")
     print(f"- feature: {feature}")
     print(f"- project skill: {project_skill}")
+    print(f"- spec system: {spec_system}")
     return 0
 
 

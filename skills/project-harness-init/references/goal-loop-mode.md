@@ -19,7 +19,7 @@ Goal Loop Mode lets the human decide direction and drift, while the agent owns i
 - Out of scope:
 
 Current Truth：
-先读取代码、AGENTS.md、docs/architecture.md、当前 spec/plan/evidence。
+先读取代码、AGENTS.md、docs/architecture.md、当前 spec/technical design/plan/evidence。
 如果文档和代码冲突，以代码和 fresh verification 为准，并记录 docs drift。
 
 交付标准：
@@ -53,6 +53,7 @@ Loop 规则：
 - 不允许用 mock-only evidence 声称真实链路打通
 - 不允许没有 fresh verification 就说完成
 - 不允许 spec 里没有交付验证
+- 不允许高风险任务跳过 approved technical design
 - 不允许 reviewer 审自己刚写的实现
 - 不允许把项目经验直接写进全局规则；先进入 project learning candidate
 ```

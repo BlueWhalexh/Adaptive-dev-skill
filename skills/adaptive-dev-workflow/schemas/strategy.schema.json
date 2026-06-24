@@ -1,0 +1,17 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "version", "risk", "modes", "stages", "required_artifacts", "required_skills", "design_policy", "design_review", "max_claim_request"],
+  "properties": {
+    "id": { "type": "string" },
+    "version": { "type": "string" },
+    "risk": { "type": "array", "items": { "type": "string", "enum": ["L0", "L1", "L2", "L3"] } },
+    "modes": { "type": "array", "items": { "type": "string", "enum": ["implement", "debug", "review", "spike", "mvp", "migration"] } },
+    "stages": { "type": "array", "items": { "type": "string" } },
+    "required_artifacts": { "type": "array", "items": { "type": "string" } },
+    "required_skills": { "type": "array", "items": { "type": "string" } },
+    "design_policy": { "type": "string", "enum": ["none", "embedded", "standalone"] },
+    "design_review": { "type": "string", "enum": ["none", "self", "independent", "human"] },
+    "max_claim_request": { "type": "string", "enum": ["none", "dev_done", "integration_done", "handoff_done"] }
+  }
+}

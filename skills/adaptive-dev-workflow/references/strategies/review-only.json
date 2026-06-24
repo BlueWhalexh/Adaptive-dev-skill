@@ -1,0 +1,12 @@
+{
+  "id": "review-only",
+  "version": "1.0",
+  "risk": ["L0", "L1", "L2", "L3"],
+  "modes": ["review"],
+  "stages": ["identify_review_scope", "inspect_artifacts", "findings_first", "evidence_gap_check", "close"],
+  "required_artifacts": [],
+  "required_skills": ["delivery-verification"],
+  "design_policy": "none",
+  "design_review": "independent",
+  "max_claim_request": "none"
+}

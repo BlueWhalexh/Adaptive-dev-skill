@@ -1,198 +1,287 @@
-schema_version: 1
-description: Stable adaptive-dev-workflow regression scenarios. These cases test routing, evidence, and completion-claim boundaries.
+schema_version: 2
+description: Adaptive Dev control-plane routing regression cases.
 
 cases:
   - id: tiny-readme-command
     prompt: "README 里把 npm 改成 pnpm"
-    expected_route: Tiny
-    expected_cards:
-      route_card: inline_ok
-      evidence_card: inline_ok
-    risk_type: docs
-    expected_gates:
-      - focused verification
-    expected_delegate_skill: []
-    expected_evidence:
-      pre:
-        - none
-      post:
-        - diff review
-        - command/link check only if command semantics changed
-    claim_ceiling: Dev Done
+    expected_classification:
+      risk: L0
+      mode: implement
+      scope: local
+      uncertainty: low
+      profiles: [docs]
+    expected_routing:
+      spec_system: none
+      execution_engine: local
+      strategy_id: quick-change
+      required_skills: []
+    expected_design_control:
+      policy: none
+      review: none
+    expected_claim_requested: none
     expected_no:
-      - no TDD
-      - no design doc
-      - no subagent review
+      - no context-grounding
+      - no specflow
+      - no project-harness-init
 
   - id: tiny-css-spacing
     prompt: "把按钮间距调大 4px"
-    expected_route: Tiny/Small
-    expected_cards:
-      route_card: inline_ok
-      evidence_card: inline_ok
-    risk_type: UI
-    expected_gates:
-      - focused verification
-    expected_delegate_skill: []
-    expected_evidence:
-      pre:
-        - none unless current visual state is ambiguous
-      post:
-        - screenshot or visual inspection
-    claim_ceiling: Dev Done
+    expected_classification:
+      risk: L0
+      mode: implement
+      scope: local
+      uncertainty: low
+      profiles: [frontend]
+    expected_routing:
+      spec_system: none
+      execution_engine: local
+      strategy_id: quick-change
+      required_skills: []
+    expected_design_control:
+      policy: none
+      review: none
+    expected_claim_requested: none
     expected_no:
       - no unit test by default
-      - no full E2E by default
+      - no complex strategy
 
   - id: small-login-bug
     prompt: "修登录按钮点击没反应"
-    expected_route: Small
-    expected_cards:
-      route_card: required
-      evidence_card: required
-    risk_type: UI behavior
-    expected_gates:
-      - reproduction or focused validator
-      - regression evidence when automatable
-    expected_delegate_skill:
-      - test-driven-development when automatable
-      - systematic-debugging when root cause is unclear
-    expected_evidence:
-      pre:
-        - reproduce failed click path or Red test
-      post:
-        - focused validator covering click to expected state/request/navigation
-        - relevant build/lint/type checks
-    claim_ceiling: Dev Done
+    expected_classification:
+      risk: L2
+      mode: debug
+      scope: module
+      uncertainty: medium|high
+      profiles: [frontend]
+    expected_routing:
+      spec_system: none
+      execution_engine: superpowers
+      strategy_id: root-cause-debug
+      required_skills: [superpowers:systematic-debugging]
+    expected_design_control:
+      policy: embedded
+      review: self
+    expected_claim_requested: none
     expected_no:
-      - no broad redesign
       - no handoff claim
+      - no broad redesign
 
   - id: medium-api-contract
     prompt: "给导出接口加 format 参数"
-    expected_route: Medium
-    expected_cards:
-      route_card: required
-      evidence_card: required
-    risk_type: API
-    expected_gates:
-      - evidence plan
-      - focused contract tests
-      - compatibility check
-    expected_delegate_skill:
-      - test-driven-development
-    expected_evidence:
-      pre:
-        - Red request/response or contract case
-      post:
-        - request/response test
-        - error case test
-        - compatibility check for existing clients
-    claim_ceiling: Integration Done
+    expected_classification:
+      risk: L2
+      mode: implement
+      scope: module|cross_module
+      uncertainty: low|medium
+      profiles: [api]
+    expected_routing:
+      spec_system: fallback
+      execution_engine: none|superpowers
+      strategy_id: complex-real-slice
+      required_skills: [context-grounding, specflow, technical-design, delivery-verification]
+    expected_design_control:
+      policy: standalone
+      review: independent
+    expected_claim_requested: none
     expected_no:
       - no unit-only completion claim
-      - no public API docs drift
 
   - id: large-permission-model
     prompt: "把用户权限模型从 role 改成 policy"
-    expected_route: Large
-    expected_cards:
-      route_card: required
-      evidence_card: required
-    risk_type: permission
-    expected_gates:
-      - spec/design
-      - written plan
-      - negative permission tests
-      - independent review
-      - system verification
-    expected_delegate_skill:
-      - writing-plans
-      - subagent-driven-development when tasks are independent
-      - requesting-code-review
-    expected_evidence:
-      pre:
-        - approved objective/spec
-        - Red or reproducing cases for changed authorization behavior where feasible
-      post:
-        - positive and negative permission tests
-        - migration/backward compatibility checks if data changes
-        - E2E or system verification for critical workflows
-    claim_ceiling: Integration Done
+    expected_classification:
+      risk: L3
+      mode: migration
+      scope: cross_module
+      uncertainty: high
+      profiles: [auth, security, data]
+    expected_routing:
+      spec_system: fallback
+      execution_engine: superpowers
+      strategy_id: migration-critical
+      required_skills: [context-grounding, specflow, technical-design, delivery-verification]
+    expected_design_control:
+      policy: standalone
+      review: human
+    expected_claim_requested: none
     expected_no:
-      - no happy-path-only evidence
       - no self-review-only completion
+
+  - id: complex-frontend-context-pack
+    prompt: "在老项目的订单详情页加一个新审核流，涉及视觉稿、权限状态、已有相似页面、埋点和后端状态流。先别急着改代码，先把需要看的上下文和验收方式梳理清楚。"
+    expected_classification:
+      risk: L3
+      mode: implement
+      scope: cross_service
+      uncertainty: high
+      profiles: [frontend, auth, api]
+    expected_routing:
+      spec_system: fallback
+      execution_engine: none
+      strategy_id: complex-real-slice
+      required_skills: [context-grounding]
+    expected_design_control:
+      policy: standalone
+      review: independent
+    expected_claim_requested: none
+    expected_no:
+      - no direct broad implementation
+
+  - id: specflow-intent-to-spec
+    prompt: "我有一个新审核流的想法，但还没写清楚目标、边界、验收和测试。先用 SpecFlow 产出 spec，不要开始写代码。"
+    expected_classification:
+      risk: L2
+      mode: implement
+      scope: module|cross_module
+      uncertainty: high
+      profiles: []
+    expected_routing:
+      spec_system: fallback
+      execution_engine: none
+      strategy_id: spec-driven-feature
+      required_skills: [specflow]
+    expected_design_control:
+      policy: none|embedded
+      review: none|self
+    expected_claim_requested: none
+    expected_no:
+      - no production code
 
   - id: package-handoff
     prompt: "把这个 Python SDK 打成 wheel，保证新项目可以 pip install 后直接 import 使用"
-    expected_route: Medium/Large
-    expected_cards:
-      route_card: required
-      evidence_card: required
-    risk_type: delivery
-    expected_gates:
-      - delivery contract
-      - evidence matrix
-      - fresh consumer verification
-    expected_delegate_skill: []
-    expected_evidence:
-      pre:
-        - delivery contract with consumer, artifact, install path, allowed and forbidden dependencies
-      post:
-        - build artifact command and artifact identity
-        - fresh venv or clean consumer installs and imports the wheel
-        - docs/onboarding matches tested path
-    claim_ceiling: Handoff Done
+    expected_classification:
+      risk: L3
+      mode: implement
+      scope: module|cross_module
+      uncertainty: medium
+      profiles: [delivery, release]
+    expected_routing:
+      spec_system: none|fallback
+      execution_engine: superpowers
+      strategy_id: complex-real-slice
+      required_skills: [technical-design, delivery-verification]
+    expected_design_control:
+      policy: standalone
+      review: independent
+    expected_claim_requested: none
     expected_no:
-      - no production-ready claim from producer tests only
-      - no hidden local source path dependency
+      - no producer-tests-only handoff claim
 
   - id: debug-ci
     prompt: "CI 挂了修一下"
-    expected_route: Debug
-    expected_cards:
-      route_card: required
-      evidence_card: required
-    risk_type: unknown failure
-    expected_gates:
-      - reproduce or inspect failing logs first
-      - root-cause hypothesis before fix
-      - focused validator after fix
-    expected_delegate_skill:
-      - systematic-debugging
-    expected_evidence:
-      pre:
-        - failing CI log or local reproduction
-      post:
-        - same check passes or exact blocker stated
-    claim_ceiling: Dev Done
+    expected_classification:
+      risk: L2
+      mode: debug
+      scope: cross_module
+      uncertainty: high
+      profiles: [infra]
+    expected_routing:
+      spec_system: none
+      execution_engine: superpowers
+      strategy_id: root-cause-debug
+      required_skills: [superpowers:systematic-debugging]
+    expected_design_control:
+      policy: embedded
+      review: self
+    expected_claim_requested: none
     expected_no:
-      - no guessing fix before root cause
-      - no suppressing errors without justification
+      - no guessing fix
+
+  - id: review-only-no-edit
+    prompt: "帮我 review 这个 diff 是否会引入回归，不要修改代码"
+    expected_classification:
+      risk: L1|L2
+      mode: review
+      scope: local|module|cross_module
+      uncertainty: medium|high
+      profiles: []
+    expected_routing:
+      spec_system: none
+      execution_engine: none
+      strategy_id: review-only
+      required_skills: []
+    expected_design_control:
+      policy: none
+      review: independent
+    expected_claim_requested: none
+    expected_no:
+      - no implementation
+
+  - id: spike-unknown-architecture
+    prompt: "这个旧系统我不熟，先调查一下支付链路怎么走，给我几个可选方案，不要改代码"
+    expected_classification:
+      risk: L2|L3
+      mode: spike
+      scope: cross_module|cross_service
+      uncertainty: high
+      profiles: [api, data]
+    expected_routing:
+      spec_system: none
+      execution_engine: none
+      strategy_id: spike
+      required_skills: [context-grounding]
+    expected_design_control:
+      policy: none
+      review: independent
+    expected_claim_requested: none
+    expected_no:
+      - no delivery claim
+
+  - id: migration-critical-data
+    prompt: "把订单表状态字段迁移为新的状态机，同时保持旧数据可回滚"
+    expected_classification:
+      risk: L3
+      mode: migration
+      scope: cross_module
+      uncertainty: high
+      profiles: [data]
+    expected_routing:
+      spec_system: fallback
+      execution_engine: superpowers
+      strategy_id: migration-critical
+      required_skills: [context-grounding, specflow, technical-design, delivery-verification]
+    expected_design_control:
+      policy: standalone
+      review: human
+    expected_claim_requested: none
+    expected_no:
+      - no happy-path-only evidence
 
   - id: project-harness-init-goal-loop
     prompt: "新项目要做 first MVP vertical slice，以后希望进入目标模式持续迭代，并初始化 docs/spec/plan/evidence、AGENTS.md、agent team 和项目 skill"
-    expected_route: Medium/Large + harness
-    expected_cards:
-      route_card: required
-      evidence_card: required
-    risk_type: project harness
-    expected_gates:
-      - inspect existing conventions
-      - create only missing harness files
-      - validate harness scaffold
-    expected_delegate_skill:
-      - project-harness-init
-    expected_evidence:
-      pre:
-        - repo docs/agent convention inspection
-      post:
-        - generated AGENTS.md, .agent/agents.md, .agent/goal-loop-mode.md
-        - generated docs/specs/<feature-id>/spec.md, design.md, acceptance.yaml
-        - generated docs/plans/<feature-id>.md and docs/evidence/<feature-id>.md
-        - project harness validator passes
-    claim_ceiling: Dev Done
+    expected_classification:
+      risk: L3
+      mode: mvp
+      scope: cross_module
+      uncertainty: medium|high
+      profiles: [delivery]
+    expected_routing:
+      spec_system: fallback
+      execution_engine: local
+      strategy_id: complex-real-slice
+      required_skills: [project-harness-init, context-grounding, specflow, technical-design, delivery-verification, knowledge-promotion]
+    expected_design_control:
+      policy: standalone
+      review: independent
+    expected_claim_requested: none
     expected_no:
-      - no implementation before approved target/spec
-      - no overwrite without explicit approval
       - no production-ready claim from scaffold creation
+
+  - id: openspec-project-harness-init
+    prompt: "这个仓库已经用 OpenSpec 了，初始化 Goal Loop Mode、AGENTS.md、agent team、项目 skill 和交付 evidence，但不要再生成第二套 product spec/plan"
+    expected_classification:
+      risk: L3
+      mode: mvp
+      scope: cross_module
+      uncertainty: low|medium|high
+      profiles: [delivery]
+    expected_routing:
+      spec_system: openspec
+      execution_engine: local
+      strategy_id: complex-real-slice
+      required_skills: [project-harness-init, technical-design, delivery-verification, knowledge-promotion]
+    expected_design_control:
+      policy: standalone
+      review: independent
+    expected_claim_requested: none
+    expected_no:
+      - no duplicate product spec system

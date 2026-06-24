@@ -1,0 +1,42 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["evidence_manifest_id", "claim_requested", "acceptance_coverage", "validators", "deferred", "review_focus"],
+  "properties": {
+    "evidence_manifest_id": { "type": "string" },
+    "claim_requested": { "type": "string", "enum": ["none", "dev_done", "integration_done", "handoff_done"] },
+    "acceptance_coverage": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["acceptance_id", "validator_ids"],
+        "properties": {
+          "acceptance_id": { "type": "string" },
+          "validator_ids": { "type": "array", "items": { "type": "string" } }
+        }
+      }
+    },
+    "validators": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "type", "result", "command_or_method", "proves", "gaps"],
+        "properties": {
+          "id": { "type": "string" },
+          "type": {
+            "type": "string",
+            "enum": ["unit", "mock", "fake", "integration", "e2e", "system", "real_external", "fresh_consumer", "manual", "static", "diff_review", "build", "lint", "typecheck"]
+          },
+          "result": { "type": "string", "enum": ["pass", "fail", "blocked", "skipped"] },
+          "command_or_method": { "type": "string" },
+          "proves": { "type": "string" },
+          "gaps": { "type": "string" }
+        }
+      }
+    },
+    "deferred": { "type": "array", "items": { "type": "string" } },
+    "review_focus": { "type": "array", "items": { "type": "string" } }
+  }
+}

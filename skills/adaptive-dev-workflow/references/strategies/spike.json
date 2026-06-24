@@ -1,0 +1,12 @@
+{
+  "id": "spike",
+  "version": "1.0",
+  "risk": ["L1", "L2", "L3"],
+  "modes": ["spike"],
+  "stages": ["question", "bounded_research", "prototype_or_probe", "decision_record", "next_strategy_recommendation"],
+  "required_artifacts": ["analysis_pack", "decision_record", "evidence_manifest"],
+  "required_skills": ["context-grounding"],
+  "design_policy": "none",
+  "design_review": "independent",
+  "max_claim_request": "none"
+}

@@ -1,14 +1,5 @@
 #!/usr/bin/env python3
-"""Run fresh Codex semantic route evals against adaptive-dev-workflow.
-
-This is intentionally separate from the deterministic sandbox eval because it
-starts fresh agent sessions and may take time, model quota, or local approval.
-
-Examples:
-  python3 scripts/run-fresh-agent-route-eval.py
-  python3 scripts/run-fresh-agent-route-eval.py --case package-handoff --case project-harness-init-goal-loop
-  python3 scripts/run-fresh-agent-route-eval.py --all
-"""
+"""Run fresh Codex semantic route evals against adaptive-dev-workflow."""
 
 from __future__ import annotations
 
@@ -26,33 +17,60 @@ ROOT = Path(__file__).resolve().parents[1]
 SEED = ROOT / "evals" / "seed-cases.yaml"
 DEFAULT_CASES = [
     "tiny-readme-command",
-    "medium-api-contract",
+    "debug-ci",
+    "specflow-intent-to-spec",
+    "complex-frontend-context-pack",
     "package-handoff",
-    "project-harness-init-goal-loop",
+    "large-permission-model",
+    "review-only-no-edit",
+    "spike-unknown-architecture",
+    "migration-critical-data",
 ]
 
 
-SCHEMA: dict[str, Any] = {
+OUTPUT_SCHEMA: dict[str, Any] = {
     "type": "object",
     "additionalProperties": False,
-    "required": [
-        "route",
-        "risk_type",
-        "claim_ceiling",
-        "required_gates",
-        "delegated_skills",
-        "needs_project_harness",
-        "handoff_required",
-        "reason",
-    ],
+    "required": ["classification", "routing", "design_control", "claims", "reason"],
     "properties": {
-        "route": {"type": "string"},
-        "risk_type": {"type": "string"},
-        "claim_ceiling": {"type": "string"},
-        "required_gates": {"type": "array", "items": {"type": "string"}},
-        "delegated_skills": {"type": "array", "items": {"type": "string"}},
-        "needs_project_harness": {"type": "boolean"},
-        "handoff_required": {"type": "boolean"},
+        "classification": {
+            "type": "object",
+            "additionalProperties": False,
+            "required": ["risk", "mode", "scope", "uncertainty", "profiles"],
+            "properties": {
+                "risk": {"type": "string"},
+                "mode": {"type": "string"},
+                "scope": {"type": "string"},
+                "uncertainty": {"type": "string"},
+                "profiles": {"type": "array", "items": {"type": "string"}},
+            },
+        },
+        "routing": {
+            "type": "object",
+            "additionalProperties": False,
+            "required": ["spec_system", "execution_engine", "strategy_id", "required_skills"],
+            "properties": {
+                "spec_system": {"type": "string"},
+                "execution_engine": {"type": "string"},
+                "strategy_id": {"type": "string"},
+                "required_skills": {"type": "array", "items": {"type": "string"}},
+            },
+        },
+        "design_control": {
+            "type": "object",
+            "additionalProperties": False,
+            "required": ["policy", "review"],
+            "properties": {
+                "policy": {"type": "string"},
+                "review": {"type": "string"},
+            },
+        },
+        "claims": {
+            "type": "object",
+            "additionalProperties": False,
+            "required": ["requested"],
+            "properties": {"requested": {"type": "string"}},
+        },
         "reason": {"type": "string"},
     },
 }
@@ -94,13 +112,22 @@ def parse_case_blocks(path: Path) -> list[str]:
 
 def scalar_value(block: str, key: str) -> str:
     match = re.search(rf"^\s+(?:-\s+)?{re.escape(key)}:\s*(.+)$", block, re.M)
-    if not match:
-        return ""
-    return match.group(1).strip().strip('"')
+    return match.group(1).strip().strip('"') if match else ""
 
 
-def load_cases() -> dict[str, dict[str, str]]:
-    cases: dict[str, dict[str, str]] = {}
+def list_value(block: str, key: str) -> list[str]:
+    raw = scalar_value(block, key)
+    if raw.startswith("[") and raw.endswith("]"):
+        return [item.strip().strip('"').strip("'") for item in raw[1:-1].split(",") if item.strip()]
+    values: list[str] = []
+    match = re.search(rf"^\s+{re.escape(key)}:\s*\n((?:\s+- .+\n?)+)", block, re.M)
+    if match:
+        values = [line.split("-", 1)[1].strip().strip('"') for line in match.group(1).splitlines()]
+    return values
+
+
+def load_cases() -> dict[str, dict[str, Any]]:
+    cases: dict[str, dict[str, Any]] = {}
     for block in parse_case_blocks(SEED):
         case_id = scalar_value(block, "id")
         if not case_id:
@@ -108,33 +135,45 @@ def load_cases() -> dict[str, dict[str, str]]:
         cases[case_id] = {
             "id": case_id,
             "prompt": scalar_value(block, "prompt"),
-            "expected_route": scalar_value(block, "expected_route"),
-            "risk_type": scalar_value(block, "risk_type"),
-            "claim_ceiling": scalar_value(block, "claim_ceiling"),
+            "classification": {
+                "risk": scalar_value(block, "risk"),
+                "mode": scalar_value(block, "mode"),
+                "scope": scalar_value(block, "scope"),
+                "uncertainty": scalar_value(block, "uncertainty"),
+                "profiles": list_value(block, "profiles"),
+            },
+            "routing": {
+                "spec_system": scalar_value(block, "spec_system"),
+                "execution_engine": scalar_value(block, "execution_engine"),
+                "strategy_id": scalar_value(block, "strategy_id"),
+                "required_skills": list_value(block, "required_skills"),
+            },
+            "design_control": {
+                "policy": scalar_value(block, "policy"),
+                "review": scalar_value(block, "review"),
+            },
+            "claim_requested": scalar_value(block, "expected_claim_requested"),
         }
     return cases
 
 
-def prompt_for(case: dict[str, str]) -> str:
+def prompt_for(case: dict[str, Any]) -> str:
     return f"""You are a fresh semantic evaluator for the local adaptive-dev-workflow skill.
 
 Do not edit files. Do not implement the task. Do not run project tests.
 
 Read `skills/adaptive-dev-workflow/SKILL.md` in this repository. If that skill
 directly tells you to read a reference for this kind of task, read only the
-needed reference. Classify the user task according to the skill.
+minimum needed reference. Classify the user task according to the skill.
 
 User task:
 {case["prompt"]}
 
-Return only JSON with these fields:
-- route: Tiny, Small, Debug, Medium, Large, OpenSpec, or a compact combined route when the skill requires it
-- risk_type
-- claim_ceiling: Dev Done, Integration Done, or Handoff Done
-- required_gates: array of short gate names
-- delegated_skills: array of skill names, empty when none
-- needs_project_harness: boolean
-- handoff_required: boolean
+Return only JSON with:
+- classification: risk, mode, scope, uncertainty, profiles
+- routing: spec_system, execution_engine, strategy_id, required_skills
+- design_control: policy, review
+- claims: requested. Because this is route-only and you are not implementing or verifying, set requested to "none".
 - reason: one short sentence
 """
 
@@ -155,12 +194,12 @@ def extract_json(text: str) -> dict[str, Any]:
     return value
 
 
-def run_fresh_agent(case: dict[str, str], *, codex_bin: str, model: str | None) -> dict[str, Any]:
+def run_fresh_agent(case: dict[str, Any], *, codex_bin: str, model: str | None, timeout_seconds: int) -> dict[str, Any]:
     with tempfile.TemporaryDirectory(prefix="adaptive-fresh-route-") as tmp:
         tmp_path = Path(tmp)
         schema_path = tmp_path / "route-schema.json"
         output_path = tmp_path / "last-message.json"
-        schema_path.write_text(json.dumps(SCHEMA), encoding="utf-8")
+        schema_path.write_text(json.dumps(OUTPUT_SCHEMA), encoding="utf-8")
 
         cmd = [
             codex_bin,
@@ -179,74 +218,85 @@ def run_fresh_agent(case: dict[str, str], *, codex_bin: str, model: str | None) 
             cmd.extend(["--model", model])
         cmd.append(prompt_for(case))
 
-        result = subprocess.run(
-            cmd,
-            text=True,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-            check=False,
-        )
+        result = subprocess.run(cmd, text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, check=False, timeout=timeout_seconds)
         if result.returncode != 0:
             raise RuntimeError("fresh agent command failed:\n" + " ".join(cmd[:-1]) + "\n" + result.stdout)
         output = output_path.read_text(encoding="utf-8") if output_path.exists() else result.stdout
         return extract_json(output)
 
 
-def normalize_route(route: Any) -> str:
-    return str(route or "").strip().lower().replace(" ", "")
+def normalize(value: Any) -> str:
+    return str(value or "").strip().lower().replace(" ", "_")
 
 
-def route_matches(expected: str, actual: Any) -> bool:
-    expected_norm = normalize_route(expected)
-    actual_norm = normalize_route(actual)
-    if not actual_norm:
-        return False
-
-    if "+harness" in expected_norm:
-        return "medium" in actual_norm or "large" in actual_norm
-
-    if expected_norm == "medium/large":
-        return "medium" in actual_norm or "large" in actual_norm
-
-    if expected_norm == "tiny/small":
-        return actual_norm in {"tiny", "small", "tiny/small"}
-
-    return actual_norm == expected_norm
+def expected_options(value: str) -> set[str]:
+    return {normalize(part) for part in str(value).split("|") if part.strip()}
 
 
-def contains_any(values: list[str], needles: list[str]) -> bool:
-    haystack = " | ".join(str(value).lower() for value in values)
-    return any(needle in haystack for needle in needles)
+def value_matches(expected: str, actual: Any) -> bool:
+    options = expected_options(expected)
+    return normalize(actual) in options if options else normalize(actual) == normalize(expected)
 
 
-def validate_result(case: dict[str, str], actual: dict[str, Any]) -> list[str]:
+def contains_all(actual: list[Any], expected: list[str]) -> bool:
+    actual_norm = {normalize(item) for item in actual}
+    return all(normalize(item) in actual_norm for item in expected)
+
+
+def canonical_expected(expected: str, actual: Any) -> str:
+    return normalize(expected) if value_matches(expected, actual) else normalize(actual)
+
+
+def stable_key(case: dict[str, Any], actual: dict[str, Any]) -> dict[str, Any]:
+    classification = actual.get("classification") or {}
+    routing = actual.get("routing") or {}
+    return {
+        "risk": canonical_expected(case["classification"]["risk"], classification.get("risk")),
+        "mode": canonical_expected(case["classification"]["mode"], classification.get("mode")),
+        "scope": canonical_expected(case["classification"]["scope"], classification.get("scope")),
+        "uncertainty": canonical_expected(case["classification"]["uncertainty"], classification.get("uncertainty")),
+        "spec_system": canonical_expected(case["routing"]["spec_system"], routing.get("spec_system")),
+        "execution_engine": canonical_expected(case["routing"]["execution_engine"], routing.get("execution_engine")),
+        "strategy_id": canonical_expected(case["routing"]["strategy_id"], routing.get("strategy_id")),
+        "design_policy": canonical_expected(case["design_control"]["policy"], (actual.get("design_control") or {}).get("policy")),
+        "design_review": canonical_expected(case["design_control"]["review"], (actual.get("design_control") or {}).get("review")),
+        "claim": canonical_expected(case["claim_requested"], (actual.get("claims") or {}).get("requested")),
+    }
+
+
+def validate_result(case: dict[str, Any], actual: dict[str, Any]) -> list[str]:
     errors: list[str] = []
-    case_id = case["id"]
-    route = normalize_route(actual.get("route"))
-    if not route_matches(case["expected_route"], actual.get("route")):
-        errors.append(f"route expected {case['expected_route']!r}, got {actual.get('route')!r}")
+    for field in ["risk", "mode", "scope", "uncertainty"]:
+        got = actual.get("classification", {}).get(field)
+        want = case["classification"][field]
+        if not value_matches(want, got):
+            errors.append(f"classification.{field} expected {want!r}, got {normalize(got)!r}")
+    if not contains_all(actual.get("classification", {}).get("profiles") or [], case["classification"]["profiles"]):
+        errors.append(f"classification.profiles missing expected {case['classification']['profiles']!r}")
 
-    claim = str(actual.get("claim_ceiling") or "").strip()
-    if claim != case["claim_ceiling"]:
-        errors.append(f"claim_ceiling expected {case['claim_ceiling']!r}, got {claim!r}")
+    for field in ["spec_system", "execution_engine", "strategy_id"]:
+        got = actual.get("routing", {}).get(field)
+        want = case["routing"][field]
+        if not value_matches(want, got):
+            errors.append(f"routing.{field} expected {want!r}, got {normalize(got)!r}")
+    if not contains_all(actual.get("routing", {}).get("required_skills") or [], case["routing"]["required_skills"]):
+        errors.append(f"routing.required_skills missing expected {case['routing']['required_skills']!r}")
 
-    gates = [str(item) for item in actual.get("required_gates") or []]
-    delegated = [str(item) for item in actual.get("delegated_skills") or []]
+    for field in ["policy", "review"]:
+        got = actual.get("design_control", {}).get(field)
+        want = case["design_control"][field]
+        if not value_matches(want, got):
+            errors.append(f"design_control.{field} expected {want!r}, got {normalize(got)!r}")
 
-    if case_id == "debug-ci":
-        if route != "debug" and not contains_any(delegated, ["systematic-debugging", "debug"]):
-            errors.append("debug case did not route to Debug or systematic-debugging")
+    got_claim = normalize(actual.get("claims", {}).get("requested"))
+    want_claim = normalize(case["claim_requested"])
+    if not value_matches(case["claim_requested"], actual.get("claims", {}).get("requested")):
+        errors.append(f"claims.requested expected {want_claim!r}, got {got_claim!r}")
 
-    if "handoff" in case_id or case["claim_ceiling"] == "Handoff Done":
-        if actual.get("handoff_required") is not True:
-            errors.append("handoff_required should be true for delivery handoff")
-        if not contains_any(gates, ["fresh consumer", "delivery", "handoff"]):
-            errors.append("handoff case missing delivery/fresh-consumer gate")
-
-    if "harness" in case["expected_route"].lower() or "harness" in case_id:
-        if actual.get("needs_project_harness") is not True and not contains_any(delegated, ["project-harness-init"]):
-            errors.append("harness case did not require project harness or delegate project-harness-init")
-
+    if case["classification"]["risk"] in {"L2", "L3"} and actual.get("routing", {}).get("strategy_id") == "quick-change":
+        errors.append("L2/L3 must not route to quick-change")
+    if case["classification"]["risk"] in {"L0", "L1"} and actual.get("routing", {}).get("strategy_id") == "complex-real-slice":
+        errors.append("L0/L1 must not trigger complex-real-slice")
     return errors
 
 
@@ -254,8 +304,10 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--case", action="append", dest="cases", help="seed case id to run; repeatable")
     parser.add_argument("--all", action="store_true", help="run all seed cases")
+    parser.add_argument("--repeat", type=int, default=1, help="fresh-agent repetitions per case")
     parser.add_argument("--codex-bin", default="codex", help="codex executable path")
-    parser.add_argument("--model", default=None, help="optional model override passed to codex exec")
+    parser.add_argument("--model", default=None, help="optional model override")
+    parser.add_argument("--timeout-seconds", type=int, default=300, help="timeout per fresh Codex invocation")
     args = parser.parse_args()
 
     cases = load_cases()
@@ -267,28 +319,36 @@ def main() -> int:
     failures: list[str] = []
     for case_id in selected_ids:
         case = cases[case_id]
-        try:
-            actual = run_fresh_agent(case, codex_bin=args.codex_bin, model=args.model)
-            errors = validate_result(case, actual)
-        except Exception as exc:  # noqa: BLE001 - eval runner should report any model/tool failure.
-            actual = {}
-            errors = [str(exc)]
+        stable_results: list[dict[str, Any]] = []
+        case_errors: list[str] = []
+        actuals: list[dict[str, Any]] = []
+        for run_index in range(args.repeat):
+            try:
+                actual = run_fresh_agent(case, codex_bin=args.codex_bin, model=args.model, timeout_seconds=args.timeout_seconds)
+                actuals.append(actual)
+                case_errors.extend(f"run {run_index + 1}: {error}" for error in validate_result(case, actual))
+                stable_results.append(stable_key(case, actual))
+            except Exception as exc:  # noqa: BLE001 - eval runner reports model/tool failures.
+                case_errors.append(f"run {run_index + 1}: {exc}")
 
-        if errors:
+        if len({json.dumps(item, sort_keys=True, ensure_ascii=False) for item in stable_results}) > 1:
+            case_errors.append("classification/routing/claim variance across repetitions")
+
+        if case_errors:
             failures.append(case_id)
-            print(f"FAIL {case_id}")
-            for error in errors:
-                print(f"  - {error}")
-            if actual:
-                print("  actual:", json.dumps(actual, ensure_ascii=False, sort_keys=True))
+            print(f"FAIL {case_id}", flush=True)
+            for error in case_errors:
+                print(f"  - {error}", flush=True)
+            if actuals:
+                print("  last actual:", json.dumps(actuals[-1], ensure_ascii=False, sort_keys=True), flush=True)
         else:
-            print(f"PASS {case_id}: {actual.get('route')} / {actual.get('claim_ceiling')}")
+            last = actuals[-1]
+            print(f"PASS {case_id}: {last['classification']['risk']} / {last['routing']['strategy_id']} / {last['claims']['requested']}", flush=True)
 
     if failures:
-        print(f"Fresh agent route eval failed: {len(failures)}/{len(selected_ids)} cases")
+        print(f"Fresh agent route eval failed: {len(failures)}/{len(selected_ids)} cases", flush=True)
         return 1
-
-    print(f"Fresh agent route eval passed: {len(selected_ids)} cases")
+    print(f"Fresh agent route eval passed: {len(selected_ids)} cases x {args.repeat} repeat", flush=True)
     return 0
 
 

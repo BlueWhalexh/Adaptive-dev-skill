@@ -1,0 +1,12 @@
+{
+  "id": "quick-change",
+  "version": "1.0",
+  "risk": ["L0"],
+  "modes": ["implement", "review"],
+  "stages": ["ground", "focused_edit", "focused_verification", "diff_review", "close"],
+  "required_artifacts": [],
+  "required_skills": [],
+  "design_policy": "none",
+  "design_review": "none",
+  "max_claim_request": "dev_done"
+}

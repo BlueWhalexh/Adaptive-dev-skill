@@ -1,7 +1,7 @@
 interface:
   display_name: "Adaptive Dev Workflow"
-  short_description: "Adaptive router for workflow/evidence/harness/project learning｜开发流程、测试矩阵、项目沉淀路由"
-  default_prompt: "Use $adaptive-dev-workflow to route this software request into the smallest safe workflow, select the evidence/test matrix, decide whether project harness or project-skill learning is needed, and preserve scope. 用 $adaptive-dev-workflow 为开发、修复、重构、项目初始化、测试矩阵、交付验收和项目 skill 沉淀选择合适流程。"
+  short_description: "Control-plane router for workflow, design, evidence, claims"
+  default_prompt: "Use $adaptive-dev-workflow to classify software work as L0-L3, select strategy/routing/design_control, create or update workflow_manifest.json, call narrow skills for context/spec/technical-design/evidence/learning, validate the artifact graph, and request verifier-signed claims. 用 $adaptive-dev-workflow 为开发、修复、重构、规划、验证、项目初始化、目标模式和交付验收选择最小安全流程。"
 
 policy:
   allow_implicit_invocation: true

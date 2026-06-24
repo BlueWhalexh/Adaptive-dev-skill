@@ -1,0 +1,129 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["workflow_state", "classification", "routing", "selected_strategy", "current_stage", "design_control", "artifacts", "claims"],
+  "properties": {
+    "workflow_state": {
+      "type": "string",
+      "enum": ["intake", "routed", "active", "blocked", "review_ready", "closed"]
+    },
+    "classification": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["risk", "mode", "scope", "uncertainty", "profiles"],
+      "properties": {
+        "risk": { "type": "string", "enum": ["L0", "L1", "L2", "L3"] },
+        "mode": { "type": "string", "enum": ["implement", "debug", "review", "spike", "mvp", "migration"] },
+        "scope": { "type": "string", "enum": ["local", "module", "cross_module", "cross_service"] },
+        "uncertainty": { "type": "string", "enum": ["low", "medium", "high"] },
+        "profiles": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "routing": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["spec_system", "execution_engine", "strategy_id", "required_skills"],
+      "properties": {
+        "spec_system": { "type": "string", "enum": ["none", "openspec", "repo_native", "fallback"] },
+        "execution_engine": { "type": "string", "enum": ["none", "local", "superpowers"] },
+        "strategy_id": { "type": "string" },
+        "required_skills": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "selected_strategy": { "type": "string" },
+    "current_stage": { "type": "string" },
+    "design_control": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["policy", "review", "triggers", "approval"],
+      "properties": {
+        "policy": { "type": "string", "enum": ["none", "embedded", "standalone"] },
+        "review": { "type": "string", "enum": ["none", "self", "independent", "human"] },
+        "triggers": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "new_boundary",
+              "cross_module_flow",
+              "cross_service_flow",
+              "public_api",
+              "event_contract",
+              "data_model",
+              "migration",
+              "auth_permission_security",
+              "secrets_pii_payments",
+              "state_machine",
+              "concurrency_idempotency_recovery",
+              "external_integration",
+              "runtime_operability_performance_observability",
+              "multiple_viable_approaches"
+            ]
+          }
+        },
+        "artifact_id": { "type": "string" },
+        "embedded_in": { "type": "string" },
+        "section_ref": { "type": "string" },
+        "approval": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["status", "reviewer", "reviewer_kind", "evidence_ids"],
+          "properties": {
+            "status": { "type": "string", "enum": ["pending", "approved", "changes_requested"] },
+            "reviewer": { "type": "string" },
+            "reviewer_kind": { "type": "string", "enum": ["agent", "human"] },
+            "evidence_ids": { "type": "array", "items": { "type": "string" } }
+          }
+        }
+      }
+    },
+    "artifacts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "type", "status", "version", "producer", "depends_on", "covers_acceptance", "path"],
+        "properties": {
+          "id": { "type": "string" },
+          "type": {
+            "type": "string",
+            "enum": ["analysis_pack", "context_manifest", "spec", "technical_design", "plan", "task_packet", "evidence_manifest", "learning_candidate", "implementation", "decision_record"]
+          },
+          "status": {
+            "type": "string",
+            "enum": ["missing", "draft", "ready", "approved", "stale", "rejected"]
+          },
+          "version": { "type": "integer" },
+          "producer": { "type": "string" },
+          "depends_on": { "type": "array", "items": { "type": "string" } },
+          "covers_acceptance": { "type": "array", "items": { "type": "string" } },
+          "path": { "type": "string" },
+          "lightweight_exception": { "type": "boolean" }
+        }
+      }
+    },
+    "claims": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["requested", "validated"],
+      "properties": {
+        "requested": { "type": "string", "enum": ["none", "dev_done", "integration_done", "handoff_done"] },
+        "validated": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["claim", "status", "verifier", "evidence_ids", "signed_at"],
+            "properties": {
+              "claim": { "type": "string", "enum": ["dev_done", "integration_done", "handoff_done"] },
+              "status": { "type": "string", "enum": ["validated", "rejected", "blocked"] },
+              "verifier": { "type": "string" },
+              "evidence_ids": { "type": "array", "items": { "type": "string" } },
+              "signed_at": { "type": "string" }
+            }
+          }
+        }
+      }
+    }
+  }
+}

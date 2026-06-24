@@ -1,0 +1,12 @@
+{
+  "id": "migration-critical",
+  "version": "1.0",
+  "risk": ["L3"],
+  "modes": ["migration"],
+  "stages": ["ground", "data_and_rollback_spec", "technical_design", "human_design_review", "negative_tests", "migration_plan", "staged_execution", "system_verification", "rollback_review", "close"],
+  "required_artifacts": ["analysis_pack", "context_manifest", "spec", "technical_design", "plan", "evidence_manifest"],
+  "required_skills": ["context-grounding", "specflow", "technical-design", "delivery-verification", "superpowers:requesting-code-review"],
+  "design_policy": "standalone",
+  "design_review": "human",
+  "max_claim_request": "integration_done"
+}

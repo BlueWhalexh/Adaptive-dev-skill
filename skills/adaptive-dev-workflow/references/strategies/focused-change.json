@@ -1,0 +1,12 @@
+{
+  "id": "focused-change",
+  "version": "1.0",
+  "risk": ["L1"],
+  "modes": ["implement"],
+  "stages": ["ground", "validator_selection", "red_or_alternate_evidence", "implementation", "focused_verification", "self_review", "close"],
+  "required_artifacts": ["evidence_manifest"],
+  "required_skills": ["delivery-verification"],
+  "design_policy": "embedded",
+  "design_review": "self",
+  "max_claim_request": "dev_done"
+}

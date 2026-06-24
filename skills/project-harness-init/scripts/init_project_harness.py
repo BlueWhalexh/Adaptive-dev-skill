@@ -4,7 +4,19 @@
 from __future__ import annotations
 
 import argparse
+from datetime import date
 from pathlib import Path
+
+
+OPEN_SPEC_MARKERS = [
+    "openspec",
+    ".openspec",
+    "open-spec",
+    "openspec.yaml",
+    "openspec.yml",
+    "open-spec.yaml",
+    "open-spec.yml",
+]
 
 
 def slug(value: str) -> str:
@@ -18,6 +30,16 @@ def slug(value: str) -> str:
     while "--" in result:
         result = result.replace("--", "-")
     return result or "project"
+
+
+def has_openspec(root: Path) -> bool:
+    return any((root / marker).exists() for marker in OPEN_SPEC_MARKERS)
+
+
+def resolve_spec_system(root: Path, requested: str) -> str:
+    if requested != "auto":
+        return requested
+    return "openspec" if has_openspec(root) else "superpowers"
 
 
 def write_if_missing(path: Path, content: str, force: bool, dry_run: bool) -> str:
@@ -81,10 +103,15 @@ def agents_md() -> str:
 
 项目级 AI coding 协作规则。保持精简；详细 SOP 放到 `.agent/skills/`，当前事实放到 `docs/`。
 
+## 语言
+
+- 人读文档默认中文，包括 spec、plan、evidence、architecture、project skill 和 review notes。
+- 文件名、路径、命令、JSON/schema 字段、validator type、skill 名称和工具报错保留英文。
+
 ## 默认流程
 
-- 先读取当前代码、`docs/architecture.md`、相关 spec/plan/evidence，再判断方案。
-- 非 Tiny 任务必须先写清 Outcome / Scope / Current Truth / Evidence / Stop Condition。
+- 先读取当前代码、`docs/architecture.md`、相关 spec/technical design/plan/evidence，再判断方案。
+- 非 L0/L1 任务必须先写清目标、范围、当前事实、证据和停止条件。
 - 不能没有 fresh verification 就声称完成。
 - 不能把 mock-only evidence 描述成真实链路。
 - 涉及 public API、data model、auth/permission/security、migration、external side effect 时必须暂停确认。
@@ -103,21 +130,23 @@ def agents_md() -> str:
 
 
 def agent_team_md() -> str:
-    return """# Project Agent Team
+    return """# 项目 Agent 团队
 
-## Rules
+## 规则
 
 - Reviewer agents 默认只读；只有任务明确授权时才允许 scoped writes。
 - Agents 必须返回 evidence、file paths、uncertainty 和 claim limits。
 - Main agent 负责最终 integration 和 completion claims。
 - 不要把缺失的 product requirements 交给 subagent 猜。
 
-## Roles
+## 角色
 
 | Role | Trigger | Inputs | Output | Must Not |
 | --- | --- | --- | --- | --- |
 | repo-grounder | 新区域或 docs 可能过期 | Goal, paths, docs | Current truth map, docs drift, risks | Edit files |
-| spec-reviewer | Medium/Large design | Spec, design, acceptance | Gaps, ambiguity, missing delivery verification | Redesign silently |
+| spec-reviewer | Medium/Large product contract | Spec, acceptance | Gaps, ambiguity, missing delivery verification | Rewrite product silently |
+| technical-design-writer | Approved spec before planning | Spec, current truth, constraints | Technical design draft, contracts, risks, evidence mapping | Write implementation plan/code |
+| technical-design-reviewer | Standalone design required | Technical design, spec, context | Design findings, missing boundaries, review decision | Review own design |
 | plan-reviewer | Before plan execution | Plan, code map | Missing tasks, sequencing risk, missing gates | Implement |
 | test-strategy-reviewer | Evidence choice unclear | Spec, changed surfaces | Required validators, claim ceiling | Demand heavy tests for Tiny tasks |
 | evidence-reviewer | Before completion | Diff, evidence, final claim | Claim ceiling, gaps, mock/fake/real labels | Accept mock as real |
@@ -142,7 +171,7 @@ def goal_loop_mode_md() -> str:
 - Out of scope:
 
 Current Truth：
-先读取代码、AGENTS.md、docs/architecture.md、当前 spec/plan/evidence。
+先读取代码、AGENTS.md、docs/architecture.md、当前 spec/technical design/plan/evidence。
 如果文档和代码冲突，以代码和 fresh verification 为准，并记录 docs drift。
 
 交付标准：
@@ -176,6 +205,7 @@ Loop 规则：
 - 不允许用 mock-only evidence 声称真实链路打通
 - 不允许没有 fresh verification 就说完成
 - 不允许 spec 里没有交付验证
+- 不允许高风险任务跳过 approved technical design
 - 不允许 reviewer 审自己刚写的实现
 - 不允许把项目经验直接写进全局规则；先进入 project learning candidate
 ```
@@ -192,172 +222,186 @@ description: Project-specific development SOP, architecture context, testing con
 
 本 skill 只保存项目特定上下文和 SOP。TDD、debugging、planning、review、verification discipline 仍交给通用执行 skill。
 
-## Current Truth
+## 语言
+
+- 人读项目文档默认中文。
+- 命令、路径、validator type、schema 字段和报错原文保留英文。
+
+## 当前事实
 
 - 触碰 architecture、contracts、runtime、state、ownership boundaries 时，读取 `references/architecture.md`。
 - 选择项目特定 validator / test command / fake-vs-real boundary 时，读取 `references/testing.md`。
 - 处理 delivery / onboarding / artifact handoff 时，读取 `references/delivery.md`。
 - 遇到重复 pitfall、项目 SOP 或历史经验时，读取 `references/lessons.md`。
 
-## NEVER
+## 禁止
 
-- NEVER put secrets, private logs, credentials, cookies, tokens, or local-only paths in this skill.
-- NEVER duplicate generic TDD/debug/planning/review workflows here.
-- NEVER treat unverified lessons as stable policy.
+- NEVER 把 secrets、private logs、credentials、cookies、tokens 或 local-only paths 写进本 skill。
+- NEVER 在这里重复通用 TDD/debug/planning/review workflows。
+- NEVER 把未验证 lessons 当成 stable policy。
 """
 
 
-def repo_architecture_md(feature_label: str, feature_slug: str, project_skill_slug: str) -> str:
-    return f"""# Architecture
+def repo_architecture_md(feature_label: str, feature_slug: str, project_skill_slug: str, spec_system: str, spec_path: str, design_path: str, plan_path: str) -> str:
+    return f"""# 架构
 
-Current verified architecture facts. Historical decisions belong in `docs/adr/`.
+当前已验证的架构事实。历史决策放在 `docs/adr/`。
 
-## Current Truth
+## 语言
 
-- This repo has been initialized with an AI coding harness.
-- `{feature_label}` is represented by `docs/specs/{feature_slug}/`, `docs/plans/{feature_slug}.md`, and `docs/evidence/{feature_slug}.md`.
-- Product runtime, framework, service entrypoints, database schema, API/UI surface, test commands, CI, and deployment targets are not established by this harness.
+人读说明默认中文；路径、命令、schema 字段和 validator type 保留英文。
 
-## Boundaries
+## 当前事实
 
-- Harness files live in `AGENTS.md`, `.agent/`, `.gitignore`, and `docs/`.
-- Project-specific SOP lives in `.agent/skills/{project_skill_slug}/`.
-- Future product code must define its own architecture, commands, validators, and ownership boundaries before claiming business delivery.
+- 这个仓库已初始化 AI coding harness。
+- Product spec system: `{spec_system}`.
+- `{feature_label}` 当前由 `{spec_path}`、`{design_path}`、`{plan_path}` 和 `docs/evidence/{feature_slug}.md` 表示。
+- 本 harness 不建立产品 runtime、framework、service entrypoint、database schema、API/UI surface、test commands、CI 或 deployment target。
 
-## Open Decisions
+## 边界
 
-- Product technology stack.
-- Product workflow and data model.
-- API/UI surface.
-- Persistence, concurrency, permissions, deployment, and integration boundaries.
+- Harness 文件位于 `AGENTS.md`、`.agent/`、`.gitignore` 和 `docs/`。
+- 项目特定 SOP 位于 `.agent/skills/{project_skill_slug}/`。
+- 后续产品代码在声称业务交付前，必须定义自己的架构、命令、validators 和 ownership boundaries。
+
+## 待决策
+
+- 产品技术栈。
+- 产品 workflow 和 data model。
+- API/UI surface。
+- persistence、concurrency、permissions、deployment 和 integration boundaries。
 """
 
 
-def project_architecture_context(feature_label: str, feature_slug: str, project_skill_slug: str) -> str:
-    return f"""# Project Architecture Context
+def project_architecture_context(feature_label: str, feature_slug: str, project_skill_slug: str, spec_system: str, spec_path: str, design_path: str, plan_path: str) -> str:
+    return f"""# 项目架构上下文
 
-## Current Truth
+## 当前事实
 
-- Current durable harness entrypoints:
+- 当前 durable harness entrypoints:
   - `AGENTS.md`
   - `.agent/goal-loop-mode.md`
   - `.agent/agents.md`
   - `.agent/skills/{project_skill_slug}/SKILL.md`
-  - `docs/specs/{feature_slug}/spec.md`
-  - `docs/specs/{feature_slug}/design.md`
-  - `docs/specs/{feature_slug}/acceptance.yaml`
-  - `docs/plans/{feature_slug}.md`
+  - Product spec system: `{spec_system}`
+  - `{spec_path}`
+  - `{design_path}`
+  - `{plan_path}`
   - `docs/evidence/{feature_slug}.md`
-- `{feature_label}` product implementation is not proven by harness validation.
+- `{feature_label}` 的产品实现尚未被 harness validation 证明。
 
-## Module Boundaries
+## 模块边界
 
 - Harness: `AGENTS.md`, `.agent/`, `.gitignore`, `docs/`.
 - Project skill: `.agent/skills/{project_skill_slug}/`.
-- Product modules: future implementation must document chosen boundaries before coding.
+- Product modules: 后续实现前必须先记录选择的边界。
 
-## Contracts / Runtime / State
+## Contracts / Runtime / State 约束
 
-- No runtime contract is implied by this harness.
-- Future public API, persistence, auth, permissions, state machine, external provider, or deployment changes require spec/design updates first.
+- 本 harness 不暗示任何 runtime contract。
+- 后续 public API、persistence、auth、permissions、state machine、external provider 或 deployment 变化，必须先更新 product spec 和 technical design。
 
-## Invariants
+## 不变量
 
-- Do not treat harness readiness as product readiness.
-- Do not introduce product boilerplate before the product spec/design accepts a stack and validator strategy.
-- Keep project docs repo-relative; do not store secrets or local-only paths.
+- 不要把 harness ready 当成 product ready。
+- 产品 spec/design 接受技术栈和 validator strategy 前，不要引入 product boilerplate。
+- 项目 docs 保持 repo-relative；不要存 secrets 或 local-only paths。
 """
 
 
-def project_testing_context(feature_label: str, project_skill_slug: str) -> str:
-    return f"""# Project Testing Context
+def project_testing_context(feature_label: str, project_skill_slug: str, spec_system: str) -> str:
+    return f"""# 项目测试上下文
 
-## Commands
+## 命令
 
 - Harness validation:
-  - `python3 <skill-dir>/scripts/validate_project_harness.py --root <repo> --feature-id "{feature_label}" --project-skill {project_skill_slug}`
+  - `python3 <skill-dir>/scripts/validate_project_harness.py --root <repo> --feature-id "{feature_label}" --project-skill {project_skill_slug} --spec-system {spec_system}`
 - Local path hygiene:
   - `rg -n "<local-temp-path>|<home-dir>|<workspace-slug>" AGENTS.md .agent docs`
 - Product test commands: not defined yet.
 
-## Fixtures
+## 测试夹具
 
-- No product fixtures are defined by this harness.
-- Do not add fixture data until the product data model and test strategy are approved.
+- 本 harness 不定义 product fixtures。
+- product data model 和 test strategy 被批准前，不要添加 fixture data。
 
-## Mock / Fake / Real Boundaries
+## Mock / Fake / Real 边界
 
-- Current evidence is manual/harness validation only.
-- Mock/fake/integration/e2e/real external evidence is not applicable until product code and runtime boundaries exist.
-- Future reports must label fake workflows separately from real persistence, external providers, or production-like chains.
+- 当前 evidence 仅为 manual/harness validation。
+- product code 和 runtime boundaries 存在前，不适用 mock/fake/integration/e2e/real external evidence。
+- 后续报告必须把 fake workflow 和 real persistence、external providers、production-like chains 分开标注。
 
-## Evidence Notes
+## Evidence 备注
 
-- Current claim ceiling: Dev Done for harness readiness.
-- Future product work must update the feature evidence file after each meaningful validator run.
-- Passing harness validation does not prove business behavior.
+- 当前 claim 上限：Dev Done for harness readiness。
+- 后续 product work 每次有 meaningful validator run 后，必须更新 feature evidence 文件。
+- harness validation 通过不证明业务行为。
 """
 
 
-def project_delivery_context(feature_label: str, feature_slug: str) -> str:
-    return f"""# Project Delivery Context
+def project_delivery_context(feature_label: str, feature_slug: str, spec_system: str, spec_path: str, design_path: str, plan_path: str) -> str:
+    return f"""# 项目交付上下文
 
-## Artifacts
+## 产物
 
-- Current deliverable is a project harness only.
-- No package, service, image, build artifact, SDK, CLI, or deployable app exists because of this initialization alone.
+- 当前 deliverable 只有 project harness。
+- 单独初始化不会产生 package、service、image、build artifact、SDK、CLI 或 deployable app。
 
-## Consumer Path
+## Consumer 路径
 
 - Goal Loop handoff path: `.agent/goal-loop-mode.md`.
-- Feature contract path: `docs/specs/{feature_slug}/`.
-- Execution/evidence path: `docs/plans/{feature_slug}.md` and `docs/evidence/{feature_slug}.md`.
+- Product spec system: `{spec_system}`.
+- Feature contract path: `{spec_path}`.
+- Technical design path: `{design_path}`.
+- Execution/evidence path: `{plan_path}` and `docs/evidence/{feature_slug}.md`.
 
 ## External Providers
 
-- None configured by this harness.
-- Future external provider work requires explicit credentials handling and real/fake evidence separation.
+- 本 harness 不配置 external providers。
+- 后续 external provider 工作需要明确 credentials handling，并区分 real/fake evidence。
 
 ## Secrets / Auth
 
-- Do not write tokens, cookies, credentials, private logs, production data, or local-only paths into docs, fixtures, snapshots, artifacts, or project skill files.
-- Use ignored env files or the project-approved secret mechanism when future product code needs credentials.
+- 不要把 tokens、cookies、credentials、private logs、production data 或 local-only paths 写入 docs、fixtures、snapshots、artifacts 或 project skill files。
+- 后续 product code 需要 credentials 时，使用 ignored env files 或项目批准的 secret 机制。
 
 ## Handoff Evidence
 
-- Current handoff evidence is harness validator output and scope review.
-- Any future Handoff Done claim requires a fresh consumer path or equivalent onboarding/artifact verification.
+- 当前 handoff evidence 是 harness validator output 和 scope review。
+- 后续任何 Handoff Done claim 都需要 fresh consumer path 或等价 onboarding/artifact verification。
 """
 
 
-def spec_md(feature_label: str, feature_slug: str, project_skill_slug: str) -> str:
-    return f"""# Spec: {feature_label}
+def spec_md(feature_label: str, feature_slug: str, project_skill_slug: str, spec_path: str, design_path: str, plan_path: str) -> str:
+    return f"""# {feature_label} 产品规格
 
-## Intent
+> 人读文档默认中文；路径、命令、schema 字段、validator type、skill 名称和工具报错保留英文。
 
-Establish a first vertical slice delivery contract for `{feature_label}` so future agents can enter Goal Loop Mode: align product behavior, implementation boundaries, verification evidence, and stop conditions before writing product code.
+## 意图
 
-## Scope
+为 `{feature_label}` 建立 first vertical slice product contract，使后续 agent 在进入 Goal Loop Mode 前先对齐产品目标、范围、行为、验收和交付验证，而不是直接写 product code。
+
+## 范围
 
 In scope:
 
-- Maintain the feature contract: spec, design, acceptance matrix, plan, and evidence file.
-- Require future implementation to read `AGENTS.md`, `docs/architecture.md`, this spec, design, plan, and evidence before coding.
-- Keep product stack, API/UI shape, storage, and deployment decisions explicit instead of implied by the harness.
+- 维护 feature contract：product spec、technical design、implementation plan 和 evidence file。
+- 要求后续实现前读取 `AGENTS.md`、`docs/architecture.md`、本 spec/technical design/plan/evidence。
+- 明确 product stack、API/UI shape、storage 和 deployment decisions；不要让 harness 隐式决定它们。
 
 Out of scope:
 
-- Creating runtime, package manager, framework, database, API, UI, or deployment boilerplate during harness initialization.
-- Initializing git or changing repo-external state.
-- Claiming `{feature_label}` product functionality is delivered.
+- 在 harness 初始化期间创建 runtime、package manager、framework、database、API、UI 或 deployment boilerplate。
+- 初始化 git 或改变 repo-external state。
+- 声称 `{feature_label}` 产品功能已经交付。
 
-## Non-goals
+## 非目标
 
-- Do not decide final architecture, data model, authentication, permissions, or production deployment in this harness template.
-- Do not create fake product behavior to satisfy acceptance.
-- Do not promote unverified lessons into stable SOP.
+- 不在本 harness template 中决定最终 architecture、data model、authentication、permissions 或 production deployment。
+- 不创建 fake product behavior 来满足 acceptance。
+- 不把未验证经验晋升为 stable SOP。
 
-## Current Truth
+## 当前事实
 
 - Harness entrypoints:
   - `AGENTS.md`
@@ -365,169 +409,196 @@ Out of scope:
   - `.agent/agents.md`
   - `.agent/skills/{project_skill_slug}/SKILL.md`
   - `docs/architecture.md`
-  - `docs/specs/{feature_slug}/acceptance.yaml`
-  - `docs/plans/{feature_slug}.md`
+  - `{spec_path}`
+  - `{design_path}`
+  - `{plan_path}`
   - `docs/evidence/{feature_slug}.md`
-- Product code, runtime entrypoints, dependencies, tests, and database schema are not proven by this harness.
-- If future code and docs conflict, code plus fresh verification wins; record docs drift.
+- Product code、runtime entrypoints、dependencies、tests 和 database schema 不由本 harness 证明。
+- 如果后续 code 和 docs 冲突，以 code + fresh verification 为准，并记录 docs drift。
 
-## Behavior
+## 行为
 
-- Trigger: user provides a concrete `{feature_label}` product goal or asks to enter Goal Loop Mode.
-- Expected: agent first completes product-level spec/design/acceptance, then implements the smallest vertical slice and updates evidence after each meaningful validator.
-- Error / edge: if implementation requires public API, data model, auth/permission/security, external side effects, production dependencies, or claim ceiling changes, stop and ask human.
-- Empty state: before product implementation, validation can prove harness readiness only.
+- Trigger：用户提供具体 `{feature_label}` 产品目标，或要求进入 Goal Loop Mode。
+- Expected：agent 先完成 product-level spec/design/acceptance，再实现最小 vertical slice，并在每次 meaningful validator 后更新 evidence。
+- Error / edge：如果实现需要改变 public API、data model、auth/permission/security、external side effects、production dependencies 或 claim 上限，停止并询问人类。
+- Empty state：产品实现前，validation 只能证明 harness readiness。
 
-## Delivery Verification
+## 交付验证
 
-- Evidence matrix: `docs/specs/{feature_slug}/acceptance.yaml` and `docs/evidence/{feature_slug}.md` must list validator, type, proves, and gaps.
-- Claim ceiling: harness initialization can reach only Dev Done for harness readiness. Product functionality remains Not Started until product validators exist.
-- Fresh consumer / real external: not required for harness readiness; required later only if the future claim needs Handoff Done or real integration evidence.
-- Human-accepted gaps: technology stack, business workflow, data model, API/UI surface, persistence, and deployment remain undecided until the product spec is completed.
+- Evidence matrix：本 Superpowers-compatible spec 和 `docs/evidence/{feature_slug}.md` 必须列出 validator、type、proves 和 gaps。
+- Claim 上限：harness initialization 只能达到 Dev Done for harness readiness。product functionality 在 product validators 存在前仍是 Not Started。
+- Fresh consumer / real external：harness readiness 不需要；只有未来 claim 需要 Handoff Done 或 real integration evidence 时才需要。
+- Human-accepted gaps：technology stack、business workflow、data model、API/UI surface、persistence 和 deployment 在 product spec 完成前保持未决。
 
-## Acceptance Criteria
+## 验收标准
 
 - [ ] AC-1: Project harness entrypoints exist: `AGENTS.md`, `.agent/goal-loop-mode.md`, `.agent/agents.md`, project skill, spec, plan, and evidence.
 - [ ] AC-2: Feature docs use repo-relative paths or `<skill-dir>/<repo>` placeholders, not machine-specific absolute paths.
 - [ ] AC-3: Project-harness validator passes and evidence distinguishes validator type, claim ceiling, and gaps.
-- [ ] AC-4: Before product implementation, product acceptance criteria and design decisions are reviewed.
+- [ ] AC-4: Before product implementation, product acceptance criteria and technical design decisions are reviewed.
 
-## Stop / Continue Conditions
+## 技术设计入口
+
+- Technical design owner: `{design_path}`.
+- 本 product spec 不承载架构决策、模块边界、API/data/state contracts、migration、observability 或 rollback 细节。
+- 后续 public API、data/auth/security、state machine、cross-service、external integration 或 runtime 变化必须先批准 technical design。
+
+## 未决问题
+
+- `{feature_label}` 的最小 user workflow 是什么？
+- 需要建模哪些 data 和 state transitions？
+- 需要什么 UI/API surface？
+- Dev Done、Integration Done、Handoff Done 分别需要哪些 validators？
+
+## 停止 / 继续条件
 
 Continue:
 
-- Continue only within harness docs, project skill, agent roles, goal prompt, and evidence until product spec is approved.
-- Future agent may use Goal Loop Mode to complete product spec before implementation.
+- product spec 被批准前，只在 harness docs、project skill、agent roles、goal prompt 和 evidence 范围内继续。
+- 后续 agent 可以使用 Goal Loop Mode 在实现前完成 product spec。
 
 Stop and ask human:
 
-- Choosing technology stack, storage, API/UI surface, deployment, or external provider.
-- Changing public API, data model, auth/permission/security, production dependency, or external protocol.
-- Raising claim ceiling from Dev Done to Integration Done or Handoff Done.
+- 选择 technology stack、storage、API/UI surface、deployment 或 external provider。
+- 改变 public API、data model、auth/permission/security、production dependency 或 external protocol。
+- 将 claim 上限从 Dev Done 提升到 Integration Done 或 Handoff Done。
 """
 
 
-def design_md(feature_label: str) -> str:
-    return f"""# Design: {feature_label}
+def technical_design_md(feature_label: str, spec_path: str, design_path: str, plan_path: str) -> str:
+    return f"""# {feature_label} 技术设计
 
-## Current Truth
+> 人读文档默认中文；路径、命令、schema 字段、validator type、skill 名称和工具报错保留英文。
 
-- This design currently covers harness initialization only.
-- Product architecture, runtime, data model, API/UI, test suite, CI, and deployment targets are undecided.
+## 输入与事实来源
 
-## Options
+- Product spec: `{spec_path}`
+- Technical design: `{design_path}`
+- Implementation plan: `{plan_path}`
+- Current truth: `docs/architecture.md` and repo code.
 
-- Option A: Generate only empty templates.
-- Option B: Generate a minimal harness and seed `{feature_label}` with objective, evidence, claim ceiling, and stop conditions.
-- Option C: Create product stack and demo implementation now.
+## 设计目标
 
-## Decision
+- 为 `{feature_label}` 的 first vertical slice 固化架构边界、技术契约、风险和验证方式。
+- 在 plan 执行前明确哪些决策已批准、哪些必须暂停询问人类。
 
-- Choose Option B for harness initialization.
-- Defer product stack and implementation until product-level spec/design/acceptance are reviewed.
+## 当前到目标架构 Delta
 
-## Tradeoffs
+- 当前：仅初始化 harness，尚未证明 product runtime。
+- 目标：后续实现前补齐 product architecture、contracts、state/data flow、validators 和 rollback plan。
 
-- Benefit: future agents get stable entrypoints, acceptance files, evidence records, and reviewer roles.
-- Cost: no business functionality can be claimed from initialization alone.
-- Risk: future agents may confuse harness readiness with product readiness unless claim ceiling stays explicit.
+## 边界与职责
 
-## Data / API / Security Impact
+- Product Spec 只定义目标、范围、行为和验收。
+- Technical Design 定义架构、边界、契约、数据/控制流、failure/recovery/security/migration/observability/rollback。
+- Implementation Plan 只定义执行顺序、任务、文件、验证和 review gate。
 
-- No product data model, API, permission, auth, production dependency, or external side effect is changed by harness initialization.
-- Future data/API/security changes require explicit spec/design updates before implementation.
+## 契约
 
-## Rollout / Rollback
+- Public API / event / schema / storage / state contracts: pending product decision.
+- Any contract change requires design review before implementation.
 
-- Rollout: commit harness files only.
-- Rollback: revise or remove harness files before product work starts; there is no runtime or migration impact.
+## 控制流 / 数据流
 
-## Open Questions
+- Pending product workflow.
+- Do not infer data flow from harness files.
 
-- What is the smallest user workflow for `{feature_label}`?
-- What data and state transitions must be modeled?
-- What UI/API surface is required?
-- Which validators are required for Dev Done, Integration Done, and Handoff Done?
+## 错误 / 重试 / 恢复 / 并发 / 幂等
+
+- Pending product runtime decision.
+- If needed, define retry, idempotency, recovery and rollback before plan execution.
+
+## 安全 / 隐私 / 权限
+
+- Harness initialization writes no secrets and changes no auth/permission boundary.
+- Future auth, PII, secrets or security posture changes require explicit review.
+
+## 性能 / 可运维 / 可观测性
+
+- Pending product runtime decision.
+- Future delivery must define logs/metrics/traces or equivalent observability where relevant.
+
+## 兼容性 / 迁移 / 回滚
+
+- Harness files can be edited or removed before product work starts.
+- No runtime migration exists yet.
+
+## 验收到设计到证据
+
+| Acceptance | Design mechanism | Planned evidence |
+| --- | --- | --- |
+| Harness entrypoints exist | Deterministic scaffold | `validate_project_harness.py` |
+| Product implementation does not start early | Stop gates in spec/design/plan | Scope review |
+| No false handoff claim | Evidence file claim ceiling | Evidence review |
+
+## 设计 Review
+
+- Status: ready_for_user_review.
+- Reviewer: pending.
+- Blocking decisions: product technology stack, workflow, data model, API/UI surface, persistence, deployment.
 """
 
 
-def acceptance_yaml(feature_label: str, feature_slug: str, project_skill_slug: str) -> str:
-    return f"""feature_id: {feature_slug}
-claim_ceiling: Dev Done
-acceptance:
-  - id: AC-1
-    behavior: "Project harness entrypoints exist for Goal Loop Mode and future {feature_label} work."
-    evidence:
-      validator: "python3 <skill-dir>/scripts/validate_project_harness.py --root <repo> --feature-id \\"{feature_label}\\" --project-skill {project_skill_slug}"
-      type: manual
-      proves: "Required harness files, feature docs, and project skill are present."
-      gaps: "Does not prove any {feature_label} product behavior."
-  - id: AC-2
-    behavior: "Generated project docs avoid machine-specific absolute paths."
-    evidence:
-      validator: "rg -n \\"<local-temp-path>|<home-dir>|<workspace-slug>\\" AGENTS.md .agent docs"
-      type: manual
-      proves: "No known local-only paths are embedded in generated harness docs."
-      gaps: "Pattern scan is not a full secret scanner."
-  - id: AC-3
-    behavior: "Evidence record states claim ceiling and distinguishes harness readiness from product readiness."
-    evidence:
-      validator: "manual review of docs/evidence/{feature_slug}.md"
-      type: manual
-      proves: "Completion claims are bounded to harness Dev Done."
-      gaps: "Future product implementation needs its own validators."
-non_goals:
-  - "Do not implement product code during harness initialization."
-  - "Do not initialize git unless explicitly requested."
-  - "Do not create framework, package, database, API, UI, or deployment boilerplate."
-stop_conditions:
-  - "A future step requires choosing product architecture or technology stack."
-  - "A future step changes public API, data model, auth, permission, security posture, external protocol, or production dependency."
-  - "Claim ceiling needs to be raised beyond Dev Done."
-continue_conditions:
-  - "Edits remain limited to harness docs, project skill, agent roles, goal prompt, and evidence."
-  - "Validation can be done with repo-local file checks and project-harness validator."
-"""
+def plan_md(feature_label: str, spec_path: str, design_path: str) -> str:
+    return f"""# {feature_label} 实施计划
 
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-def plan_md(feature_label: str, feature_slug: str) -> str:
-    return f"""# Plan: {feature_label}
+**目标：** 建立 project harness，并为后续 first vertical slice implementation 做准备。
 
-## Approved Spec
+**架构：** 本 plan 只覆盖 harness initialization。Product architecture 必须在 approved technical design 后执行。
 
-- `docs/specs/{feature_slug}/spec.md`
-- `docs/specs/{feature_slug}/design.md`
-- `docs/specs/{feature_slug}/acceptance.yaml`
+**技术栈：** harness initialization 不选择技术栈。
 
-## Task Table
+---
 
-| Task | Scope | Gate | Evidence | Done |
+## 已批准 Spec
+
+- `{spec_path}`
+
+## 已批准 Technical Design
+
+- `{design_path}`
+
+## 任务表
+
+| 任务 | 范围 | Gate | Evidence | Done |
 | --- | --- | --- | --- | --- |
-| 1 | Inspect existing repo conventions | Project Harness Init Gate | `rg --files -uu`; docs/agent file review | pending |
-| 2 | Create missing harness files only | project-harness-init script | dry-run then create with feature id `{feature_label}` | pending |
-| 3 | Validate harness and local-path hygiene | focused validator | project-harness validator; local path scan | pending |
-| 4 | Complete product-level spec/design/acceptance before implementation | spec-reviewer / plan-reviewer | reviewed product acceptance and evidence plan | not started |
-| 5 | Future product implementation | adaptive route + Superpowers gates as needed | future tests/integration/e2e evidence | not started |
+| 1 | 检查现有 repo convention | Project Harness Init Gate | `rg --files -uu`; docs/agent file review | pending |
+| 2 | 只创建缺失 harness files | project-harness-init script | dry-run 后按 `{feature_label}` 创建 | pending |
+| 3 | 验证 harness 和 local-path hygiene | focused validator | project-harness validator; local path scan | pending |
+| 4 | 实现前完成 product-level spec/design/acceptance | spec-reviewer / technical-design-reviewer / plan-reviewer | reviewed product acceptance, technical design, and evidence plan | not started |
+| 5 | 后续 product implementation | adaptive route + Superpowers gates as needed | future tests/integration/e2e evidence | not started |
 
-## Review Points
+## Review 重点
 
-- Correctness: harness distinguishes `{feature_label}` product readiness from harness readiness.
-- Boundary: no product code, git init, runtime, dependency, database, UI/API, or deploy boilerplate unless explicitly requested.
-- Evidence: validator type and claim ceiling are explicit; mock/fake/real external are not conflated.
-- Safety: docs and project skill must not contain secrets, local-only paths, credentials, private logs, or production data.
+- Correctness：harness 区分 `{feature_label}` product readiness 和 harness readiness。
+- Boundary：除非明确要求，不创建 product code、git init、runtime、dependency、database、UI/API 或 deploy boilerplate。
+- Evidence：validator type 和 claim 上限明确；mock/fake/real external 不混淆。
+- Safety：docs 和 project skill 不能包含 secrets、local-only paths、credentials、private logs 或 production data。
 
-## Risks / Gaps
+## 风险 / 缺口
 
-- Product requirements are intentionally incomplete until a product-level spec is approved.
-- Current claim ceiling is Dev Done for harness readiness only.
-- No automated product tests exist until product code and test commands exist.
+- product-level spec 被批准前，Product requirements 有意保持不完整。
+- 当前 claim 上限只是 Dev Done for harness readiness。
+- product code 和 test commands 存在前，没有 automated product tests。
 """
 
 
-def evidence_md(feature_label: str, feature_slug: str, project_skill_slug: str) -> str:
-    return f"""# Evidence: {feature_label}
+def evidence_md(feature_label: str, feature_slug: str, project_skill_slug: str, spec_system: str, spec_path: str, design_path: str, plan_path: str) -> str:
+    return f"""# 证据：{feature_label}
 
-## Claim Ceiling
+## 产品规格系统
+
+`{spec_system}`
+
+Feature contract owner：`{spec_path}`
+
+Technical design owner：`{design_path}`
+
+Execution plan owner：`{plan_path}`
+
+## Claim 上限
 
 Dev Done for project harness readiness.
 
@@ -537,34 +608,40 @@ Dev Done for project harness readiness.
 
 | Validator | Type | Result | Proves | Gaps |
 | --- | --- | --- | --- | --- |
-| `python3 <skill-dir>/scripts/init_project_harness.py --root <repo> --feature-id "{feature_label}" --project-skill {project_skill_slug} --dry-run` | manual | pending | Planned file set is harness-only before writes. | Dry-run alone does not prove final content quality. |
-| `python3 <skill-dir>/scripts/validate_project_harness.py --root <repo> --feature-id "{feature_label}" --project-skill {project_skill_slug}` | manual | pending | Required harness structure, feature docs, acceptance, and project skill exist. | Validator checks structure/contracts, not business correctness. |
+| `python3 <skill-dir>/scripts/init_project_harness.py --root <repo> --feature-id "{feature_label}" --project-skill {project_skill_slug} --spec-system {spec_system} --dry-run` | manual | pending | Planned file set is harness-only before writes. | Dry-run alone does not prove final content quality. |
+| `python3 <skill-dir>/scripts/validate_project_harness.py --root <repo> --feature-id "{feature_label}" --project-skill {project_skill_slug} --spec-system {spec_system}` | manual | pending | Required harness structure, spec-system routing, evidence, and project skill exist. | Validator checks structure/contracts, not business correctness. |
 | Local path scan using machine-specific patterns | manual | pending | Generated docs do not contain known machine-specific absolute paths. | Not a full secret scan. |
 
-## Red / Reproduction Evidence
+## Red / 复现证据
 
-- Record whether the repo lacked required harness files before initialization.
+- 记录初始化前 repo 是否缺少 required harness files。
 
-## Green / Final Evidence
+## Green / 最终证据
 
-- Record validator output after initialization.
+- 记录初始化后的 validator output。
 
-## Review Evidence
+## Review 证据
 
-- Scope review should confirm no product code, framework boilerplate, dependency installation, database schema, UI/API, deployment artifact, or git initialization was created unless explicitly requested.
+- Scope review 应确认：除非明确要求，否则未创建 product code、framework boilerplate、dependency installation、database schema、UI/API、deployment artifact 或 git initialization。
 
-## Deferred / Accepted Gaps
+## Deferred / 已接受缺口
 
-- Product requirements, design decisions, data/API boundaries, runtime validators, and delivery evidence are deferred to a future Goal Loop Mode task.
-- No Integration Done or Handoff Done claim is made by harness initialization.
+- Product requirements、design decisions、data/API boundaries、runtime validators 和 delivery evidence 推迟到未来 Goal Loop Mode 任务。
+- harness initialization 不声明 Integration Done 或 Handoff Done。
 """
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--root", default=".", help="Project root")
-    parser.add_argument("--feature-id", help="Optional feature id for docs/specs/<feature-id>")
+    parser.add_argument("--feature-id", help="Optional feature id for evidence and fallback spec/plan files")
     parser.add_argument("--project-skill", default="project-domain", help="Project skill folder name")
+    parser.add_argument(
+        "--spec-system",
+        choices=["auto", "superpowers", "openspec"],
+        default="auto",
+        help="Product spec system. auto uses OpenSpec when explicit OpenSpec markers exist, otherwise Superpowers docs.",
+    )
     parser.add_argument("--force", action="store_true", help="Overwrite existing files")
     parser.add_argument("--dry-run", action="store_true", help="Print actions without writing")
     args = parser.parse_args()
@@ -573,7 +650,18 @@ def main() -> int:
     project_skill_slug = slug(args.project_skill)
     feature_label = args.feature_id or "First MVP"
     feature_slug = slug(feature_label)
+    today = date.today().isoformat()
+    spec_system = resolve_spec_system(root, args.spec_system)
+    if spec_system == "openspec":
+        spec_path = "OpenSpec changes/<change-id>/{proposal.md,specs/}"
+        design_path = "OpenSpec changes/<change-id>/design.md"
+        plan_path = "OpenSpec changes/<change-id>/tasks.md; Superpowers writing-plans may derive detailed plans during implementation"
+    else:
+        spec_path = f"docs/superpowers/specs/{today}-{feature_slug}-spec.md"
+        design_path = f"docs/superpowers/designs/{today}-{feature_slug}-technical-design.md"
+        plan_path = f"docs/superpowers/plans/{today}-{feature_slug}.md"
     actions: list[str] = []
+    actions.append(f"spec-system {spec_system}")
 
     actions.append(write_if_missing(root / "AGENTS.md", agents_md(), args.force, args.dry_run))
     actions.append(ensure_lines(root / ".gitignore", gitignore(), args.force, args.dry_run))
@@ -585,22 +673,18 @@ def main() -> int:
 
     skill_root = root / ".agent" / "skills" / project_skill_slug
     actions.append(write_if_missing(skill_root / "SKILL.md", project_skill(project_skill_slug), args.force, args.dry_run))
-    actions.append(write_if_missing(skill_root / "references" / "architecture.md", project_architecture_context(feature_label, feature_slug, project_skill_slug), args.force, args.dry_run))
-    actions.append(write_if_missing(skill_root / "references" / "testing.md", project_testing_context(feature_label, project_skill_slug), args.force, args.dry_run))
-    actions.append(write_if_missing(skill_root / "references" / "delivery.md", project_delivery_context(feature_label, feature_slug), args.force, args.dry_run))
-    actions.append(write_if_missing(skill_root / "references" / "lessons.md", "# Project Lessons\n\nOnly promote lessons after evidence, scope, and destination review.\n\n## Promoted Lessons\n\n## Rejected / Expired Lessons\n", args.force, args.dry_run))
+    actions.append(write_if_missing(skill_root / "references" / "architecture.md", project_architecture_context(feature_label, feature_slug, project_skill_slug, spec_system, spec_path, design_path, plan_path), args.force, args.dry_run))
+    actions.append(write_if_missing(skill_root / "references" / "testing.md", project_testing_context(feature_label, project_skill_slug, spec_system), args.force, args.dry_run))
+    actions.append(write_if_missing(skill_root / "references" / "delivery.md", project_delivery_context(feature_label, feature_slug, spec_system, spec_path, design_path, plan_path), args.force, args.dry_run))
+    actions.append(write_if_missing(skill_root / "references" / "lessons.md", "# 项目经验\n\n只有经过 evidence、scope 和 destination review 后，才能晋升 lessons。\n\n## 已晋升经验\n\n## 已拒绝 / 已过期经验\n", args.force, args.dry_run))
 
-    actions.append(write_if_missing(root / "docs" / "architecture.md", repo_architecture_md(feature_label, feature_slug, project_skill_slug), args.force, args.dry_run))
+    actions.append(write_if_missing(root / "docs" / "architecture.md", repo_architecture_md(feature_label, feature_slug, project_skill_slug, spec_system, spec_path, design_path, plan_path), args.force, args.dry_run))
     actions.append(touch_if_missing(root / "docs" / "adr" / ".gitkeep", args.dry_run))
-    actions.append(touch_if_missing(root / "docs" / "specs" / "archived" / ".gitkeep", args.dry_run))
-
-    spec_dir = root / "docs" / "specs" / feature_slug
-    actions.append(write_if_missing(spec_dir / "spec.md", spec_md(feature_label, feature_slug, project_skill_slug), args.force, args.dry_run))
-    actions.append(write_if_missing(spec_dir / "design.md", design_md(feature_label), args.force, args.dry_run))
-    actions.append(write_if_missing(spec_dir / "acceptance.yaml", acceptance_yaml(feature_label, feature_slug, project_skill_slug), args.force, args.dry_run))
-    actions.append(touch_if_missing(spec_dir / "changes" / ".gitkeep", args.dry_run))
-    actions.append(write_if_missing(root / "docs" / "plans" / f"{feature_slug}.md", plan_md(feature_label, feature_slug), args.force, args.dry_run))
-    actions.append(write_if_missing(root / "docs" / "evidence" / f"{feature_slug}.md", evidence_md(feature_label, feature_slug, project_skill_slug), args.force, args.dry_run))
+    if spec_system == "superpowers":
+        actions.append(write_if_missing(root / spec_path, spec_md(feature_label, feature_slug, project_skill_slug, spec_path, design_path, plan_path), args.force, args.dry_run))
+        actions.append(write_if_missing(root / design_path, technical_design_md(feature_label, spec_path, design_path, plan_path), args.force, args.dry_run))
+        actions.append(write_if_missing(root / plan_path, plan_md(feature_label, spec_path, design_path), args.force, args.dry_run))
+    actions.append(write_if_missing(root / "docs" / "evidence" / f"{feature_slug}.md", evidence_md(feature_label, feature_slug, project_skill_slug, spec_system, spec_path, design_path, plan_path), args.force, args.dry_run))
 
     for action in actions:
         print(action)

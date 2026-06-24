@@ -1,0 +1,12 @@
+{
+  "id": "spec-driven-feature",
+  "version": "1.0",
+  "risk": ["L2"],
+  "modes": ["implement", "mvp"],
+  "stages": ["ground", "context_pack_if_needed", "pack_backed_specflow", "spec_review", "embedded_design", "plan", "implementation", "focused_and_chain_verification", "review", "close"],
+  "required_artifacts": ["spec", "plan", "evidence_manifest"],
+  "required_skills": ["specflow", "technical-design", "delivery-verification", "superpowers:writing-plans"],
+  "design_policy": "embedded",
+  "design_review": "self",
+  "max_claim_request": "integration_done"
+}

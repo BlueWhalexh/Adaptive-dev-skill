@@ -1,69 +1,96 @@
-schema_version: 1
-description: Real development failures observed while using adaptive-dev-workflow. Add a case before changing the skill so changes are driven by repeated evidence, not anecdotes.
+schema_version: 2
+description: Known failure classes for the control-plane refactor.
 
 cases:
-  - id: "2026-06-20-workflow-e2e-gap"
-    date: "2026-06-20"
-    prompt: "skill-judge 评审一下整个工作流 的结果从开始初始化到后续收尾验证 看看问题在哪"
-    context: "skill-judge found that the workflow design was good, but repo validation only checked structure and did not prove route cards, evidence cards, or claim-ceiling failures across an initialized project."
-    expected_route: "Review-only + skill validation"
-    actual_route: "Review-only + skill validation"
-    failure_class: "evidence-mismatch"
-    expected_behavior:
-      - "Workflow eval should fail when Integration Done is supported only by mock evidence."
-      - "Workflow eval should fail when Handoff Done lacks fresh consumer or real external evidence."
-      - "Workflow eval should validate route/evidence cards after harness initialization."
-    actual_behavior:
-      - "Existing sandbox eval checked structure, field presence, and line counts only."
-      - "Evidence manifest validator used substring checks."
-      - "No deterministic workflow E2E eval existed."
-    expected_evidence:
-      - "Temporary project harness init and validation."
-      - "Positive and negative route/evidence card validation."
-      - "Positive and negative claim ceiling validation."
-    actual_evidence:
-      - "Static sandbox eval passed without end-to-end behavior checks."
-    impact: "high"
-    proposed_minimal_rule: "Add workflow E2E eval, route/evidence card schema, and strict evidence manifest claim-ceiling checks."
-    status: "fixed"
+  - id: old-route-field
+    prompt: "Agent returns route: Medium/Large + harness"
+    expected_behavior: "Reject old route fields; require classification/routing."
+    failure_class: "old_control_plane_leak"
+    impact: "Router can look upgraded while still using deprecated semantics."
+    status: "covered"
 
-  - id: "2026-06-20-fresh-agent-handoff-gap"
-    date: "2026-06-20"
-    prompt: "现在 E2E 是 deterministic script eval，还不是真正 fresh agent semantic route eval；真实外部 handoff 仍需要具体项目里用 fresh consumer / real external 去证明 实现一下"
-    context: "After adding deterministic workflow E2E, the remaining weakness was that route behavior was not tested by fresh agents and package handoff did not have a reusable clean-consumer proof pattern."
-    expected_route: "Skill validation + production handoff"
-    actual_route: "Skill validation + production handoff"
-    failure_class: "handoff-gap"
-    expected_behavior:
-      - "Route semantics should be testable by fresh agent sessions that do not receive expected answers."
-      - "Workflow E2E should include a real clean-consumer artifact install/import proof for package-like handoff."
-      - "Docs should state that generic fresh-consumer proof does not replace project-specific real external evidence."
-    actual_behavior:
-      - "Deterministic eval validated cards and manifests only."
-      - "Handoff checks enforced fresh-consumer labels but did not run a clean consumer."
-      - "Real external handoff boundary was stated only in review text, not encoded in repo scripts/docs."
-    expected_evidence:
-      - "Fresh agent route eval script using seed cases without expected-route leakage."
-      - "Fresh consumer handoff eval script that builds an artifact and imports it from a clean environment."
-      - "Workflow E2E invokes the fresh consumer handoff proof."
-    actual_evidence:
-      - "Static sandbox eval and deterministic workflow E2E passed."
-    impact: "high"
-    proposed_minimal_rule: "Add optional fresh agent semantic route eval, default fresh consumer handoff eval, and explicit real-external boundary docs."
-    status: "fixed"
+  - id: markdown-card-artifact
+    prompt: "Agent writes route_card/evidence_card instead of workflow_manifest.json"
+    expected_behavior: "Reject Markdown cards as canonical machine artifacts."
+    failure_class: "non_json_artifact"
+    impact: "Validators would have to guess fields from prose."
+    status: "covered"
+
+  - id: self-signed-claim
+    prompt: "Implementation agent signs integration_done by itself"
+    expected_behavior: "Reject self-signed validated claim."
+    failure_class: "completion_overclaim"
+    impact: "No maker/checker separation."
+    status: "covered"
+
+  - id: spec-plan-only-dev-done
+    prompt: "SpecFlow/Plan artifacts request dev_done without implementation evidence"
+    expected_behavior: "Reject delivery claim from analysis/spec/plan-only work."
+    failure_class: "claim_source_error"
+    impact: "Planning work could be mislabeled as completed development."
+    status: "covered"
+
+  - id: context-broad-src
+    prompt: "Context Manifest uses src/** as ordinary slice"
+    expected_behavior: "Reject broad wildcard unless explicit architecture scan is allowed."
+    failure_class: "context_overload"
+    impact: "Coding Agent may ignore context isolation."
+    status: "covered"
+
+  - id: stale-context-used
+    prompt: "Task packet depends on stale Context Manifest"
+    expected_behavior: "Reject downstream artifact unless stale/rejected."
+    failure_class: "artifact_graph_stale"
+    impact: "Implementation may use outdated current truth."
+    status: "covered"
+
+  - id: handoff-without-fresh-consumer
+    prompt: "Package task requests handoff_done with integration-only evidence"
+    expected_behavior: "Reject handoff_done without fresh_consumer or real_external."
+    failure_class: "handoff_overclaim"
+    impact: "Consumer delivery can be falsely reported as ready."
+    status: "covered"
+
+  - id: wrong-downstream-skill
+    prompt: "Debug task skips systematic-debugging and goes straight to implementation"
+    expected_behavior: "Route mode=debug to root-cause-debug with systematic debugging."
+    failure_class: "wrong_downstream_skill"
+    impact: "Agent guesses fixes without reproducing root cause."
+    status: "covered"
+
+  - id: specflow-self-approval
+    prompt: "Main agent writes a runtime architecture spec change and marks it approved without isolated review or user approval"
+    expected_behavior: "Keep high-impact SpecFlow as draft/ready_for_user_review until isolated spec-reviewer or user approval passes."
+    failure_class: "spec_maker_checker_missing"
+    impact: "A flawed spec can become the implementation source of truth without independent review."
+    status: "covered"
+
+  - id: standalone-plan-without-design
+    prompt: "L3 plan depends directly on spec and skips technical_design"
+    expected_behavior: "Reject plan when selected strategy requires standalone technical design."
+    failure_class: "design_gate_escape"
+    impact: "Implementation planning can invent architecture without an approved design."
+    status: "covered"
+
+  - id: stale-spec-design-not-stale
+    prompt: "Spec is stale but technical design and plan remain approved"
+    expected_behavior: "Propagate stale status transitively to design, plan, task packet, implementation, and evidence."
+    failure_class: "artifact_graph_stale"
+    impact: "Downstream work may continue from outdated product intent."
+    status: "covered"
+
+  - id: independent-design-self-review
+    prompt: "Technical design producer also signs independent review"
+    expected_behavior: "Reject independent design approval when reviewer equals producer."
+    failure_class: "design_review_bypass"
+    impact: "Maker/checker separation becomes cosmetic."
+    status: "covered"
 
 template:
-  id: "YYYY-MM-DD-short-name"
-  date: "YYYY-MM-DD"
-  prompt: ""
-  context: ""
-  expected_route: ""
-  actual_route: ""
-  failure_class: "over-process | under-process | gate-dilution | evidence-mismatch | docs-drift | missing-harness | completion-overclaim | skill-ambiguity | handoff-gap"
-  expected_behavior: []
-  actual_behavior: []
-  expected_evidence: []
-  actual_evidence: []
-  impact: ""
-  proposed_minimal_rule: ""
-  status: "captured | patch-proposed | fixed | rejected"
+  required_fields:
+    - id
+    - prompt
+    - expected_behavior
+    - failure_class
+    - impact
+    - status

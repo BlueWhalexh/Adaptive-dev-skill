@@ -1,0 +1,13 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "source", "problem", "pattern", "promotion_target", "status"],
+  "properties": {
+    "id": { "type": "string" },
+    "source": { "type": "string" },
+    "problem": { "type": "string" },
+    "pattern": { "type": "string" },
+    "promotion_target": { "type": "string", "enum": ["AGENTS.md", "project_skill", "template", "test_fixture", "general_skill", "none"] },
+    "status": { "type": "string", "enum": ["candidate", "approved", "rejected", "promoted"] }
+  }
+}

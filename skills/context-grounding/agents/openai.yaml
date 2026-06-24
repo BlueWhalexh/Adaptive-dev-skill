@@ -1,0 +1,2 @@
+allow_implicit_invocation: true
+description: Context grounding, Analysis Pack, Context Manifest, freshness, runtime audit, and sufficiency eval.

@@ -1,0 +1,45 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["context_manifest_id", "repo_commit", "spec_version", "allowed_paths", "forbidden_paths", "context_files", "runtime_audit"],
+  "properties": {
+    "context_manifest_id": { "type": "string" },
+    "repo_commit": { "type": "string" },
+    "spec_version": { "type": "string" },
+    "allowed_paths": { "type": "array", "items": { "type": "string" } },
+    "forbidden_paths": { "type": "array", "items": { "type": "string" } },
+    "context_files": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["path", "sha256", "reason"],
+        "properties": {
+          "path": { "type": "string" },
+          "sha256": { "type": "string" },
+          "reason": { "type": "string" }
+        }
+      }
+    },
+    "runtime_audit": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["read_events"],
+      "properties": {
+        "read_events": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["path", "within_allowed_paths", "pack_updated_before_use"],
+            "properties": {
+              "path": { "type": "string" },
+              "within_allowed_paths": { "type": "boolean" },
+              "pack_updated_before_use": { "type": "boolean" }
+            }
+          }
+        }
+      }
+    }
+  }
+}
