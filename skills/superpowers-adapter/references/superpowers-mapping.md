@@ -1,0 +1,38 @@
+# Superpowers Mapping
+
+This adapter only maps contracts. The native Superpowers skill remains the owner of its methodology.
+
+| Workflow situation | Native Superpowers skill | Input artifact |
+| --- | --- | --- |
+| Implementation approach is unclear | `superpowers:brainstorming` | route decision, approved spec, constraints |
+| Multi-step implementation needed | `superpowers:writing-plans` | approved spec, approved/embedded technical design, evidence plan |
+| Written plan ready | `superpowers:executing-plans` | approved implementation plan |
+| Feature/bugfix behavior is automatable | `superpowers:test-driven-development` | acceptance criteria, focused validator target |
+| Bug/test/CI failure | `superpowers:systematic-debugging` | failure signal, reproduction, logs |
+| Major diff needs maker/checker | `superpowers:requesting-code-review` | diff summary, acceptance, evidence manifest |
+| Completion claim is about to be made | `superpowers:verification-before-completion` | commands run, evidence ids, remaining gaps |
+
+## Output Contract
+
+Return a `transition_request.json` with:
+
+```json
+{
+  "schema_version": 1,
+  "workflow_id": "workflow-001",
+  "from_stage": "slice_execution",
+  "to_stage": "system_verification",
+  "exit": {
+    "status": "completed",
+    "produced_artifacts": [],
+    "updated_artifacts": [],
+    "invalidated_artifacts": [],
+    "evidence_refs": [],
+    "claim_requests": [],
+    "next_recommendation": "delivery-verification",
+    "error_code": ""
+  }
+}
+```
+
+If Superpowers evidence is only unit/mock/fake, do not request `integration_done` or `handoff_done`.

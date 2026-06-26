@@ -15,6 +15,7 @@ from typing import Any
 
 ROOT = Path(__file__).resolve().parents[1]
 SEED = ROOT / "evals" / "seed-cases.yaml"
+RESOLVER = ROOT / "skills" / "workflow-control-plane" / "scripts" / "resolve_strategy.py"
 DEFAULT_CASES = [
     "tiny-readme-command",
     "debug-ci",
@@ -32,46 +33,51 @@ DEFAULT_CASES = [
 OUTPUT_SCHEMA: dict[str, Any] = {
     "type": "object",
     "additionalProperties": False,
-    "required": ["classification", "routing", "design_control", "claims", "reason"],
+    "required": ["schema_version", "classification", "capabilities", "constraints", "user_overrides", "ambiguity", "reason"],
     "properties": {
+        "schema_version": {"type": "integer"},
         "classification": {
             "type": "object",
             "additionalProperties": False,
-            "required": ["risk", "mode", "scope", "uncertainty", "profiles"],
+            "required": ["risk", "intent_mode", "delivery_shape", "scope", "uncertainty", "profiles", "change_types"],
             "properties": {
                 "risk": {"type": "string"},
-                "mode": {"type": "string"},
+                "intent_mode": {"type": "string"},
+                "delivery_shape": {"type": "string"},
                 "scope": {"type": "string"},
                 "uncertainty": {"type": "string"},
                 "profiles": {"type": "array", "items": {"type": "string"}},
+                "change_types": {"type": "array", "items": {"type": "string"}},
             },
         },
-        "routing": {
+        "capabilities": {
             "type": "object",
             "additionalProperties": False,
-            "required": ["spec_system", "execution_engine", "strategy_id", "required_skills"],
+            "required": ["spec_systems", "execution_engines", "project_harness"],
             "properties": {
-                "spec_system": {"type": "string"},
-                "execution_engine": {"type": "string"},
-                "strategy_id": {"type": "string"},
-                "required_skills": {"type": "array", "items": {"type": "string"}},
+                "spec_systems": {"type": "array", "items": {"type": "string"}},
+                "execution_engines": {"type": "array", "items": {"type": "string"}},
+                "project_harness": {"type": "string"},
             },
         },
-        "design_control": {
+        "constraints": {
             "type": "object",
             "additionalProperties": False,
-            "required": ["policy", "review", "documentation_topology"],
+            "required": ["human_design_approval_required", "isolated_review_required"],
             "properties": {
-                "policy": {"type": "string"},
-                "review": {"type": "string"},
-                "documentation_topology": {"type": "string"},
+                "human_design_approval_required": {"type": "boolean"},
+                "isolated_review_required": {"type": "boolean"},
             },
         },
-        "claims": {
+        "user_overrides": {"type": "array", "items": {"type": "string"}},
+        "ambiguity": {
             "type": "object",
             "additionalProperties": False,
-            "required": ["requested"],
-            "properties": {"requested": {"type": "string"}},
+            "required": ["status", "reasons"],
+            "properties": {
+                "status": {"type": "string"},
+                "reasons": {"type": "array", "items": {"type": "string"}},
+            },
         },
         "reason": {"type": "string"},
     },
@@ -165,18 +171,30 @@ def prompt_for(case: dict[str, Any]) -> str:
 
 Do not edit files. Do not implement the task. Do not run project tests.
 
-Read `skills/adaptive-dev-workflow/SKILL.md` in this repository. If that skill
-directly tells you to read a reference for this kind of task, read only the
-minimum needed reference. Classify the user task according to the skill.
+Read `skills/adaptive-dev-workflow/SKILL.md` in this repository. Do not edit
+files. Classify the user task according to the skill and emit the route decision
+only; do not resolve the strategy yourself.
+
+Evaluator instructions such as "do not edit files" are not user overrides.
+For this eval, assume `local` and `superpowers` execution engines are available,
+`fallback` specs are available, and OpenSpec/repo-native/project harness are
+unknown unless the user task explicitly says otherwise.
+
+Do not set `ambiguity.status=ambiguous` only because implementation details,
+acceptance details, migration rollout, or exact tests are missing. Use
+`uncertainty=high` for those gaps. Use ambiguity only when you cannot classify
+the task facts or capabilities conflict.
 
 User task:
 {case["prompt"]}
 
 Return only JSON with:
-- classification: risk, mode, scope, uncertainty, profiles
-- routing: spec_system, execution_engine, strategy_id, required_skills
-- design_control: policy, review, documentation_topology
-- claims: requested. Because this is route-only and you are not implementing or verifying, set requested to "none".
+- schema_version: 1
+- classification: risk, intent_mode, delivery_shape, scope, uncertainty, profiles, change_types
+- capabilities: spec_systems, execution_engines, project_harness
+- constraints: human_design_approval_required, isolated_review_required
+- user_overrides
+- ambiguity: status and reasons
 - reason: one short sentence
 """
 
@@ -250,56 +268,67 @@ def canonical_expected(expected: str, actual: Any) -> str:
     return normalize(expected) if value_matches(expected, actual) else normalize(actual)
 
 
-def stable_key(case: dict[str, Any], actual: dict[str, Any]) -> dict[str, Any]:
+def resolve_route(actual: dict[str, Any]) -> dict[str, Any]:
+    route = {key: actual[key] for key in ["schema_version", "classification", "capabilities", "constraints", "user_overrides", "ambiguity"]}
+    with tempfile.TemporaryDirectory(prefix="adaptive-resolve-route-") as tmp:
+        route_path = Path(tmp) / "route.json"
+        route_path.write_text(json.dumps(route, ensure_ascii=False), encoding="utf-8")
+        result = subprocess.run([sys.executable, str(RESOLVER), str(route_path)], text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, check=False)
+        if result.returncode != 0:
+            raise RuntimeError("strategy resolver failed:\n" + result.stdout)
+        return extract_json(result.stdout)
+
+
+def stable_key(case: dict[str, Any], actual: dict[str, Any], resolved: dict[str, Any]) -> dict[str, Any]:
     classification = actual.get("classification") or {}
-    routing = actual.get("routing") or {}
     return {
         "risk": canonical_expected(case["classification"]["risk"], classification.get("risk")),
-        "mode": canonical_expected(case["classification"]["mode"], classification.get("mode")),
+        "mode": canonical_expected(case["classification"]["mode"], classification.get("intent_mode")),
         "scope": canonical_expected(case["classification"]["scope"], classification.get("scope")),
         "uncertainty": canonical_expected(case["classification"]["uncertainty"], classification.get("uncertainty")),
-        "spec_system": canonical_expected(case["routing"]["spec_system"], routing.get("spec_system")),
-        "execution_engine": canonical_expected(case["routing"]["execution_engine"], routing.get("execution_engine")),
-        "strategy_id": canonical_expected(case["routing"]["strategy_id"], routing.get("strategy_id")),
-        "design_policy": canonical_expected(case["design_control"]["policy"], (actual.get("design_control") or {}).get("policy")),
-        "design_review": canonical_expected(case["design_control"]["review"], (actual.get("design_control") or {}).get("review")),
-        "documentation_topology": canonical_expected(case["design_control"]["documentation_topology"], (actual.get("design_control") or {}).get("documentation_topology")),
-        "claim": canonical_expected(case["claim_requested"], (actual.get("claims") or {}).get("requested")),
+        "spec_system": canonical_expected(case["routing"]["spec_system"], resolved.get("spec_system")),
+        "execution_engine": canonical_expected(case["routing"]["execution_engine"], resolved.get("execution_engine")),
+        "strategy_id": canonical_expected(case["routing"]["strategy_id"], resolved.get("strategy_id")),
+        "design_policy": canonical_expected(case["design_control"]["policy"], (resolved.get("design_control") or {}).get("policy")),
+        "design_review": canonical_expected(case["design_control"]["review"], (resolved.get("design_control") or {}).get("review")),
+        "documentation_topology": canonical_expected(case["design_control"]["documentation_topology"], (resolved.get("design_control") or {}).get("documentation_topology")),
+        "claim": canonical_expected(case["claim_requested"], "none"),
     }
 
 
-def validate_result(case: dict[str, Any], actual: dict[str, Any]) -> list[str]:
+def validate_result(case: dict[str, Any], actual: dict[str, Any], resolved: dict[str, Any]) -> list[str]:
     errors: list[str] = []
     for field in ["risk", "mode", "scope", "uncertainty"]:
-        got = actual.get("classification", {}).get(field)
+        actual_field = "intent_mode" if field == "mode" else field
+        got = actual.get("classification", {}).get(actual_field)
         want = case["classification"][field]
         if not value_matches(want, got):
-            errors.append(f"classification.{field} expected {want!r}, got {normalize(got)!r}")
+            errors.append(f"classification.{actual_field} expected {want!r}, got {normalize(got)!r}")
     if not contains_all(actual.get("classification", {}).get("profiles") or [], case["classification"]["profiles"]):
         errors.append(f"classification.profiles missing expected {case['classification']['profiles']!r}")
 
     for field in ["spec_system", "execution_engine", "strategy_id"]:
-        got = actual.get("routing", {}).get(field)
+        got = resolved.get(field)
         want = case["routing"][field]
         if not value_matches(want, got):
             errors.append(f"routing.{field} expected {want!r}, got {normalize(got)!r}")
-    if not contains_all(actual.get("routing", {}).get("required_skills") or [], case["routing"]["required_skills"]):
+    if not contains_all(resolved.get("required_skills") or [], case["routing"]["required_skills"]):
         errors.append(f"routing.required_skills missing expected {case['routing']['required_skills']!r}")
 
     for field in ["policy", "review", "documentation_topology"]:
-        got = actual.get("design_control", {}).get(field)
+        got = (resolved.get("design_control") or {}).get(field)
         want = case["design_control"][field]
         if not value_matches(want, got):
             errors.append(f"design_control.{field} expected {want!r}, got {normalize(got)!r}")
 
-    got_claim = normalize(actual.get("claims", {}).get("requested"))
+    got_claim = "none"
     want_claim = normalize(case["claim_requested"])
-    if not value_matches(case["claim_requested"], actual.get("claims", {}).get("requested")):
+    if not value_matches(case["claim_requested"], got_claim):
         errors.append(f"claims.requested expected {want_claim!r}, got {got_claim!r}")
 
-    if case["classification"]["risk"] in {"L2", "L3"} and actual.get("routing", {}).get("strategy_id") == "quick-change":
+    if case["classification"]["risk"] in {"L2", "L3"} and resolved.get("strategy_id") == "quick-change":
         errors.append("L2/L3 must not route to quick-change")
-    if case["classification"]["risk"] in {"L0", "L1"} and actual.get("routing", {}).get("strategy_id") == "complex-real-slice":
+    if case["classification"]["risk"] in {"L0", "L1"} and resolved.get("strategy_id") == "complex-real-slice":
         errors.append("L0/L1 must not trigger complex-real-slice")
     return errors
 
@@ -329,9 +358,10 @@ def main() -> int:
         for run_index in range(args.repeat):
             try:
                 actual = run_fresh_agent(case, codex_bin=args.codex_bin, model=args.model, timeout_seconds=args.timeout_seconds)
+                resolved = resolve_route(actual)
                 actuals.append(actual)
-                case_errors.extend(f"run {run_index + 1}: {error}" for error in validate_result(case, actual))
-                stable_results.append(stable_key(case, actual))
+                case_errors.extend(f"run {run_index + 1}: {error}" for error in validate_result(case, actual, resolved))
+                stable_results.append(stable_key(case, actual, resolved))
             except Exception as exc:  # noqa: BLE001 - eval runner reports model/tool failures.
                 case_errors.append(f"run {run_index + 1}: {exc}")
 
@@ -347,7 +377,8 @@ def main() -> int:
                 print("  last actual:", json.dumps(actuals[-1], ensure_ascii=False, sort_keys=True), flush=True)
         else:
             last = actuals[-1]
-            print(f"PASS {case_id}: {last['classification']['risk']} / {last['routing']['strategy_id']} / {last['claims']['requested']}", flush=True)
+            resolved = resolve_route(last)
+            print(f"PASS {case_id}: {last['classification']['risk']} / {resolved['strategy_id']} / none", flush=True)
 
     if failures:
         print(f"Fresh agent route eval failed: {len(failures)}/{len(selected_ids)} cases", flush=True)

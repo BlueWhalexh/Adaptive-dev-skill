@@ -22,8 +22,8 @@ description: Use after an approved product spec and before implementation planni
 ## Output Modes
 
 - `none`: 不创建 design artifact；topology 必须是 `compact`，可输出 reason。
-- `embedded`: 在 implementation plan 中加入 compact `Technical Design` section，并在 `workflow_manifest.json` 写 `embedded_in` 和 `section_ref`。
-- `standalone`: 生成或更新 canonical `technical_design` artifact；manifest 的 `design_control.artifact_id` 指向它。大切片使用 `split_design_workspace`。
+- `embedded`: 在 implementation plan 中加入 compact `Technical Design` section，并通过 `workflow-control-plane` transition request 返回 `embedded_in` 和 `section_ref`。
+- `standalone`: 生成或更新 canonical `technical_design` artifact；通过 transition request 让 manifest 的 `design_control.artifact_id` 指向它。大切片使用 `split_design_workspace`。
 
 OpenSpec/repo-native/Kiro-like 项目已有 canonical design surface 时复用原路径。OpenSpec 默认复用 `openspec/changes/<change>/design.md`。不要为了 fallback 再生成第二套设计文档。
 

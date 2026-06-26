@@ -1,9 +1,9 @@
 # Adaptive Dev Skill
 
-Adaptive Dev Skill 是一组面向 Codex / Claude Code / Gemini CLI 的 AI coding workflow skills。它的目标不是把所有流程写进一个大 prompt，而是提供一个小型控制面：
+Adaptive Dev Skill 是一组面向 Codex / Claude Code / Gemini CLI 的 AI coding workflow skills。它的目标不是把所有流程写进一个大 prompt，而是提供一个小型 workflow runtime：
 
 ```text
-Router + Strategy Registry + Technical Design Gate + Artifact Graph + Verifier-signed Claims + Eval Harness
+Admission Router + Workflow Control Plane + Narrow Skills + Verifier-signed Claims + Eval Harness
 ```
 
 核心判断：
@@ -18,10 +18,12 @@ Router + Strategy Registry + Technical Design Gate + Artifact Graph + Verifier-s
 
 | Skill | Responsibility |
 | --- | --- |
-| `adaptive-dev-workflow` | 主控 router：classification、routing、strategy selection、workflow manifest、artifact graph、claim request |
+| `adaptive-dev-workflow` | Admission router：分类任务事实、检测能力、输出 `route_decision.json` |
+| `workflow-control-plane` | Strategy resolver、`workflow_manifest.json` 单点写入、状态迁移、resume、artifact graph、claim ceiling |
 | `context-grounding` | Analysis Pack、Context Manifest、static/freshness/runtime/sufficiency 验证 |
 | `specflow` | 把 intent 或 Analysis Pack 转成 reviewed spec artifact；OpenSpec repo 走 adapter |
 | `technical-design` | 在 approved spec 和 implementation plan 之间生成/审查 technical design、设计边界、契约、回滚和 approval |
+| `superpowers-adapter` | 把 approved artifacts 转换给 Superpowers 原生 skills，并把输出映射回 transition request |
 | `delivery-verification` | JSON evidence manifest、claim level、fresh consumer / real external / integration 证据验证 |
 | `knowledge-promotion` | 把重复 SOP、踩坑、用户反馈沉淀为 learning candidate，再进入项目 skill / AGENTS.md |
 | `project-harness-init` | 初始化项目级 harness：AGENTS.md、agent team、Goal Loop Mode、spec/technical design/plan/evidence 结构、项目 skill |
@@ -30,10 +32,44 @@ Superpowers 仍然是执行纪律，不被重写：TDD、systematic debugging、
 
 ## Control Plane Model
 
-`adaptive-dev-workflow` 生成或更新 `workflow_manifest.json`。机器校验 artifact 使用 JSON，Markdown 只做人读说明。
+`adaptive-dev-workflow` 只输出 `route_decision.json`。`workflow-control-plane` 根据 route decision 解析 strategy，并且是 `workflow_manifest.json` 的唯一 writer。机器校验 artifact 使用 JSON，Markdown 只做人读说明。
+
+Route decision:
 
 ```json
 {
+  "schema_version": 1,
+  "classification": {
+    "risk": "L2",
+    "intent_mode": "implement",
+    "delivery_shape": "feature",
+    "scope": "module",
+    "uncertainty": "medium",
+    "profiles": ["api"],
+    "change_types": ["api_contract"]
+  },
+  "capabilities": {
+    "spec_systems": ["fallback"],
+    "execution_engines": ["superpowers"],
+    "project_harness": "present"
+  },
+  "constraints": {
+    "human_design_approval_required": false,
+    "isolated_review_required": true
+  },
+  "user_overrides": [],
+  "ambiguity": { "status": "clear", "reasons": [] }
+}
+```
+
+Resolved workflow manifest:
+
+```json
+{
+  "schema_version": 3,
+  "skill_suite_version": "2026-06-26",
+  "run_id": "workflow-001",
+  "strategy_version": "1.0",
   "workflow_state": "intake",
   "classification": {
     "risk": "L2",
@@ -50,6 +86,12 @@ Superpowers 仍然是执行纪律，不被重写：TDD、systematic debugging、
   },
   "selected_strategy": "spec-driven-feature",
   "current_stage": "ground",
+  "resume": {
+    "checkpoint_id": "cp-init",
+    "resume_from_stage": "ground",
+    "last_validated_artifact_ids": [],
+    "blocked_reason": ""
+  },
   "design_control": {
     "policy": "embedded",
     "review": "self",
@@ -79,15 +121,17 @@ Deprecated and intentionally unsupported as canonical artifacts:
 
 ## Classification And Routing
 
-Classification describes task facts:
+Classification describes task facts in `route_decision.json`:
 
 - `risk`: `L0 | L1 | L2 | L3`
-- `mode`: `implement | debug | review | spike | mvp | migration`
+- `intent_mode`: `implement | debug | review | spike | mvp | migration`
+- `delivery_shape`: `none | doc_only | local_change | feature | mvp | migration | handoff`
 - `scope`: `local | module | cross_module | cross_service`
 - `uncertainty`: `low | medium | high`
 - `profiles`: `frontend | api | data | auth | security | release | docs | delivery | infra`
+- `change_types`: `docs | visual | bugfix | feature | api_contract | migration | refactor | handoff | review | research`
 
-Routing describes execution choices:
+Routing describes execution choices after `workflow-control-plane` resolves the strategy:
 
 - `spec_system`: `none | openspec | repo_native | fallback`
 - `execution_engine`: `none | local | superpowers`
@@ -98,7 +142,7 @@ Routing describes execution choices:
 
 ## Strategies
 
-Strategy manifests live in `skills/adaptive-dev-workflow/references/strategies/*.json`.
+Strategy manifests live in `skills/workflow-control-plane/references/strategies/*.json`.
 
 | Strategy | Use when |
 | --- | --- |
@@ -111,7 +155,7 @@ Strategy manifests live in `skills/adaptive-dev-workflow/references/strategies/*
 | `spike` | bounded exploration, decision record, no delivery claim |
 | `review-only` | review without edits |
 
-The strategy owns stages. The router only records `selected_strategy` and `current_stage`.
+The strategy owns stages. The router does not own strategy policy; `workflow-control-plane` records `selected_strategy` and `current_stage`.
 
 Project harness initialization is a local scaffold operation: route it with `execution_engine: local` and `project-harness-init`. Use `superpowers` later when executing the product implementation plan, not while merely creating AGENTS.md, Goal Loop Mode, project skill, spec/design/plan surfaces, and evidence docs.
 
@@ -184,7 +228,7 @@ This is the main guard against complex tasks drifting back into “read everythi
 ```sh
 git clone https://github.com/BlueWhalexh/Adaptive-dev-skill.git
 cd Adaptive-dev-skill
-for skill in adaptive-dev-workflow context-grounding specflow technical-design delivery-verification knowledge-promotion project-harness-init; do
+for skill in adaptive-dev-workflow workflow-control-plane context-grounding specflow technical-design superpowers-adapter delivery-verification knowledge-promotion project-harness-init; do
   mkdir -p "$HOME/.codex/skills/$skill"
   rsync -a "skills/$skill/" "$HOME/.codex/skills/$skill/"
 done
@@ -193,7 +237,7 @@ done
 Optional `.agents` install:
 
 ```sh
-for skill in adaptive-dev-workflow context-grounding specflow technical-design delivery-verification knowledge-promotion project-harness-init; do
+for skill in adaptive-dev-workflow workflow-control-plane context-grounding specflow technical-design superpowers-adapter delivery-verification knowledge-promotion project-harness-init; do
   mkdir -p "$HOME/.agents/skills/$skill"
   rsync -a "skills/$skill/" "$HOME/.agents/skills/$skill/"
 done
@@ -211,7 +255,7 @@ Use $adaptive-dev-workflow.
 Recommended project `AGENTS.md` line:
 
 ```md
-For implementation, fix, refactor, design, planning, verification, review, or handoff tasks, use adaptive-dev-workflow to classify L0-L3 risk, select strategy, create/update workflow_manifest.json when needed, and request verifier-signed claims only after evidence.
+For implementation, fix, refactor, design, planning, verification, review, or handoff tasks, use adaptive-dev-workflow to classify task facts and emit route_decision.json; use workflow-control-plane to resolve strategy and create/update workflow_manifest.json; request verifier-signed claims only through delivery-verification after evidence.
 Human-facing docs default to Chinese; keep commands, paths, schema keys, validator types, skill names, and tool errors in English.
 ```
 
@@ -232,11 +276,14 @@ python3 scripts/run-skill-sandbox-eval.py
 python3 scripts/run-workflow-e2e-eval.py
 python3 scripts/run-handoff-fresh-consumer-eval.py
 python3 /Users/didi/.codex/skills/.system/skill-creator/scripts/quick_validate.py skills/adaptive-dev-workflow
+python3 /Users/didi/.codex/skills/.system/skill-creator/scripts/quick_validate.py skills/workflow-control-plane
 python3 /Users/didi/.codex/skills/.system/skill-creator/scripts/quick_validate.py skills/context-grounding
 python3 /Users/didi/.codex/skills/.system/skill-creator/scripts/quick_validate.py skills/specflow
 python3 /Users/didi/.codex/skills/.system/skill-creator/scripts/quick_validate.py skills/technical-design
+python3 /Users/didi/.codex/skills/.system/skill-creator/scripts/quick_validate.py skills/superpowers-adapter
 python3 /Users/didi/.codex/skills/.system/skill-creator/scripts/quick_validate.py skills/delivery-verification
 python3 /Users/didi/.codex/skills/.system/skill-creator/scripts/quick_validate.py skills/knowledge-promotion
+python3 /Users/didi/.codex/skills/.system/skill-creator/scripts/quick_validate.py skills/project-harness-init
 git diff --check
 ```
 

@@ -159,7 +159,7 @@ cases:
       risk: L3
       mode: implement
       scope: module|cross_module
-      uncertainty: medium
+      uncertainty: medium|high
       profiles: [delivery, release]
     expected_routing:
       spec_system: none|fallback

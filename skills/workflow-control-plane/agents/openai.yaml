@@ -1,0 +1,3 @@
+interface:
+  display_name: "Workflow Control Plane"
+  short_description: "Resolve strategies and own workflow manifest state"

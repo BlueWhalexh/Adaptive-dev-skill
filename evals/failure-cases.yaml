@@ -142,6 +142,20 @@ cases:
     impact: "Integration success can be overstated as consumer-ready delivery."
     status: "covered"
 
+  - id: adaptive-direct-manifest-write
+    prompt: "Adaptive router creates or edits workflow_manifest.json directly."
+    expected_behavior: "Reject router-owned manifest writes; adaptive must emit route_decision and hand state writes to workflow-control-plane."
+    failure_class: "state_writer_conflict"
+    impact: "Router and runtime state become dual authorities."
+    status: "covered"
+
+  - id: specialist-direct-manifest-write
+    prompt: "Technical-design, context-grounding, or Superpowers adapter directly mutates workflow_manifest.json."
+    expected_behavior: "Require specialist skills to return transition requests; only workflow-control-plane writes manifest state."
+    failure_class: "state_writer_conflict"
+    impact: "Concurrent stage outputs can race and corrupt lifecycle state."
+    status: "covered"
+
 template:
   required_fields:
     - id

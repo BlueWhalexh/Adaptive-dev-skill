@@ -10,9 +10,9 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[3]
-ADAPTIVE_SCRIPTS = ROOT / "skills" / "adaptive-dev-workflow" / "scripts"
-ADAPTIVE_SCHEMAS = ROOT / "skills" / "adaptive-dev-workflow" / "schemas"
-sys.path.insert(0, str(ADAPTIVE_SCRIPTS))
+WORKFLOW_SCRIPTS = ROOT / "skills" / "workflow-control-plane" / "scripts"
+KNOWLEDGE_SCHEMAS = ROOT / "skills" / "knowledge-promotion" / "schemas"
+sys.path.insert(0, str(WORKFLOW_SCRIPTS))
 
 from validate_json_artifact import load_json, validate_instance  # noqa: E402
 
@@ -22,7 +22,7 @@ SAFE_ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,80}$")
 
 def validate(path: Path) -> list[str]:
     candidate = load_json(path)
-    schema = load_json(ADAPTIVE_SCHEMAS / "learning-candidate.schema.json")
+    schema = load_json(KNOWLEDGE_SCHEMAS / "learning-candidate.schema.json")
     errors = validate_instance(candidate, schema)
     if errors:
         return errors

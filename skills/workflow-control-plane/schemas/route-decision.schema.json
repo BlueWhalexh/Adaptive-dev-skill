@@ -1,0 +1,57 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "classification", "capabilities", "constraints", "user_overrides", "ambiguity"],
+  "properties": {
+    "schema_version": { "type": "integer", "enum": [1] },
+    "classification": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["risk", "intent_mode", "delivery_shape", "scope", "uncertainty", "profiles", "change_types"],
+      "properties": {
+        "risk": { "type": "string", "enum": ["L0", "L1", "L2", "L3"] },
+        "intent_mode": { "type": "string", "enum": ["implement", "debug", "review", "spike", "mvp", "migration"] },
+        "delivery_shape": { "type": "string", "enum": ["none", "doc_only", "local_change", "feature", "mvp", "migration", "handoff"] },
+        "scope": { "type": "string", "enum": ["local", "module", "cross_module", "cross_service"] },
+        "uncertainty": { "type": "string", "enum": ["low", "medium", "high"] },
+        "profiles": {
+          "type": "array",
+          "items": { "type": "string", "enum": ["frontend", "api", "data", "auth", "security", "release", "docs", "delivery", "infra"] }
+        },
+        "change_types": {
+          "type": "array",
+          "items": { "type": "string", "enum": ["docs", "visual", "bugfix", "feature", "api_contract", "migration", "refactor", "handoff", "review", "research"] }
+        }
+      }
+    },
+    "capabilities": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["spec_systems", "execution_engines", "project_harness"],
+      "properties": {
+        "spec_systems": { "type": "array", "items": { "type": "string", "enum": ["none", "openspec", "repo_native", "fallback"] } },
+        "execution_engines": { "type": "array", "items": { "type": "string", "enum": ["none", "local", "superpowers"] } },
+        "project_harness": { "type": "string", "enum": ["present", "missing", "unknown"] }
+      }
+    },
+    "constraints": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["human_design_approval_required", "isolated_review_required"],
+      "properties": {
+        "human_design_approval_required": { "type": "boolean" },
+        "isolated_review_required": { "type": "boolean" }
+      }
+    },
+    "user_overrides": { "type": "array", "items": { "type": "string" } },
+    "ambiguity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "reasons"],
+      "properties": {
+        "status": { "type": "string", "enum": ["clear", "ambiguous"] },
+        "reasons": { "type": "array", "items": { "type": "string" } }
+      }
+    }
+  }
+}

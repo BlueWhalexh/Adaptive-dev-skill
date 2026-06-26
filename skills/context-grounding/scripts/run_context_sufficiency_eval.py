@@ -9,8 +9,8 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[3]
-ADAPTIVE_SCRIPTS = ROOT / "skills" / "adaptive-dev-workflow" / "scripts"
-sys.path.insert(0, str(ADAPTIVE_SCRIPTS))
+WORKFLOW_SCRIPTS = ROOT / "skills" / "workflow-control-plane" / "scripts"
+sys.path.insert(0, str(WORKFLOW_SCRIPTS))
 
 from validate_json_artifact import load_json  # noqa: E402
 

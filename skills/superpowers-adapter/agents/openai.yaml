@@ -1,0 +1,3 @@
+interface:
+  display_name: "Superpowers Adapter"
+  short_description: "Map workflow artifacts to native Superpowers skills"

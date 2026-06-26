@@ -30,6 +30,8 @@ Canonical input 是 JSON：
 
 `mock`、`fake`、`static` 证据不能单独支撑 `integration_done` 或 `handoff_done`。
 
+`references/verifier-registry.json` 是 verifier authority 的 canonical registry。`workflow-control-plane` 可以读取它来拒绝不可信 claim，但不要在别的 skill 中复制 claim 规则。
+
 ## Validation
 
 ```sh

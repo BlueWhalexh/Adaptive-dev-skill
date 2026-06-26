@@ -1,0 +1,14 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "workflow_id", "status", "current_stage", "workflow_state", "errors", "warnings"],
+  "properties": {
+    "schema_version": { "type": "integer", "enum": [1] },
+    "workflow_id": { "type": "string" },
+    "status": { "type": "string", "enum": ["applied", "rejected", "blocked"] },
+    "current_stage": { "type": "string" },
+    "workflow_state": { "type": "string", "enum": ["intake", "routed", "active", "blocked", "review_ready", "closed"] },
+    "errors": { "type": "array", "items": { "type": "string" } },
+    "warnings": { "type": "array", "items": { "type": "string" } }
+  }
+}

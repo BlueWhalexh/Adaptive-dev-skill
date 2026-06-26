@@ -12,38 +12,40 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 ADAPTIVE = ROOT / "skills" / "adaptive-dev-workflow"
+WORKFLOW = ROOT / "skills" / "workflow-control-plane"
 CONTEXT = ROOT / "skills" / "context-grounding"
 SPECFLOW = ROOT / "skills" / "specflow"
 DELIVERY = ROOT / "skills" / "delivery-verification"
 KNOWLEDGE = ROOT / "skills" / "knowledge-promotion"
 TECHNICAL_DESIGN = ROOT / "skills" / "technical-design"
 PROJECT_HARNESS = ROOT / "skills" / "project-harness-init"
+SUPERPOWERS_ADAPTER = ROOT / "skills" / "superpowers-adapter"
 SEED = ROOT / "evals" / "seed-cases.yaml"
 FAILURES = ROOT / "evals" / "failure-cases.yaml"
 WORKFLOW_E2E = ROOT / "scripts" / "run-workflow-e2e-eval.py"
 FRESH_AGENT_ROUTE_EVAL = ROOT / "scripts" / "run-fresh-agent-route-eval.py"
 
 
-REQUIRED_SKILLS = [ADAPTIVE, CONTEXT, SPECFLOW, TECHNICAL_DESIGN, DELIVERY, KNOWLEDGE, PROJECT_HARNESS]
-REQUIRED_SCHEMAS = [
+REQUIRED_SKILLS = [ADAPTIVE, WORKFLOW, CONTEXT, SPECFLOW, TECHNICAL_DESIGN, DELIVERY, KNOWLEDGE, PROJECT_HARNESS, SUPERPOWERS_ADAPTER]
+REQUIRED_WORKFLOW_SCHEMAS = [
     "workflow-manifest.schema.json",
-    "context-manifest.schema.json",
-    "evidence-manifest.schema.json",
-    "learning-candidate.schema.json",
     "strategy.schema.json",
+    "route-decision.schema.json",
+    "resolved-strategy.schema.json",
+    "transition-request.schema.json",
+    "transition-result.schema.json",
+]
+REQUIRED_DELIVERY_SCHEMAS = [
+    "evidence-manifest.schema.json",
     "verifier-registry.schema.json",
 ]
 REQUIRED_ADAPTIVE_SECTIONS = [
-    "## Core Model",
+    "## Output",
     "## Classification",
-    "## Routing",
-    "## Strategy Selection",
-    "## Narrow Skill Delegation",
-    "## Technical Design Gate",
-    "## Artifact Graph",
-    "## Verifier-Signed Claims",
-    "## Context Runtime Rule",
-    "## Stop Gates",
+    "## Capability Detection",
+    "## Procedure",
+    "## Delegation Map",
+    "## Never",
     "## Validation",
 ]
 REQUIRED_CASE_FIELDS = [
@@ -166,16 +168,20 @@ def main() -> int:
         read(skill_dir / "agents" / "openai.yaml")
 
     assert_contains(ADAPTIVE / "SKILL.md", REQUIRED_ADAPTIVE_SECTIONS)
-    assert_contains(ADAPTIVE / "SKILL.md", ["workflow_manifest.json", "Verifier-Signed Claims", "context-grounding", "technical-design", "delivery-verification"])
-    for forbidden in ["route_card:", "evidence_card:", "artifact_state:", "delivery_claim:", "claim_ceiling:"]:
+    assert_contains(ADAPTIVE / "SKILL.md", ["route_decision.json", "workflow-control-plane", "Do not write or mutate", "context-grounding", "delivery-verification"])
+    for forbidden in ["## Artifact Graph", "## Verifier-Signed Claims", "## Technical Design Gate", "route_card:", "evidence_card:", "artifact_state:", "delivery_claim:", "claim_ceiling:"]:
         if forbidden in read(ADAPTIVE / "SKILL.md"):
             fail(f"adaptive SKILL.md still contains old control-plane marker: {forbidden}")
 
-    for schema in REQUIRED_SCHEMAS:
-        read(ADAPTIVE / "schemas" / schema)
-    read(ADAPTIVE / "references" / "verifier-registry.json")
-    for script in ["validate_json_artifact.py", "validate_workflow_manifest.py", "validate_artifact_graph.py", "validate_strategy_registry.py"]:
-        read(ADAPTIVE / "scripts" / script)
+    for schema in REQUIRED_WORKFLOW_SCHEMAS:
+        read(WORKFLOW / "schemas" / schema)
+    for schema in REQUIRED_DELIVERY_SCHEMAS:
+        read(DELIVERY / "schemas" / schema)
+    read(DELIVERY / "references" / "verifier-registry.json")
+    for script in ["validate_json_artifact.py", "validate_workflow_manifest.py", "validate_artifact_graph.py", "validate_strategy_registry.py", "resolve_strategy.py", "init_workflow.py", "transition_workflow.py", "resume_workflow.py", "inspect_workflow.py"]:
+        read(WORKFLOW / "scripts" / script)
+    for reference in ["state-machine.md", "error-codes.md", "rule-ownership.md", "strategy-registry.md"]:
+        read(WORKFLOW / "references" / reference)
 
     read(CONTEXT / "scripts" / "validate_context_pack_static.py")
     read(CONTEXT / "scripts" / "validate_context_freshness.py")
@@ -190,12 +196,12 @@ def main() -> int:
     read(KNOWLEDGE / "scripts" / "validate_learning_candidate.py")
 
     skill_lines = line_count(ADAPTIVE / "SKILL.md")
-    if skill_lines > 240:
+    if skill_lines > 170:
         fail(f"adaptive SKILL.md is too heavy for the router: {skill_lines} lines")
 
     seed_count, strategy_counts = validate_seed_cases()
     failure_count = validate_failure_cases()
-    run([sys.executable, str(ADAPTIVE / "scripts" / "validate_strategy_registry.py")])
+    run([sys.executable, str(WORKFLOW / "scripts" / "validate_strategy_registry.py")])
     run([sys.executable, str(WORKFLOW_E2E)])
     fresh_agent_ran = run_fresh_agent_route_eval()
 

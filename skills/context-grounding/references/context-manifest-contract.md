@@ -22,4 +22,4 @@
 }
 ```
 
-Use `skills/adaptive-dev-workflow/schemas/context-manifest.schema.json` as the canonical schema.
+Use `skills/context-grounding/schemas/context-manifest.schema.json` as the canonical schema.

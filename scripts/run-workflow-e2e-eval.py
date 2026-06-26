@@ -13,7 +13,7 @@ from typing import Any
 
 
 ROOT = Path(__file__).resolve().parents[1]
-ADAPTIVE = ROOT / "skills" / "adaptive-dev-workflow"
+WORKFLOW = ROOT / "skills" / "workflow-control-plane"
 CONTEXT = ROOT / "skills" / "context-grounding"
 DELIVERY = ROOT / "skills" / "delivery-verification"
 KNOWLEDGE = ROOT / "skills" / "knowledge-promotion"
@@ -45,6 +45,32 @@ def write_text(path: Path, value: str) -> Path:
 
 def sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def route_decision() -> dict[str, Any]:
+    return {
+        "schema_version": 1,
+        "classification": {
+            "risk": "L3",
+            "intent_mode": "migration",
+            "delivery_shape": "migration",
+            "scope": "cross_module",
+            "uncertainty": "high",
+            "profiles": ["auth", "security", "data"],
+            "change_types": ["migration"],
+        },
+        "capabilities": {
+            "spec_systems": ["openspec", "fallback"],
+            "execution_engines": ["local", "superpowers"],
+            "project_harness": "present",
+        },
+        "constraints": {
+            "human_design_approval_required": True,
+            "isolated_review_required": True,
+        },
+        "user_overrides": [],
+        "ambiguity": {"status": "clear", "reasons": []},
+    }
 
 
 def workflow_manifest(*, requested: str = "integration_done", validated_claim: str = "integration_done") -> dict[str, Any]:
@@ -144,7 +170,7 @@ def workflow_manifest(*, requested: str = "integration_done", validated_claim: s
                 "type": "task_packet",
                 "status": "ready",
                 "version": 1,
-                "producer": "adaptive-dev-workflow",
+                "producer": "workflow-control-plane",
                 "depends_on": ["plan-001", "ctx-001"],
                 "covers_acceptance": ["AC-1"],
                 "path": "docs/tasks/task-001.json",
@@ -243,6 +269,30 @@ def main() -> int:
 
         source_file = write_text(repo / "src" / "orders" / "implementation.ts", "export const ok = true;\n")
         spec_file = write_text(repo / "docs" / "superpowers" / "specs" / "2026-06-23-feature-spec.md", "# Spec\n")
+
+        route_path = write_json(root / "route-decision.json", route_decision())
+        resolved_path = root / "resolved-strategy.json"
+        initialized_manifest = root / "workflow-initialized.json"
+        transition_path = write_json(root / "transition-request.json", {
+            "schema_version": 1,
+            "workflow_id": "workflow-e2e-migration",
+            "from_stage": "ground",
+            "to_stage": "data_and_rollback_spec",
+            "exit": {
+                "status": "completed",
+                "produced_artifacts": [],
+                "updated_artifacts": [],
+                "invalidated_artifacts": [],
+                "evidence_refs": [],
+                "claim_requests": [],
+                "next_recommendation": "specflow",
+                "error_code": "",
+            },
+        })
+        run([sys.executable, str(WORKFLOW / "scripts" / "resolve_strategy.py"), str(route_path), "--output", str(resolved_path)])
+        run([sys.executable, str(WORKFLOW / "scripts" / "init_workflow.py"), str(route_path), "--resolved-strategy", str(resolved_path), "--workflow-id", "workflow-e2e-migration", "--output", str(initialized_manifest)])
+        run([sys.executable, str(WORKFLOW / "scripts" / "inspect_workflow.py"), str(initialized_manifest), "--validate"])
+        run([sys.executable, str(WORKFLOW / "scripts" / "transition_workflow.py"), str(initialized_manifest), str(transition_path)])
 
         wf_ok = write_json(root / "workflow-ok.json", workflow_manifest())
         wf_handoff_ok = workflow_manifest(requested="handoff_done", validated_claim="handoff_done")
@@ -348,8 +398,8 @@ def main() -> int:
                 item["status"] = "stale"
         wf_stale_bad_path = write_json(root / "workflow-stale-bad.json", wf_stale_bad)
 
-        manifest_validator = ADAPTIVE / "scripts" / "validate_workflow_manifest.py"
-        graph_validator = ADAPTIVE / "scripts" / "validate_artifact_graph.py"
+        manifest_validator = WORKFLOW / "scripts" / "validate_workflow_manifest.py"
+        graph_validator = WORKFLOW / "scripts" / "validate_artifact_graph.py"
         run([sys.executable, str(manifest_validator), str(wf_ok)])
         run([sys.executable, str(graph_validator), str(wf_ok)])
         run([sys.executable, str(manifest_validator), str(wf_handoff_ok_path)])
@@ -411,11 +461,12 @@ def main() -> int:
         run([sys.executable, str(KNOWLEDGE / "scripts" / "validate_learning_candidate.py"), str(learning_ok)])
         run([sys.executable, str(KNOWLEDGE / "scripts" / "validate_learning_candidate.py"), str(learning_bad)], expect_ok=False)
 
-        run([sys.executable, str(ADAPTIVE / "scripts" / "validate_strategy_registry.py")])
+        run([sys.executable, str(WORKFLOW / "scripts" / "validate_strategy_registry.py")])
         run([sys.executable, str(HANDOFF_FRESH_CONSUMER)])
 
     print("Workflow E2E eval passed")
     print("- project harness init + validate: pass")
+    print("- route decision -> strategy resolver -> init/transition: pass")
     print("- workflow manifest + artifact graph positive/negative checks: pass")
     print("- version/stage/resume/verifier false-claim checks: pass")
     print("- JSON evidence manifest claim checks: pass")

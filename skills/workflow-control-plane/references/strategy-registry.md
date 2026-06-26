@@ -5,7 +5,7 @@ READ when selecting strategy stages or auditing whether the downstream skills ar
 Machine-readable strategy manifests live in `references/strategies/*.json` and are validated by:
 
 ```sh
-python3 skills/adaptive-dev-workflow/scripts/validate_strategy_registry.py
+python3 skills/workflow-control-plane/scripts/validate_strategy_registry.py
 ```
 
 ## Strategies

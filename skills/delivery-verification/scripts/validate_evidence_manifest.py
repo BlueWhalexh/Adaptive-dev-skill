@@ -9,9 +9,9 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[3]
-ADAPTIVE_SCRIPTS = ROOT / "skills" / "adaptive-dev-workflow" / "scripts"
-ADAPTIVE_SCHEMAS = ROOT / "skills" / "adaptive-dev-workflow" / "schemas"
-sys.path.insert(0, str(ADAPTIVE_SCRIPTS))
+WORKFLOW_SCRIPTS = ROOT / "skills" / "workflow-control-plane" / "scripts"
+DELIVERY_SCHEMAS = ROOT / "skills" / "delivery-verification" / "schemas"
+sys.path.insert(0, str(WORKFLOW_SCRIPTS))
 
 from validate_json_artifact import load_json, validate_instance  # noqa: E402
 
@@ -38,7 +38,7 @@ CLAIM_REQUIRED_TYPES = {
 
 def validate(path: Path) -> list[str]:
     manifest = load_json(path)
-    schema = load_json(ADAPTIVE_SCHEMAS / "evidence-manifest.schema.json")
+    schema = load_json(DELIVERY_SCHEMAS / "evidence-manifest.schema.json")
     errors = validate_instance(manifest, schema)
     if errors:
         return errors

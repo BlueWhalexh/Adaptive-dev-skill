@@ -11,9 +11,11 @@ from validate_json_artifact import load_json, validate_instance
 
 
 SKILL_DIR = Path(__file__).resolve().parents[1]
+SKILLS_DIR = SKILL_DIR.parent
 SCHEMA = SKILL_DIR / "schemas" / "workflow-manifest.schema.json"
-VERIFIER_SCHEMA = SKILL_DIR / "schemas" / "verifier-registry.schema.json"
-VERIFIER_REGISTRY = SKILL_DIR / "references" / "verifier-registry.json"
+DELIVERY = SKILLS_DIR / "delivery-verification"
+VERIFIER_SCHEMA = DELIVERY / "schemas" / "verifier-registry.schema.json"
+VERIFIER_REGISTRY = DELIVERY / "references" / "verifier-registry.json"
 STRATEGIES = SKILL_DIR / "references" / "strategies"
 FORBIDDEN_TOP_LEVEL = {
     "route",
@@ -150,6 +152,11 @@ def validate(path: Path) -> list[str]:
         if not safe_path(artifact["path"]):
             errors.append(f"artifact path must be relative and stay inside repo: {artifact['path']}")
 
+    terminal_state = manifest["workflow_state"] in {"review_ready", "closed"}
+    downstream_artifact_types = {"plan", "task_packet", "implementation", "evidence_manifest"}
+    downstream_exists = any(artifact_type in artifact_types for artifact_type in downstream_artifact_types)
+    require_ready_gates = terminal_state or downstream_exists or manifest["claims"]["requested"] != "none" or bool(manifest["claims"]["validated"])
+
     design = manifest["design_control"]
     approval = design["approval"]
     topology = design["documentation_topology"]
@@ -172,16 +179,16 @@ def validate(path: Path) -> list[str]:
         if topology == "compact":
             errors.append("standalone design requires single_file_design or split_design_workspace topology")
         artifact_id = design.get("artifact_id")
-        if not artifact_id:
+        if require_ready_gates and not artifact_id:
             errors.append("standalone design requires design_control.artifact_id")
-        elif artifact_id not in artifact_ids:
+        elif artifact_id and artifact_id not in artifact_ids:
             errors.append(f"standalone design references missing technical_design artifact: {artifact_id}")
     if topology == "split_design_workspace" and design["policy"] != "standalone":
         errors.append("split_design_workspace requires standalone technical design")
 
-    if design["review"] == "none" and approval["status"] != "approved":
+    if require_ready_gates and design["review"] == "none" and approval["status"] != "approved":
         errors.append("design review none still requires an approved no-op approval record")
-    if design["review"] != "none" and approval["status"] != "approved":
+    if require_ready_gates and design["review"] != "none" and approval["status"] != "approved":
         errors.append("design review must be approved before downstream planning")
     if design["review"] == "independent":
         producer = ""
