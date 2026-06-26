@@ -33,16 +33,17 @@ DEFAULT_CASES = [
 OUTPUT_SCHEMA: dict[str, Any] = {
     "type": "object",
     "additionalProperties": False,
-    "required": ["schema_version", "classification", "capabilities", "constraints", "user_overrides", "ambiguity", "reason"],
+    "required": ["schema_version", "status", "classification", "capability_report_ref", "user_constraints", "user_overrides", "ambiguity", "reason"],
     "properties": {
         "schema_version": {"type": "integer"},
+        "status": {"type": "string"},
         "classification": {
             "type": "object",
             "additionalProperties": False,
-            "required": ["risk", "intent_mode", "delivery_shape", "scope", "uncertainty", "profiles", "change_types"],
+            "required": ["risk", "work_intent", "delivery_shape", "scope", "uncertainty", "profiles", "change_types"],
             "properties": {
                 "risk": {"type": "string"},
-                "intent_mode": {"type": "string"},
+                "work_intent": {"type": "string"},
                 "delivery_shape": {"type": "string"},
                 "scope": {"type": "string"},
                 "uncertainty": {"type": "string"},
@@ -50,23 +51,16 @@ OUTPUT_SCHEMA: dict[str, Any] = {
                 "change_types": {"type": "array", "items": {"type": "string"}},
             },
         },
-        "capabilities": {
+        "capability_report_ref": {"type": "string"},
+        "user_constraints": {
             "type": "object",
             "additionalProperties": False,
-            "required": ["spec_systems", "execution_engines", "project_harness"],
+            "required": ["network_access", "production_changes", "required_spec_system", "required_execution_engine"],
             "properties": {
-                "spec_systems": {"type": "array", "items": {"type": "string"}},
-                "execution_engines": {"type": "array", "items": {"type": "string"}},
-                "project_harness": {"type": "string"},
-            },
-        },
-        "constraints": {
-            "type": "object",
-            "additionalProperties": False,
-            "required": ["human_design_approval_required", "isolated_review_required"],
-            "properties": {
-                "human_design_approval_required": {"type": "boolean"},
-                "isolated_review_required": {"type": "boolean"},
+                "network_access": {"type": "string"},
+                "production_changes": {"type": "string"},
+                "required_spec_system": {"type": ["string", "null"]},
+                "required_execution_engine": {"type": ["string", "null"]},
             },
         },
         "user_overrides": {"type": "array", "items": {"type": "string"}},
@@ -176,9 +170,10 @@ files. Classify the user task according to the skill and emit the route decision
 only; do not resolve the strategy yourself.
 
 Evaluator instructions such as "do not edit files" are not user overrides.
-For this eval, assume `local` and `superpowers` execution engines are available,
-`fallback` specs are available, and OpenSpec/repo-native/project harness are
-unknown unless the user task explicitly says otherwise.
+For this eval, set `capability_report_ref` to `capability-report.json`.
+Assume the deterministic capability report says `local`, `superpowers`, and
+`fallback` are available, while OpenSpec/repo-native/project harness are unknown
+unless the user task explicitly says otherwise.
 
 Do not set `ambiguity.status=ambiguous` only because implementation details,
 acceptance details, migration rollout, or exact tests are missing. Use
@@ -190,9 +185,10 @@ User task:
 
 Return only JSON with:
 - schema_version: 1
-- classification: risk, intent_mode, delivery_shape, scope, uncertainty, profiles, change_types
-- capabilities: spec_systems, execution_engines, project_harness
-- constraints: human_design_approval_required, isolated_review_required
+- status: provisional or confirmed
+- classification: risk, work_intent, delivery_shape, scope, uncertainty, profiles, change_types
+- capability_report_ref
+- user_constraints: network_access, production_changes, required_spec_system, required_execution_engine
 - user_overrides
 - ambiguity: status and reasons
 - reason: one short sentence
@@ -268,10 +264,24 @@ def canonical_expected(expected: str, actual: Any) -> str:
     return normalize(expected) if value_matches(expected, actual) else normalize(actual)
 
 
+def capability_report() -> dict[str, Any]:
+    return {
+        "schema_version": 1,
+        "repo_revision": "fresh-route-eval",
+        "spec_systems": [{"id": "fallback", "status": "available", "evidence": ["eval"]}],
+        "execution_engines": [
+            {"id": "local", "status": "available", "version": "builtin"},
+            {"id": "superpowers", "status": "available", "version": "unknown"},
+        ],
+        "project_harness": {"status": "unknown", "version": "unknown", "evidence": []},
+    }
+
+
 def resolve_route(actual: dict[str, Any]) -> dict[str, Any]:
-    route = {key: actual[key] for key in ["schema_version", "classification", "capabilities", "constraints", "user_overrides", "ambiguity"]}
+    route = {key: actual[key] for key in ["schema_version", "status", "classification", "capability_report_ref", "user_constraints", "user_overrides", "ambiguity"]}
     with tempfile.TemporaryDirectory(prefix="adaptive-resolve-route-") as tmp:
         route_path = Path(tmp) / "route.json"
+        (Path(tmp) / "capability-report.json").write_text(json.dumps(capability_report(), ensure_ascii=False), encoding="utf-8")
         route_path.write_text(json.dumps(route, ensure_ascii=False), encoding="utf-8")
         result = subprocess.run([sys.executable, str(RESOLVER), str(route_path)], text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, check=False)
         if result.returncode != 0:
@@ -283,7 +293,7 @@ def stable_key(case: dict[str, Any], actual: dict[str, Any], resolved: dict[str,
     classification = actual.get("classification") or {}
     return {
         "risk": canonical_expected(case["classification"]["risk"], classification.get("risk")),
-        "mode": canonical_expected(case["classification"]["mode"], classification.get("intent_mode")),
+        "mode": canonical_expected(case["classification"]["mode"], classification.get("work_intent")),
         "scope": canonical_expected(case["classification"]["scope"], classification.get("scope")),
         "uncertainty": canonical_expected(case["classification"]["uncertainty"], classification.get("uncertainty")),
         "spec_system": canonical_expected(case["routing"]["spec_system"], resolved.get("spec_system")),
@@ -299,7 +309,7 @@ def stable_key(case: dict[str, Any], actual: dict[str, Any], resolved: dict[str,
 def validate_result(case: dict[str, Any], actual: dict[str, Any], resolved: dict[str, Any]) -> list[str]:
     errors: list[str] = []
     for field in ["risk", "mode", "scope", "uncertainty"]:
-        actual_field = "intent_mode" if field == "mode" else field
+        actual_field = "work_intent" if field == "mode" else field
         got = actual.get("classification", {}).get(actual_field)
         want = case["classification"][field]
         if not value_matches(want, got):

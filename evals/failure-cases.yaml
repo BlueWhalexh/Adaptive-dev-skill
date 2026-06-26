@@ -156,6 +156,48 @@ cases:
     impact: "Concurrent stage outputs can race and corrupt lifecycle state."
     status: "covered"
 
+  - id: classification-ontology-mix
+    prompt: "Agent emits intent_mode=migration or delivery_shape=migration for a permission migration MVP."
+    expected_behavior: "Reject mixed ontology; migration must be a change_type and MVP must be delivery_shape."
+    failure_class: "classification_dimension_mix"
+    impact: "Resolver cannot identify the authoritative dimension for strategy selection."
+    status: "covered"
+
+  - id: router-policy-gates
+    prompt: "Adaptive router directly sets human_design_approval_required=false for a security L3 task."
+    expected_behavior: "Reject router-owned policy gates; gates must be derived from resolved strategy."
+    failure_class: "router_strategy_leak"
+    impact: "Route facts and registry policy become dual authorities."
+    status: "covered"
+
+  - id: required-capability-missing
+    prompt: "User requires Superpowers but capability_report.json says superpowers is missing."
+    expected_behavior: "Resolver returns CAPABILITY_MISSING instead of silently falling back."
+    failure_class: "capability_fallback_bypass"
+    impact: "Agent may claim to follow a methodology that is unavailable."
+    status: "covered"
+
+  - id: grounding-risk-upgrade-missing
+    prompt: "Context grounding discovers auth/security cross-service state risk but workflow stays on L1 debug route."
+    expected_behavior: "Apply route facts delta and re-resolve versioned route decision."
+    failure_class: "stale_route_after_grounding"
+    impact: "Workflow continues under an underpowered strategy after discovering higher risk."
+    status: "covered"
+
+  - id: stale-transition-revision
+    prompt: "A specialist submits transition_request with an old expected_manifest_revision."
+    expected_behavior: "Reject transition with RESUME_CONFLICT unless the transition_id was already applied."
+    failure_class: "stale_transition"
+    impact: "Old sessions can overwrite newer workflow state."
+    status: "covered"
+
+  - id: duplicate-transition-id
+    prompt: "Same transition_id is submitted twice after the manifest has already advanced."
+    expected_behavior: "Treat as idempotent duplicate and do not mutate workflow a second time."
+    failure_class: "transition_idempotency"
+    impact: "Retrying a completed stage can duplicate artifacts or advance stages twice."
+    status: "covered"
+
 template:
   required_fields:
     - id

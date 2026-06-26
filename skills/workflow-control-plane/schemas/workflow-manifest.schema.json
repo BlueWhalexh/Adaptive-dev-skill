@@ -5,6 +5,7 @@
     "schema_version",
     "skill_suite_version",
     "run_id",
+    "manifest_revision",
     "strategy_version",
     "workflow_state",
     "classification",
@@ -20,6 +21,7 @@
     "schema_version": { "type": "integer", "enum": [3] },
     "skill_suite_version": { "type": "string" },
     "run_id": { "type": "string" },
+    "manifest_revision": { "type": "integer" },
     "strategy_version": { "type": "string" },
     "workflow_state": {
       "type": "string",
@@ -28,17 +30,17 @@
     "classification": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["risk", "mode", "scope", "uncertainty", "profiles"],
+        "required": ["risk", "mode", "scope", "uncertainty", "profiles"],
       "properties": {
         "risk": { "type": "string", "enum": ["L0", "L1", "L2", "L3"] },
-        "mode": { "type": "string", "enum": ["implement", "debug", "review", "spike", "mvp", "migration"] },
+        "mode": { "type": "string", "enum": ["implement", "debug", "review", "design", "verify", "research", "handoff"] },
         "scope": { "type": "string", "enum": ["local", "module", "cross_module", "cross_service"] },
         "uncertainty": { "type": "string", "enum": ["low", "medium", "high"] },
         "profiles": {
           "type": "array",
           "items": {
             "type": "string",
-            "enum": ["frontend", "api", "data", "auth", "security", "release", "docs", "delivery", "infra"]
+            "enum": ["frontend", "api", "data", "auth", "security", "release", "docs", "infra"]
           }
         }
       }
@@ -46,12 +48,13 @@
     "routing": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["spec_system", "execution_engine", "strategy_id", "required_skills"],
+      "required": ["spec_system", "execution_engine", "strategy_id", "required_skills", "capability_report_ref"],
       "properties": {
         "spec_system": { "type": "string", "enum": ["none", "openspec", "repo_native", "fallback"] },
         "execution_engine": { "type": "string", "enum": ["none", "local", "superpowers"] },
         "strategy_id": { "type": "string" },
-        "required_skills": { "type": "array", "items": { "type": "string" } }
+        "required_skills": { "type": "array", "items": { "type": "string" } },
+        "capability_report_ref": { "type": "string" }
       }
     },
     "selected_strategy": { "type": "string" },
@@ -137,6 +140,9 @@
           "depends_on": { "type": "array", "items": { "type": "string" } },
           "covers_acceptance": { "type": "array", "items": { "type": "string" } },
           "path": { "type": "string" },
+          "digest": { "type": "string" },
+          "semantic_owner": { "type": "string" },
+          "physical_producer": { "type": "string" },
           "lightweight_exception": { "type": "boolean" }
         }
       }
@@ -152,15 +158,45 @@
           "items": {
             "type": "object",
             "additionalProperties": false,
-            "required": ["claim", "status", "verifier", "evidence_ids", "signed_at"],
+            "required": ["claim", "status", "verifier", "evidence_ids", "attested_at", "attestation"],
             "properties": {
               "claim": { "type": "string", "enum": ["dev_done", "integration_done", "handoff_done"] },
               "status": { "type": "string", "enum": ["validated", "rejected", "blocked"] },
               "verifier": { "type": "string" },
               "evidence_ids": { "type": "array", "items": { "type": "string" } },
-              "signed_at": { "type": "string" }
+              "attested_at": { "type": "string" },
+              "attestation": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["workflow_id", "claim_type", "commit_sha", "strategy_id", "strategy_version", "registry_digest", "evidence_manifest_digest", "verifier_id", "verifier_version", "result"],
+                "properties": {
+                  "workflow_id": { "type": "string" },
+                  "claim_type": { "type": "string", "enum": ["dev_done", "integration_done", "handoff_done"] },
+                  "commit_sha": { "type": "string" },
+                  "strategy_id": { "type": "string" },
+                  "strategy_version": { "type": "string" },
+                  "registry_digest": { "type": "string" },
+                  "evidence_manifest_digest": { "type": "string" },
+                  "verifier_id": { "type": "string" },
+                  "verifier_version": { "type": "string" },
+                  "result": { "type": "string", "enum": ["pass", "fail", "blocked"] }
+                }
+              }
             }
           }
+        }
+      }
+    },
+    "transition_log": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["transition_id", "stage_id", "status"],
+        "properties": {
+          "transition_id": { "type": "string" },
+          "stage_id": { "type": "string" },
+          "status": { "type": "string" }
         }
       }
     }

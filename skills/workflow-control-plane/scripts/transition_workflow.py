@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import json
+from collections import defaultdict, deque
 from pathlib import Path
 from typing import Any
 
@@ -34,69 +35,99 @@ def result(workflow_id: str, status: str, current_stage: str, workflow_state: st
     return value
 
 
+def next_stage(strategy: dict[str, Any], current_stage: str) -> str:
+    stages = strategy["stages"]
+    index = stages.index(current_stage)
+    return stages[index + 1] if index + 1 < len(stages) else current_stage
+
+
+def propagate_stale(artifacts: list[dict[str, Any]], changed_ids: set[str]) -> None:
+    by_id = {artifact["id"]: artifact for artifact in artifacts}
+    reverse: dict[str, list[str]] = defaultdict(list)
+    for artifact in artifacts:
+        for dep_id in artifact["depends_on"]:
+            if dep_id in by_id:
+                reverse[dep_id].append(artifact["id"])
+
+    queue: deque[str] = deque(changed_ids)
+    seen: set[str] = set()
+    while queue:
+        source = queue.popleft()
+        for downstream_id in reverse[source]:
+            if downstream_id in seen:
+                continue
+            seen.add(downstream_id)
+            downstream = by_id[downstream_id]
+            if downstream["status"] not in {"missing", "rejected"}:
+                downstream["status"] = "stale"
+            queue.append(downstream_id)
+
+
 def apply_transition(manifest: dict[str, Any], request: dict[str, Any]) -> tuple[dict[str, Any], dict[str, Any]]:
     errors = validate_instance(request, load_json(REQUEST_SCHEMA))
     if errors:
         return manifest, result(request.get("workflow_id", ""), "rejected", manifest.get("current_stage", ""), manifest.get("workflow_state", "blocked"), errors, [])
     if request["workflow_id"] != manifest["run_id"]:
         return manifest, result(request["workflow_id"], "rejected", manifest["current_stage"], manifest["workflow_state"], ["RESUME_CONFLICT: workflow_id mismatch"], [])
-    if request["from_stage"] != manifest["current_stage"]:
-        return manifest, result(request["workflow_id"], "rejected", manifest["current_stage"], manifest["workflow_state"], ["RESUME_CONFLICT: from_stage mismatch"], [])
+    for item in manifest.get("transition_log", []):
+        if item["transition_id"] == request["transition_id"]:
+            return manifest, result(request["workflow_id"], "applied", manifest["current_stage"], manifest["workflow_state"], [], ["duplicate transition_id ignored idempotently"])
+    if request["expected_manifest_revision"] != manifest["manifest_revision"]:
+        return manifest, result(request["workflow_id"], "rejected", manifest["current_stage"], manifest["workflow_state"], ["RESUME_CONFLICT: manifest revision mismatch"], [])
+    if request["stage_id"] != manifest["current_stage"]:
+        return manifest, result(request["workflow_id"], "rejected", manifest["current_stage"], manifest["workflow_state"], ["RESUME_CONFLICT: stage_id mismatch"], [])
 
     strategy, strategy_error = load_strategy(manifest["selected_strategy"])
     if strategy_error:
         return manifest, result(request["workflow_id"], "rejected", manifest["current_stage"], manifest["workflow_state"], [strategy_error], [])
-    if request["to_stage"] not in strategy["stages"]:
-        return manifest, result(request["workflow_id"], "rejected", manifest["current_stage"], manifest["workflow_state"], ["INVALID_STAGE: to_stage not in selected strategy"], [])
 
     updated = dict(manifest)
     artifacts = [dict(item) for item in manifest["artifacts"]]
     by_id = {item["id"]: item for item in artifacts}
-    exit_payload = request["exit"]
-    warnings: list[str] = []
+    changed_ids: set[str] = set()
 
-    for artifact_id in exit_payload["invalidated_artifacts"]:
+    for change in request["artifact_changes"]:
+        artifact = change["artifact"]
+        artifact_id = artifact["id"]
+        old_digest = by_id.get(artifact_id, {}).get("digest")
+        new_digest = artifact.get("digest")
         if artifact_id in by_id:
-            by_id[artifact_id]["status"] = "stale"
-        else:
-            warnings.append(f"unknown invalidated artifact ignored: {artifact_id}")
-    for artifact in exit_payload["updated_artifacts"]:
-        if artifact.get("id") not in by_id:
-            warnings.append(f"updated artifact did not exist; adding: {artifact.get('id')}")
-            artifacts.append(artifact)
-        else:
-            by_id[artifact["id"]].update(artifact)
-    for artifact in exit_payload["produced_artifacts"]:
-        if artifact.get("id") in by_id:
-            warnings.append(f"produced artifact replaced existing id: {artifact.get('id')}")
-            by_id[artifact["id"]].update(artifact)
+            by_id[artifact_id].update(artifact)
         else:
             artifacts.append(artifact)
+            by_id[artifact_id] = artifact
+        if change["change_type"] == "content_changed" and (old_digest != new_digest or old_digest is None):
+            changed_ids.add(artifact_id)
+    if changed_ids:
+        propagate_stale(artifacts, changed_ids)
 
     requested = manifest["claims"]["requested"]
-    for claim in exit_payload["claim_requests"]:
+    for claim in request["claim_requests"]:
         if CLAIM_RANK[claim] > CLAIM_RANK[requested]:
             requested = claim
 
     state = "active"
     blocked_reason = ""
     transition_status = "applied"
-    if exit_payload["status"] in {"blocked", "failed", "human_required"}:
+    target_stage = next_stage(strategy, manifest["current_stage"]) if request["status"] == "completed" else manifest["current_stage"]
+    if request["status"] in {"blocked", "failed", "human_required"}:
         state = "blocked"
-        blocked_reason = exit_payload["error_code"] or exit_payload["status"]
+        blocked_reason = (request["error"] or {}).get("code") or request["status"]
         transition_status = "blocked"
 
     updated["artifacts"] = artifacts
-    updated["current_stage"] = request["to_stage"]
+    updated["current_stage"] = target_stage
     updated["workflow_state"] = state
+    updated["manifest_revision"] = manifest["manifest_revision"] + 1
     updated["resume"] = {
-        "checkpoint_id": f"cp-{request['to_stage']}",
-        "resume_from_stage": request["to_stage"],
+        "checkpoint_id": f"cp-{target_stage}",
+        "resume_from_stage": target_stage,
         "last_validated_artifact_ids": [item["id"] for item in artifacts if item["status"] in {"ready", "approved"}],
         "blocked_reason": blocked_reason,
     }
     updated["claims"] = {**manifest["claims"], "requested": requested}
-    return updated, result(request["workflow_id"], transition_status, request["to_stage"], state, [], warnings)
+    updated["transition_log"] = manifest.get("transition_log", []) + [{"transition_id": request["transition_id"], "stage_id": request["stage_id"], "status": request["status"]}]
+    return updated, result(request["workflow_id"], transition_status, target_stage, state, [], [])
 
 
 def main() -> int:

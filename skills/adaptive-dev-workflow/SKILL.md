@@ -22,23 +22,22 @@ skills/workflow-control-plane/schemas/route-decision.schema.json
 ```json
 {
   "schema_version": 1,
+  "status": "provisional | confirmed",
   "classification": {
     "risk": "L0 | L1 | L2 | L3",
-    "intent_mode": "implement | debug | review | spike | mvp | migration",
-    "delivery_shape": "none | doc_only | local_change | feature | mvp | migration | handoff",
+    "work_intent": "implement | debug | review | design | verify | research | handoff",
+    "delivery_shape": "none | doc_only | local_change | feature | mvp | spike",
     "scope": "local | module | cross_module | cross_service",
     "uncertainty": "low | medium | high",
-    "profiles": ["frontend | api | data | auth | security | release | docs | delivery | infra"],
-    "change_types": ["docs | visual | bugfix | feature | api_contract | migration | refactor | handoff | review | research"]
+    "profiles": ["frontend | api | data | auth | security | release | docs | infra"],
+    "change_types": ["docs | visual | bugfix | feature | api_contract | migration | refactor"]
   },
-  "capabilities": {
-    "spec_systems": ["none | openspec | repo_native | fallback"],
-    "execution_engines": ["none | local | superpowers"],
-    "project_harness": "present | missing | unknown"
-  },
-  "constraints": {
-    "human_design_approval_required": false,
-    "isolated_review_required": false
+  "capability_report_ref": ".agent/runtime/capability-report.json",
+  "user_constraints": {
+    "network_access": "allowed | forbidden | unknown",
+    "production_changes": "allowed | forbidden | unknown",
+    "required_spec_system": "none | openspec | repo_native | fallback | null",
+    "required_execution_engine": "none | local | superpowers | null"
   },
   "user_overrides": [],
   "ambiguity": { "status": "clear | ambiguous", "reasons": [] }
@@ -56,31 +55,31 @@ skills/workflow-control-plane/schemas/route-decision.schema.json
 
 Intent rules:
 
-- CI/test/runtime failure => `intent_mode=debug`。
-- 用户只要求 review 且不修改 => `intent_mode=review`。
-- 开放式调研、不承诺实现 => `intent_mode=spike`。
-- 数据/权限/状态迁移 => `intent_mode=migration`。
-- 新项目/first MVP/project harness => `intent_mode=mvp`。
+- CI/test/runtime failure => `work_intent=debug`。
+- 用户只要求 review 且不修改 => `work_intent=review`。
+- 开放式调研、不承诺实现 => `work_intent=research` 且通常 `delivery_shape=spike`。
+- 数据/权限/状态迁移 => `change_types` 包含 `migration`，不要把 migration 写成 work intent。
+- 新项目/first MVP/project harness => `delivery_shape=mvp`。
+- SDK/package/runtime image/artifact/onboarding 交给新消费者使用，或用户要求“新项目可安装/可 import/可接入” => `work_intent=handoff`。
 
-Non-downgradable profiles: `auth`、`security`、`data`、`migration`、`release`、`delivery`。这些 profile 不允许为了省流程降级为 L0/L1。
+Non-downgradable facts: `auth`、`security`、`data`、`migration`、`release`、`handoff`。这些事实不允许为了省流程降级为 L0/L1。
 
 ## Capability Detection
 
-只检查足够路由的信息：
+不要把 capability 判断写进 route decision。由 control plane 脚本生成：
 
-- 是否存在 OpenSpec/repo-native spec surface。
-- 是否可用 Superpowers execution engine。
-- 是否已有 AGENTS/project harness。
-- 用户是否显式要求不写代码、只写 spec、只 review、或必须 handoff。
+```sh
+python3 skills/workflow-control-plane/scripts/detect_capabilities.py --root . --output .agent/runtime/capability-report.json
+```
 
-不要为了路由大范围读仓库。current truth 不清时，用 `uncertainty=high`，让 control-plane 后续路由到 `context-grounding`。
+Router 只引用 `capability_report_ref`，不复制 OpenSpec/Superpowers/harness 探测结果。current truth 不清时，用 `uncertainty=high`，让 control-plane 后续路由到 `context-grounding`。
 
 ## Procedure
 
 1. Inspect only enough context to classify.
 2. Emit `route_decision.json` or equivalent JSON object.
 3. If classification itself is ambiguous, set `ambiguity.status=ambiguous` with reasons and stop. Missing implementation details, acceptance details, migration design, or rollout plan are not route ambiguity; record `uncertainty=high` and let downstream skills handle them.
-4. Call strategy resolver:
+4. Ensure capability report exists, then call strategy resolver:
 
 ```sh
 python3 skills/workflow-control-plane/scripts/resolve_strategy.py route_decision.json --output resolved_strategy.json
@@ -92,7 +91,13 @@ python3 skills/workflow-control-plane/scripts/resolve_strategy.py route_decision
 python3 skills/workflow-control-plane/scripts/init_workflow.py route_decision.json --resolved-strategy resolved_strategy.json --workflow-id workflow-001 --output workflow_manifest.json
 ```
 
-6. Report selected strategy, required skills, human gates, and remaining ambiguity. Do not claim implementation completion from routing work.
+6. Report selected strategy, required skills, resolver-derived gates, and remaining ambiguity. Do not claim implementation completion from routing work.
+
+If `context-grounding` or another narrow skill discovers stronger facts, create a route facts delta and let control plane produce `route_decision` v2:
+
+```sh
+python3 skills/workflow-control-plane/scripts/apply_route_facts_delta.py route_decision.json route_facts_delta.json --output route_decision.v2.json
+```
 
 ## Delegation Map
 

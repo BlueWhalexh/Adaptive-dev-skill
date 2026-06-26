@@ -94,7 +94,7 @@ cases:
     prompt: "把用户权限模型从 role 改成 policy"
     expected_classification:
       risk: L3
-      mode: migration
+      mode: implement
       scope: cross_module
       uncertainty: high
       profiles: [auth, security, data]
@@ -115,7 +115,7 @@ cases:
     prompt: "在老项目的订单详情页加一个新审核流，涉及视觉稿、权限状态、已有相似页面、埋点和后端状态流。先别急着改代码，先把需要看的上下文和验收方式梳理清楚。"
     expected_classification:
       risk: L3
-      mode: implement
+      mode: design
       scope: cross_service
       uncertainty: high
       profiles: [frontend, auth, api]
@@ -136,7 +136,7 @@ cases:
     prompt: "我有一个新审核流的想法，但还没写清楚目标、边界、验收和测试。先用 SpecFlow 产出 spec，不要开始写代码。"
     expected_classification:
       risk: L2
-      mode: implement
+      mode: design
       scope: module|cross_module
       uncertainty: high
       profiles: []
@@ -157,10 +157,10 @@ cases:
     prompt: "把这个 Python SDK 打成 wheel，保证新项目可以 pip install 后直接 import 使用"
     expected_classification:
       risk: L3
-      mode: implement
+      mode: handoff
       scope: module|cross_module
       uncertainty: medium|high
-      profiles: [delivery, release]
+      profiles: [release]
     expected_routing:
       spec_system: none|fallback
       execution_engine: superpowers
@@ -220,7 +220,7 @@ cases:
     prompt: "这个旧系统我不熟，先调查一下支付链路怎么走，给我几个可选方案，不要改代码"
     expected_classification:
       risk: L2|L3
-      mode: spike
+      mode: research
       scope: cross_module|cross_service
       uncertainty: high
       profiles: [api, data]
@@ -241,7 +241,7 @@ cases:
     prompt: "把订单表状态字段迁移为新的状态机，同时保持旧数据可回滚"
     expected_classification:
       risk: L3
-      mode: migration
+      mode: implement
       scope: cross_module
       uncertainty: high
       profiles: [data]
@@ -262,10 +262,10 @@ cases:
     prompt: "新项目要做 first MVP vertical slice，以后希望进入目标模式持续迭代，并初始化 docs/spec/plan/evidence、AGENTS.md、agent team 和项目 skill"
     expected_classification:
       risk: L3
-      mode: mvp
+      mode: implement
       scope: cross_module
       uncertainty: medium|high
-      profiles: [delivery]
+      profiles: [docs, infra]
     expected_routing:
       spec_system: fallback
       execution_engine: local
@@ -283,10 +283,10 @@ cases:
     prompt: "这个仓库已经用 OpenSpec 了，初始化 Goal Loop Mode、AGENTS.md、agent team、项目 skill 和交付 evidence，但不要再生成第二套 product spec/plan"
     expected_classification:
       risk: L3
-      mode: mvp
+      mode: implement
       scope: cross_module
       uncertainty: low|medium|high
-      profiles: [delivery]
+      profiles: [docs, infra]
     expected_routing:
       spec_system: openspec
       execution_engine: local

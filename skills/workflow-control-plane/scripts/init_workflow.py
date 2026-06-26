@@ -38,11 +38,12 @@ def build_manifest(route: dict[str, Any], resolved: dict[str, Any], workflow_id:
         "schema_version": 3,
         "skill_suite_version": "2026-06-26",
         "run_id": workflow_id,
+        "manifest_revision": 1,
         "strategy_version": resolved["strategy_version"],
         "workflow_state": "routed",
         "classification": {
             "risk": classification["risk"],
-            "mode": classification["intent_mode"],
+            "mode": classification["work_intent"],
             "scope": classification["scope"],
             "uncertainty": classification["uncertainty"],
             "profiles": classification["profiles"],
@@ -52,6 +53,7 @@ def build_manifest(route: dict[str, Any], resolved: dict[str, Any], workflow_id:
             "execution_engine": resolved["execution_engine"],
             "strategy_id": resolved["strategy_id"],
             "required_skills": resolved["required_skills"],
+            "capability_report_ref": resolved["capability_report_ref"],
         },
         "selected_strategy": resolved["strategy_id"],
         "current_stage": first_stage,
@@ -70,6 +72,7 @@ def build_manifest(route: dict[str, Any], resolved: dict[str, Any], workflow_id:
         },
         "artifacts": [],
         "claims": {"requested": "none", "validated": []},
+        "transition_log": [],
     }
 
 
@@ -82,7 +85,7 @@ def main() -> int:
     args = parser.parse_args()
 
     route = load_json(Path(args.route_decision))
-    resolved = load_json(Path(args.resolved_strategy)) if args.resolved_strategy else resolve(route)
+    resolved = load_json(Path(args.resolved_strategy)) if args.resolved_strategy else resolve(route, Path(args.route_decision).parent)
     resolved_errors = validate_instance(resolved, load_json(RESOLVED_SCHEMA))
     if resolved_errors:
         for error in resolved_errors:

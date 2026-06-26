@@ -1,2 +1,2 @@
 allow_implicit_invocation: true
-description: Evidence manifest validation and verifier-signed delivery claims.
+  description: Evidence manifest validation and verifier-issued delivery attestations.

@@ -1,7 +1,7 @@
 interface:
   display_name: "Adaptive Dev Workflow"
   short_description: "Admission router that emits route decisions"
-  default_prompt: "Use $adaptive-dev-workflow to classify software work, detect capabilities, emit route_decision.json, and hand strategy/state ownership to workflow-control-plane. 用 $adaptive-dev-workflow 为开发、修复、重构、规划、验证、项目初始化、目标模式和交付验收判断任务事实并提交 route decision。"
+  default_prompt: "Use $adaptive-dev-workflow to classify software work, reference capability_report.json, emit route_decision.json, and hand strategy/state ownership to workflow-control-plane. 用 $adaptive-dev-workflow 为开发、修复、重构、规划、验证、项目初始化、目标模式和交付验收判断任务事实并提交 route decision。"
 
 policy:
   allow_implicit_invocation: true

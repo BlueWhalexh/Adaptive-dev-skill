@@ -1,0 +1,45 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "repo_revision", "spec_systems", "execution_engines", "project_harness"],
+  "properties": {
+    "schema_version": { "type": "integer", "enum": [1] },
+    "repo_revision": { "type": "string" },
+    "spec_systems": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "status", "evidence"],
+        "properties": {
+          "id": { "type": "string", "enum": ["none", "openspec", "repo_native", "fallback"] },
+          "status": { "type": "string", "enum": ["available", "missing", "unknown"] },
+          "evidence": { "type": "array", "items": { "type": "string" } }
+        }
+      }
+    },
+    "execution_engines": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "status", "version"],
+        "properties": {
+          "id": { "type": "string", "enum": ["none", "local", "superpowers"] },
+          "status": { "type": "string", "enum": ["available", "missing", "unknown"] },
+          "version": { "type": "string" }
+        }
+      }
+    },
+    "project_harness": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "version", "evidence"],
+      "properties": {
+        "status": { "type": "string", "enum": ["present", "missing", "unknown"] },
+        "version": { "type": "string" },
+        "evidence": { "type": "array", "items": { "type": "string" } }
+      }
+    }
+  }
+}

@@ -1,25 +1,63 @@
 {
   "type": "object",
   "additionalProperties": false,
-  "required": ["schema_version", "workflow_id", "from_stage", "to_stage", "exit"],
+  "required": ["schema_version", "workflow_id", "transition_id", "expected_manifest_revision", "stage_id", "producer", "status", "artifact_changes", "evidence_refs", "claim_requests", "discovered_facts", "error"],
   "properties": {
     "schema_version": { "type": "integer", "enum": [1] },
     "workflow_id": { "type": "string" },
-    "from_stage": { "type": "string" },
-    "to_stage": { "type": "string" },
-    "exit": {
+    "transition_id": { "type": "string" },
+    "expected_manifest_revision": { "type": "integer" },
+    "stage_id": { "type": "string" },
+    "producer": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["status", "produced_artifacts", "updated_artifacts", "invalidated_artifacts", "evidence_refs", "claim_requests", "next_recommendation", "error_code"],
+      "required": ["skill", "version"],
       "properties": {
-        "status": { "type": "string", "enum": ["completed", "blocked", "failed", "human_required"] },
-        "produced_artifacts": { "type": "array", "items": { "type": "object" } },
-        "updated_artifacts": { "type": "array", "items": { "type": "object" } },
-        "invalidated_artifacts": { "type": "array", "items": { "type": "string" } },
-        "evidence_refs": { "type": "array", "items": { "type": "string" } },
-        "claim_requests": { "type": "array", "items": { "type": "string", "enum": ["dev_done", "integration_done", "handoff_done"] } },
-        "next_recommendation": { "type": "string" },
-        "error_code": { "type": "string" }
+        "skill": { "type": "string" },
+        "version": { "type": "string" }
+      }
+    },
+    "status": { "type": "string", "enum": ["completed", "blocked", "failed", "human_required"] },
+    "artifact_changes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["change_type", "artifact"],
+        "properties": {
+          "change_type": { "type": "string", "enum": ["upsert", "content_changed"] },
+          "artifact": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id", "type", "status", "version", "producer", "depends_on", "covers_acceptance", "path"],
+            "properties": {
+              "id": { "type": "string" },
+              "type": { "type": "string" },
+              "status": { "type": "string" },
+              "version": { "type": "integer" },
+              "producer": { "type": "string" },
+              "depends_on": { "type": "array", "items": { "type": "string" } },
+              "covers_acceptance": { "type": "array", "items": { "type": "string" } },
+              "path": { "type": "string" },
+              "digest": { "type": "string" },
+              "semantic_owner": { "type": "string" },
+              "physical_producer": { "type": "string" },
+              "lightweight_exception": { "type": "boolean" }
+            }
+          }
+        }
+      }
+    },
+    "evidence_refs": { "type": "array", "items": { "type": "string" } },
+    "claim_requests": { "type": "array", "items": { "type": "string", "enum": ["dev_done", "integration_done", "handoff_done"] } },
+    "discovered_facts": { "type": "object" },
+    "error": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "required": ["code", "message"],
+      "properties": {
+        "code": { "type": "string" },
+        "message": { "type": "string" }
       }
     }
   }

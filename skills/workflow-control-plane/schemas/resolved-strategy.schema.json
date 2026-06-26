@@ -20,6 +20,17 @@
         "triggers": { "type": "array", "items": { "type": "string" } }
       }
     },
+    "gates": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["human_design_approval_required", "isolated_review_required", "integration_evidence_required"],
+      "properties": {
+        "human_design_approval_required": { "type": "boolean" },
+        "isolated_review_required": { "type": "boolean" },
+        "integration_evidence_required": { "type": "boolean" }
+      }
+    },
+    "capability_report_ref": { "type": "string" },
     "reason": { "type": "string" }
   }
 }

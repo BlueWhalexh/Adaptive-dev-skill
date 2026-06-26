@@ -34,6 +34,8 @@ REQUIRED_WORKFLOW_SCHEMAS = [
     "resolved-strategy.schema.json",
     "transition-request.schema.json",
     "transition-result.schema.json",
+    "capability-report.schema.json",
+    "route-facts-delta.schema.json",
 ]
 REQUIRED_DELIVERY_SCHEMAS = [
     "evidence-manifest.schema.json",
@@ -178,7 +180,7 @@ def main() -> int:
     for schema in REQUIRED_DELIVERY_SCHEMAS:
         read(DELIVERY / "schemas" / schema)
     read(DELIVERY / "references" / "verifier-registry.json")
-    for script in ["validate_json_artifact.py", "validate_workflow_manifest.py", "validate_artifact_graph.py", "validate_strategy_registry.py", "resolve_strategy.py", "init_workflow.py", "transition_workflow.py", "resume_workflow.py", "inspect_workflow.py"]:
+    for script in ["validate_json_artifact.py", "validate_workflow_manifest.py", "validate_artifact_graph.py", "validate_strategy_registry.py", "detect_capabilities.py", "apply_route_facts_delta.py", "resolve_strategy.py", "init_workflow.py", "transition_workflow.py", "resume_workflow.py", "inspect_workflow.py"]:
         read(WORKFLOW / "scripts" / script)
     for reference in ["state-machine.md", "error-codes.md", "rule-ownership.md", "strategy-registry.md"]:
         read(WORKFLOW / "references" / reference)

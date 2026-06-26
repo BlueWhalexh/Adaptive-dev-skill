@@ -6,7 +6,7 @@
     "id": { "type": "string" },
     "version": { "type": "string" },
     "risk": { "type": "array", "items": { "type": "string", "enum": ["L0", "L1", "L2", "L3"] } },
-    "modes": { "type": "array", "items": { "type": "string", "enum": ["implement", "debug", "review", "spike", "mvp", "migration"] } },
+    "modes": { "type": "array", "items": { "type": "string", "enum": ["implement", "debug", "review", "design", "verify", "research", "handoff"] } },
     "stages": { "type": "array", "items": { "type": "string" } },
     "required_artifacts": { "type": "array", "items": { "type": "string" } },
     "required_skills": { "type": "array", "items": { "type": "string" } },

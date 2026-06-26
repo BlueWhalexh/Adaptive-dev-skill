@@ -20,18 +20,16 @@ Return a `transition_request.json` with:
 {
   "schema_version": 1,
   "workflow_id": "workflow-001",
-  "from_stage": "slice_execution",
-  "to_stage": "system_verification",
-  "exit": {
-    "status": "completed",
-    "produced_artifacts": [],
-    "updated_artifacts": [],
-    "invalidated_artifacts": [],
-    "evidence_refs": [],
-    "claim_requests": [],
-    "next_recommendation": "delivery-verification",
-    "error_code": ""
-  }
+  "transition_id": "tr-superpowers-001",
+  "expected_manifest_revision": 12,
+  "stage_id": "slice_execution",
+  "producer": { "skill": "superpowers-adapter", "version": "1.0.0" },
+  "status": "completed",
+  "artifact_changes": [],
+  "evidence_refs": [],
+  "claim_requests": [],
+  "discovered_facts": {},
+  "error": null
 }
 ```
 

@@ -18,22 +18,28 @@ Do not invent global stages such as `SPEC_READY` or `CONTEXT_READY`.
 
 ## Writer Rule
 
-Specialist skills must not edit `workflow_manifest.json` directly. They return a transition exit payload:
+Specialist skills must not edit `workflow_manifest.json` directly. They return a revision-checked `transition_request.json`:
 
 ```json
 {
+  "schema_version": 1,
+  "workflow_id": "workflow-001",
+  "transition_id": "tr-042",
+  "expected_manifest_revision": 12,
+  "stage_id": "technical_design",
+  "producer": { "skill": "technical-design", "version": "1.0.0" },
   "status": "completed",
-  "produced_artifacts": [],
-  "updated_artifacts": [],
-  "invalidated_artifacts": [],
+  "artifact_changes": [],
   "evidence_refs": [],
   "claim_requests": [],
-  "next_recommendation": "",
-  "error_code": ""
+  "discovered_facts": {},
+  "error": null
 }
 ```
 
 Then run `scripts/transition_workflow.py`.
+
+Only workflow-control-plane computes downstream stale propagation and advances the strategy stage.
 
 ## Resume Rule
 

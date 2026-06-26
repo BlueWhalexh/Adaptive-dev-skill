@@ -24,9 +24,13 @@ description: Owns workflow runtime state for adaptive AI coding tasks. Use when 
 
 ## Inputs
 
-`adaptive-dev-workflow` emits `route_decision.json` using `schemas/route-decision.schema.json`.
+`adaptive-dev-workflow` emits `route_decision.json` using `schemas/route-decision.schema.json`. Capability detection is a deterministic report, not router judgment:
 
-Specialist skills return transition exits using `schemas/transition-request.schema.json`. They may produce artifact metadata, warnings, evidence refs, or claim requests, but the control plane writes the manifest.
+```sh
+python3 skills/workflow-control-plane/scripts/detect_capabilities.py --root . --output .agent/runtime/capability-report.json
+```
+
+Specialist skills return revision-checked transition requests using `schemas/transition-request.schema.json`. They may produce artifact changes, evidence refs, claim requests, and discovered facts, but the control plane writes the manifest and computes stale propagation.
 
 ## Core Commands
 
@@ -46,6 +50,12 @@ Apply stage result:
 
 ```sh
 python3 skills/workflow-control-plane/scripts/transition_workflow.py workflow_manifest.json transition_request.json
+```
+
+Apply discovered route facts after grounding:
+
+```sh
+python3 skills/workflow-control-plane/scripts/apply_route_facts_delta.py route_decision.json route_facts_delta.json --output route_decision.v2.json
 ```
 
 Resume interrupted work:

@@ -42,6 +42,10 @@ ROUTING_TOKENS = {
     "migration-critical",
     "spike",
     "review-only",
+    "research",
+    "handoff",
+    "design",
+    "verify",
 }
 HARD_DESIGN_TRIGGERS = {
     "new_boundary",
@@ -104,6 +108,8 @@ def validate(path: Path) -> list[str]:
 
     if not SAFE_ID.match(manifest["run_id"]):
         errors.append(f"run_id is unsafe: {manifest['run_id']}")
+    if manifest["manifest_revision"] < 1:
+        errors.append("manifest_revision must be >= 1")
     if not VERSION.match(manifest["strategy_version"]):
         errors.append(f"strategy_version must be semver-like major.minor[.patch]: {manifest['strategy_version']}")
     if not manifest["skill_suite_version"].strip():
@@ -206,7 +212,7 @@ def validate(path: Path) -> list[str]:
 
     hard_triggered = bool(set(design["triggers"]) & HARD_DESIGN_TRIGGERS)
     high_risk_implementation = manifest["classification"]["risk"] == "L3" and manifest["classification"]["mode"] not in {"review", "spike"}
-    if (hard_triggered or high_risk_implementation or manifest["classification"]["mode"] == "migration") and design["policy"] != "standalone":
+    if (hard_triggered or high_risk_implementation) and design["policy"] != "standalone":
         errors.append("L3, migration, or hard design triggers require standalone technical design")
 
     requested = manifest["claims"]["requested"]
@@ -219,6 +225,7 @@ def validate(path: Path) -> list[str]:
     errors.extend(verifier_errors)
     for signed in manifest["claims"]["validated"]:
         verifier = signed["verifier"].strip().lower()
+        attestation = signed["attestation"]
         if verifier in SELF_VERIFIERS:
             errors.append(f"validated claim cannot be self-signed by {signed['verifier']!r}")
         if signed["verifier"] not in verifiers:
@@ -235,6 +242,18 @@ def validate(path: Path) -> list[str]:
             errors.append(f"validated {signed['claim']} requires evidence_ids")
         if signed["claim"] in {"integration_done", "handoff_done"} and "evidence_manifest" not in artifact_types:
             errors.append(f"{signed['claim']} requires an evidence_manifest artifact")
+        if attestation["workflow_id"] != manifest["run_id"]:
+            errors.append(f"claim attestation workflow_id mismatch for {signed['claim']}")
+        if attestation["claim_type"] != signed["claim"]:
+            errors.append(f"claim attestation claim_type mismatch for {signed['claim']}")
+        if attestation["strategy_id"] != manifest["selected_strategy"]:
+            errors.append(f"claim attestation strategy_id mismatch for {signed['claim']}")
+        if attestation["strategy_version"] != manifest["strategy_version"]:
+            errors.append(f"claim attestation strategy_version mismatch for {signed['claim']}")
+        if attestation["verifier_id"] != signed["verifier"]:
+            errors.append(f"claim attestation verifier_id mismatch for {signed['claim']}")
+        if signed["status"] == "validated" and attestation["result"] != "pass":
+            errors.append(f"validated {signed['claim']} requires pass attestation result")
 
     return errors
 

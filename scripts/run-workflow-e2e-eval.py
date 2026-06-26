@@ -50,26 +50,55 @@ def sha256(path: Path) -> str:
 def route_decision() -> dict[str, Any]:
     return {
         "schema_version": 1,
+        "status": "provisional",
         "classification": {
             "risk": "L3",
-            "intent_mode": "migration",
-            "delivery_shape": "migration",
+            "work_intent": "implement",
+            "delivery_shape": "mvp",
             "scope": "cross_module",
             "uncertainty": "high",
             "profiles": ["auth", "security", "data"],
             "change_types": ["migration"],
         },
-        "capabilities": {
-            "spec_systems": ["openspec", "fallback"],
-            "execution_engines": ["local", "superpowers"],
-            "project_harness": "present",
-        },
-        "constraints": {
-            "human_design_approval_required": True,
-            "isolated_review_required": True,
+        "capability_report_ref": "capability-report.json",
+        "user_constraints": {
+            "network_access": "unknown",
+            "production_changes": "forbidden",
+            "required_spec_system": None,
+            "required_execution_engine": None,
         },
         "user_overrides": [],
         "ambiguity": {"status": "clear", "reasons": []},
+    }
+
+
+def capability_report() -> dict[str, Any]:
+    return {
+        "schema_version": 1,
+        "repo_revision": "e2e",
+        "spec_systems": [
+            {"id": "openspec", "status": "available", "evidence": ["openspec/config.yaml"]},
+            {"id": "fallback", "status": "available", "evidence": ["workflow fallback"]},
+        ],
+        "execution_engines": [
+            {"id": "local", "status": "available", "version": "builtin"},
+            {"id": "superpowers", "status": "available", "version": "unknown"},
+        ],
+        "project_harness": {"status": "present", "version": "2", "evidence": ["AGENTS.md"]},
+    }
+
+
+def route_facts_delta() -> dict[str, Any]:
+    return {
+        "schema_version": 1,
+        "source": "context-grounding",
+        "discovered_facts": {
+            "risk_floor": "L3",
+            "scope": "cross_service",
+            "add_profiles": ["auth", "security"],
+            "add_change_types": ["migration"],
+        },
+        "reason_codes": ["AUTH_BOUNDARY_DISCOVERED", "CROSS_SERVICE_STATE_CHANGE"],
     }
 
 
@@ -78,6 +107,7 @@ def workflow_manifest(*, requested: str = "integration_done", validated_claim: s
         "schema_version": 3,
         "skill_suite_version": "2026-06-24",
         "run_id": "run-control-plane-e2e",
+        "manifest_revision": 1,
         "strategy_version": "1.0",
         "workflow_state": "review_ready",
         "classification": {
@@ -92,6 +122,7 @@ def workflow_manifest(*, requested: str = "integration_done", validated_claim: s
             "execution_engine": "superpowers",
             "strategy_id": "complex-real-slice",
             "required_skills": ["context-grounding", "specflow", "technical-design", "delivery-verification"],
+            "capability_report_ref": "capability-report.json",
         },
         "selected_strategy": "complex-real-slice",
         "current_stage": "delivery_review",
@@ -204,10 +235,23 @@ def workflow_manifest(*, requested: str = "integration_done", validated_claim: s
                     "status": "validated",
                     "verifier": "evidence-manifest-validator",
                     "evidence_ids": ["V-001"],
-                    "signed_at": "2026-06-23T00:00:00Z",
+                    "attested_at": "2026-06-23T00:00:00Z",
+                    "attestation": {
+                        "workflow_id": "run-control-plane-e2e",
+                        "claim_type": validated_claim,
+                        "commit_sha": "abc123",
+                        "strategy_id": "complex-real-slice",
+                        "strategy_version": "1.0",
+                        "registry_digest": "sha256:registry",
+                        "evidence_manifest_digest": "sha256:evidence",
+                        "verifier_id": "evidence-manifest-validator",
+                        "verifier_version": "1.0.0",
+                        "result": "pass",
+                    },
                 }
             ],
         },
+        "transition_log": [],
     }
 
 
@@ -270,10 +314,25 @@ def main() -> int:
         source_file = write_text(repo / "src" / "orders" / "implementation.ts", "export const ok = true;\n")
         spec_file = write_text(repo / "docs" / "superpowers" / "specs" / "2026-06-23-feature-spec.md", "# Spec\n")
 
+        write_json(root / "capability-report.json", capability_report())
         route_path = write_json(root / "route-decision.json", route_decision())
         resolved_path = root / "resolved-strategy.json"
         initialized_manifest = root / "workflow-initialized.json"
         transition_path = write_json(root / "transition-request.json", {
+            "schema_version": 1,
+            "workflow_id": "workflow-e2e-migration",
+            "transition_id": "tr-ground-001",
+            "expected_manifest_revision": 1,
+            "stage_id": "ground",
+            "producer": {"skill": "context-grounding", "version": "1.0.0"},
+            "status": "completed",
+            "artifact_changes": [],
+            "evidence_refs": [],
+            "claim_requests": [],
+            "discovered_facts": {},
+            "error": None,
+        })
+        old_transition_path = write_json(root / "transition-request-old-bad.json", {
             "schema_version": 1,
             "workflow_id": "workflow-e2e-migration",
             "from_stage": "ground",
@@ -289,14 +348,47 @@ def main() -> int:
                 "error_code": "",
             },
         })
+        stale_transition_path = write_json(root / "transition-request-stale-bad.json", {
+            "schema_version": 1,
+            "workflow_id": "workflow-e2e-migration",
+            "transition_id": "tr-ground-stale",
+            "expected_manifest_revision": 0,
+            "stage_id": "ground",
+            "producer": {"skill": "context-grounding", "version": "1.0.0"},
+            "status": "completed",
+            "artifact_changes": [],
+            "evidence_refs": [],
+            "claim_requests": [],
+            "discovered_facts": {},
+            "error": None,
+        })
+        capability_missing = capability_report()
+        capability_missing["execution_engines"] = [{"id": "local", "status": "available", "version": "builtin"}]
+        write_json(root / "capability-missing-superpowers.json", capability_missing)
+        required_superpowers_route = route_decision()
+        required_superpowers_route["capability_report_ref"] = "capability-missing-superpowers.json"
+        required_superpowers_route["user_constraints"]["required_execution_engine"] = "superpowers"
+        required_superpowers_path = write_json(root / "route-required-superpowers-bad.json", required_superpowers_route)
+        delta_path = write_json(root / "route-facts-delta.json", route_facts_delta())
+        rerouted_path = root / "route-decision-v2.json"
         run([sys.executable, str(WORKFLOW / "scripts" / "resolve_strategy.py"), str(route_path), "--output", str(resolved_path)])
+        run([sys.executable, str(WORKFLOW / "scripts" / "resolve_strategy.py"), str(required_superpowers_path)], expect_ok=False)
+        run([sys.executable, str(WORKFLOW / "scripts" / "apply_route_facts_delta.py"), str(route_path), str(delta_path), "--output", str(rerouted_path)])
+        rerouted = json.loads(rerouted_path.read_text(encoding="utf-8"))
+        if rerouted["classification"]["risk"] != "L3" or rerouted["classification"]["scope"] != "cross_service":
+            raise SystemExit("route facts delta did not upgrade risk/scope")
         run([sys.executable, str(WORKFLOW / "scripts" / "init_workflow.py"), str(route_path), "--resolved-strategy", str(resolved_path), "--workflow-id", "workflow-e2e-migration", "--output", str(initialized_manifest)])
         run([sys.executable, str(WORKFLOW / "scripts" / "inspect_workflow.py"), str(initialized_manifest), "--validate"])
+        run([sys.executable, str(WORKFLOW / "scripts" / "transition_workflow.py"), str(initialized_manifest), str(old_transition_path)], expect_ok=False)
+        run([sys.executable, str(WORKFLOW / "scripts" / "transition_workflow.py"), str(initialized_manifest), str(stale_transition_path)], expect_ok=False)
+        run([sys.executable, str(WORKFLOW / "scripts" / "transition_workflow.py"), str(initialized_manifest), str(transition_path)])
         run([sys.executable, str(WORKFLOW / "scripts" / "transition_workflow.py"), str(initialized_manifest), str(transition_path)])
 
         wf_ok = write_json(root / "workflow-ok.json", workflow_manifest())
         wf_handoff_ok = workflow_manifest(requested="handoff_done", validated_claim="handoff_done")
         wf_handoff_ok["claims"]["validated"][0]["verifier"] = "fresh-consumer-verifier"
+        wf_handoff_ok["claims"]["validated"][0]["attestation"]["claim_type"] = "handoff_done"
+        wf_handoff_ok["claims"]["validated"][0]["attestation"]["verifier_id"] = "fresh-consumer-verifier"
         wf_handoff_ok_path = write_json(root / "workflow-handoff-ok.json", wf_handoff_ok)
         wf_old_route_bad = write_json(root / "workflow-old-route-bad.json", {"route": "Medium/Large + harness", **workflow_manifest()})
         wf_spec_only_bad = workflow_manifest(requested="dev_done", validated_claim="dev_done")
@@ -466,7 +558,8 @@ def main() -> int:
 
     print("Workflow E2E eval passed")
     print("- project harness init + validate: pass")
-    print("- route decision -> strategy resolver -> init/transition: pass")
+    print("- route decision -> capability report -> strategy resolver -> init/transition: pass")
+    print("- route facts delta, capability-missing, stale/duplicate transition checks: pass")
     print("- workflow manifest + artifact graph positive/negative checks: pass")
     print("- version/stage/resume/verifier false-claim checks: pass")
     print("- JSON evidence manifest claim checks: pass")

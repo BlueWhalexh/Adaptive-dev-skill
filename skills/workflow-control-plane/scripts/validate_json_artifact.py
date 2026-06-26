@@ -20,6 +20,7 @@ TYPE_MAP = {
     "integer": int,
     "boolean": bool,
     "number": (int, float),
+    "null": type(None),
 }
 
 
@@ -34,13 +35,18 @@ def validate_instance(value: Any, schema: dict[str, Any], path: str = "$") -> li
     errors: list[str] = []
     expected_type = schema.get("type")
     if expected_type:
-        expected = TYPE_MAP[expected_type]
-        if expected_type == "integer":
-            valid = isinstance(value, int) and not isinstance(value, bool)
-        elif expected_type == "number":
-            valid = isinstance(value, expected) and not isinstance(value, bool)
-        else:
-            valid = isinstance(value, expected)
+        expected_types = expected_type if isinstance(expected_type, list) else [expected_type]
+        valid = False
+        for candidate_type in expected_types:
+            expected = TYPE_MAP[candidate_type]
+            if candidate_type == "integer":
+                valid = isinstance(value, int) and not isinstance(value, bool)
+            elif candidate_type == "number":
+                valid = isinstance(value, expected) and not isinstance(value, bool)
+            else:
+                valid = isinstance(value, expected)
+            if valid:
+                break
         if not valid:
             return [f"{path}: expected {expected_type}, got {type(value).__name__}"]
 
