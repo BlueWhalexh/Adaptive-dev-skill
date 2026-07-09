@@ -20,13 +20,15 @@ KNOWLEDGE = ROOT / "skills" / "knowledge-promotion"
 TECHNICAL_DESIGN = ROOT / "skills" / "technical-design"
 PROJECT_HARNESS = ROOT / "skills" / "project-harness-init"
 SUPERPOWERS_ADAPTER = ROOT / "skills" / "superpowers-adapter"
+AGENT_ORCHESTRATION = ROOT / "skills" / "agent-orchestration"
 SEED = ROOT / "evals" / "seed-cases.yaml"
 FAILURES = ROOT / "evals" / "failure-cases.yaml"
 WORKFLOW_E2E = ROOT / "scripts" / "run-workflow-e2e-eval.py"
+AGENT_ORCHESTRATION_E2E = ROOT / "scripts" / "run-agent-orchestration-e2e-eval.py"
 FRESH_AGENT_ROUTE_EVAL = ROOT / "scripts" / "run-fresh-agent-route-eval.py"
 
 
-REQUIRED_SKILLS = [ADAPTIVE, WORKFLOW, CONTEXT, SPECFLOW, TECHNICAL_DESIGN, DELIVERY, KNOWLEDGE, PROJECT_HARNESS, SUPERPOWERS_ADAPTER]
+REQUIRED_SKILLS = [ADAPTIVE, WORKFLOW, CONTEXT, SPECFLOW, TECHNICAL_DESIGN, DELIVERY, KNOWLEDGE, PROJECT_HARNESS, SUPERPOWERS_ADAPTER, AGENT_ORCHESTRATION]
 REQUIRED_WORKFLOW_SCHEMAS = [
     "workflow-manifest.schema.json",
     "strategy.schema.json",
@@ -196,6 +198,12 @@ def main() -> int:
     read(TECHNICAL_DESIGN / "references" / "spec-system-adapters.md")
     read(KNOWLEDGE / "scripts" / "capture_learning_candidate.py")
     read(KNOWLEDGE / "scripts" / "validate_learning_candidate.py")
+    for schema in ["agent-roster.schema.json", "context-packet.schema.json", "work-order.schema.json", "work-result.schema.json"]:
+        read(AGENT_ORCHESTRATION / "schemas" / schema)
+    for script in ["build_context_packet.py", "create_work_order.py", "validate_agent_roster.py", "validate_context_packet.py", "validate_work_order.py", "validate_work_result.py", "summarize_progress.py"]:
+        read(AGENT_ORCHESTRATION / "scripts" / script)
+    for reference in ["role-contracts.md", "context-projection.md", "orchestration-patterns.md"]:
+        read(AGENT_ORCHESTRATION / "references" / reference)
 
     skill_lines = line_count(ADAPTIVE / "SKILL.md")
     if skill_lines > 170:
@@ -205,6 +213,7 @@ def main() -> int:
     failure_count = validate_failure_cases()
     run([sys.executable, str(WORKFLOW / "scripts" / "validate_strategy_registry.py")])
     run([sys.executable, str(WORKFLOW_E2E)])
+    run([sys.executable, str(AGENT_ORCHESTRATION_E2E)])
     fresh_agent_ran = run_fresh_agent_route_eval()
 
     print("Sandbox eval passed")
@@ -213,6 +222,7 @@ def main() -> int:
     print(f"- seed cases: {seed_count}")
     print(f"- failure cases: {failure_count}")
     print("- workflow e2e: pass")
+    print("- agent orchestration e2e: pass")
     print("- fresh agent route eval: pass" if fresh_agent_ran else "- fresh agent route eval: skipped (set RUN_FRESH_AGENT_ROUTE_EVAL=1)")
     print("- strategy coverage:")
     for strategy, count in sorted(strategy_counts.items()):

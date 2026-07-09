@@ -1,0 +1,40 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "work_order_id", "workflow_id", "role", "status", "produced_artifacts", "discovered_facts", "evidence_refs", "claim_requests", "next_work_order_requests", "error", "handoff_notes"],
+  "properties": {
+    "schema_version": { "type": "integer", "enum": [1] },
+    "work_order_id": { "type": "string" },
+    "workflow_id": { "type": "string" },
+    "role": { "type": "string" },
+    "status": { "type": "string", "enum": ["completed", "blocked", "failed", "needs_human"] },
+    "produced_artifacts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["artifact_id", "type", "path", "status"],
+        "properties": {
+          "artifact_id": { "type": "string" },
+          "type": { "type": "string" },
+          "path": { "type": "string" },
+          "status": { "type": "string" }
+        }
+      }
+    },
+    "discovered_facts": { "type": "object" },
+    "evidence_refs": { "type": "array", "items": { "type": "string" } },
+    "claim_requests": { "type": "array", "items": { "type": "string", "enum": ["dev_done", "integration_done", "handoff_done"] } },
+    "next_work_order_requests": { "type": "array", "items": { "type": "string" } },
+    "error": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "required": ["code", "message"],
+      "properties": {
+        "code": { "type": "string" },
+        "message": { "type": "string" }
+      }
+    },
+    "handoff_notes": { "type": "string" }
+  }
+}

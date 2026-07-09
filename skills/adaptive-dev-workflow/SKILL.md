@@ -105,6 +105,7 @@ python3 skills/workflow-control-plane/scripts/apply_route_facts_delta.py route_d
 - `context-grounding`: Analysis Pack, Context Manifest, freshness/runtime/sufficiency checks.
 - `specflow`: Product spec and OpenSpec adapter.
 - `technical-design`: architecture/design topology/design review.
+- `agent-orchestration`: role roster, work orders, context packets, structured role results.
 - `superpowers-adapter`: contract bridge to native Superpowers skills.
 - `delivery-verification`: evidence manifest, verifier authority, claim issuance.
 - `project-harness-init`: AGENTS/project skill/spec evidence scaffold.

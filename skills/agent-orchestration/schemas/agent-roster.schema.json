@@ -1,0 +1,25 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "workflow_id", "agents"],
+  "properties": {
+    "schema_version": { "type": "integer", "enum": [1] },
+    "workflow_id": { "type": "string" },
+    "agents": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["agent_id", "role", "status", "capabilities", "allowed_artifact_types", "max_parallel_work_orders"],
+        "properties": {
+          "agent_id": { "type": "string" },
+          "role": { "type": "string" },
+          "status": { "type": "string", "enum": ["active", "unavailable"] },
+          "capabilities": { "type": "array", "items": { "type": "string" } },
+          "allowed_artifact_types": { "type": "array", "items": { "type": "string" } },
+          "max_parallel_work_orders": { "type": "integer" }
+        }
+      }
+    }
+  }
+}

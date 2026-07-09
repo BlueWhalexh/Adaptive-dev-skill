@@ -23,6 +23,7 @@ Admission Router + Workflow Control Plane + Narrow Skills + Verifier-signed Clai
 | `context-grounding` | Analysis Pack、Context Manifest、static/freshness/runtime/sufficiency 验证 |
 | `specflow` | 把 intent 或 Analysis Pack 转成 reviewed spec artifact；OpenSpec repo 走 adapter |
 | `technical-design` | 在 approved spec 和 implementation plan 之间生成/审查 technical design、设计边界、契约、回滚和 approval |
+| `agent-orchestration` | 生成 role roster、context packet、work order 和 structured role result，支持多 Agent 角色隔离协作 |
 | `superpowers-adapter` | 把 approved artifacts 转换给 Superpowers 原生 skills，并把输出映射回 transition request |
 | `delivery-verification` | JSON evidence manifest、claim level、fresh consumer / real external / integration 证据验证 |
 | `knowledge-promotion` | 把重复 SOP、踩坑、用户反馈沉淀为 learning candidate，再进入项目 skill / AGENTS.md |
@@ -228,7 +229,7 @@ This is the main guard against complex tasks drifting back into “read everythi
 ```sh
 git clone https://github.com/BlueWhalexh/Adaptive-dev-skill.git
 cd Adaptive-dev-skill
-for skill in adaptive-dev-workflow workflow-control-plane context-grounding specflow technical-design superpowers-adapter delivery-verification knowledge-promotion project-harness-init; do
+for skill in adaptive-dev-workflow workflow-control-plane context-grounding specflow technical-design agent-orchestration superpowers-adapter delivery-verification knowledge-promotion project-harness-init; do
   mkdir -p "$HOME/.codex/skills/$skill"
   rsync -a "skills/$skill/" "$HOME/.codex/skills/$skill/"
 done
@@ -237,7 +238,7 @@ done
 Optional `.agents` install:
 
 ```sh
-for skill in adaptive-dev-workflow workflow-control-plane context-grounding specflow technical-design superpowers-adapter delivery-verification knowledge-promotion project-harness-init; do
+for skill in adaptive-dev-workflow workflow-control-plane context-grounding specflow technical-design agent-orchestration superpowers-adapter delivery-verification knowledge-promotion project-harness-init; do
   mkdir -p "$HOME/.agents/skills/$skill"
   rsync -a "skills/$skill/" "$HOME/.agents/skills/$skill/"
 done
@@ -274,12 +275,14 @@ Deterministic checks:
 PYTHONPYCACHEPREFIX=/private/tmp/adaptive-skill-pycache python3 -m py_compile scripts/*.py skills/*/scripts/*.py
 python3 scripts/run-skill-sandbox-eval.py
 python3 scripts/run-workflow-e2e-eval.py
+python3 scripts/run-agent-orchestration-e2e-eval.py
 python3 scripts/run-handoff-fresh-consumer-eval.py
 python3 /Users/didi/.codex/skills/.system/skill-creator/scripts/quick_validate.py skills/adaptive-dev-workflow
 python3 /Users/didi/.codex/skills/.system/skill-creator/scripts/quick_validate.py skills/workflow-control-plane
 python3 /Users/didi/.codex/skills/.system/skill-creator/scripts/quick_validate.py skills/context-grounding
 python3 /Users/didi/.codex/skills/.system/skill-creator/scripts/quick_validate.py skills/specflow
 python3 /Users/didi/.codex/skills/.system/skill-creator/scripts/quick_validate.py skills/technical-design
+python3 /Users/didi/.codex/skills/.system/skill-creator/scripts/quick_validate.py skills/agent-orchestration
 python3 /Users/didi/.codex/skills/.system/skill-creator/scripts/quick_validate.py skills/superpowers-adapter
 python3 /Users/didi/.codex/skills/.system/skill-creator/scripts/quick_validate.py skills/delivery-verification
 python3 /Users/didi/.codex/skills/.system/skill-creator/scripts/quick_validate.py skills/knowledge-promotion
@@ -318,6 +321,7 @@ skills/
   context-grounding/
   specflow/
   technical-design/
+  agent-orchestration/
   delivery-verification/
   knowledge-promotion/
   project-harness-init/
