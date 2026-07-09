@@ -1,6 +1,6 @@
 # Role Contracts
 
-Use these roles as boundaries, not as mandatory agents. Create a work order only when the role adds isolation, maker/checker separation, or parallel throughput.
+Use these roles as boundaries, not as mandatory runtime workers. Create a work order only when the role adds isolation, maker/checker separation, or parallel throughput. Runtime isolation is controlled by `execution_carrier`, `context_isolation`, and `workspace_policy` in the work order.
 
 | Role | Input | Output | Never |
 | --- | --- | --- | --- |

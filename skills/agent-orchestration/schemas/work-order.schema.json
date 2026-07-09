@@ -1,7 +1,7 @@
 {
   "type": "object",
   "additionalProperties": false,
-  "required": ["schema_version", "work_order_id", "workflow_id", "role", "objective", "stage_id", "status", "context_packet_ref", "input_artifacts", "output_contract", "forbidden_actions", "expected_result_schema", "dependencies"],
+  "required": ["schema_version", "work_order_id", "workflow_id", "role", "objective", "stage_id", "status", "context_packet_ref", "execution_carrier", "context_isolation", "workspace_policy", "input_artifacts", "output_contract", "forbidden_actions", "expected_result_schema", "dependencies"],
   "properties": {
     "schema_version": { "type": "integer", "enum": [1] },
     "work_order_id": { "type": "string" },
@@ -12,6 +12,11 @@
     "stage_id": { "type": "string" },
     "status": { "type": "string", "enum": ["queued", "assigned", "blocked", "completed", "cancelled"] },
     "context_packet_ref": { "type": "string" },
+    "execution_carrier": { "type": "string", "enum": ["main_session", "subagent", "separate_session", "human", "external"] },
+    "context_isolation": { "type": "string", "enum": ["none", "role_contract_only", "fresh_context"] },
+    "workspace_policy": { "type": "string", "enum": ["shared_readonly", "shared_writer", "isolated_worktree"] },
+    "worktree_ref": { "type": "string" },
+    "merge_owner": { "type": "string" },
     "input_artifacts": { "type": "array", "items": { "type": "string" } },
     "output_contract": {
       "type": "object",

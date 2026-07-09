@@ -36,6 +36,9 @@ def build(args: argparse.Namespace) -> dict:
         "stage_id": args.stage_id,
         "status": "assigned" if assigned else "queued",
         "context_packet_ref": packet["context_packet_id"],
+        "execution_carrier": args.execution_carrier,
+        "context_isolation": args.context_isolation,
+        "workspace_policy": args.workspace_policy,
         "input_artifacts": [artifact["artifact_id"] for artifact in packet.get("artifact_refs", [])],
         "output_contract": {
             "artifact_type": args.output_artifact_type,
@@ -48,6 +51,10 @@ def build(args: argparse.Namespace) -> dict:
     }
     if assigned:
         order["assigned_agent_id"] = assigned
+    if args.worktree_ref:
+        order["worktree_ref"] = args.worktree_ref
+    if args.merge_owner:
+        order["merge_owner"] = args.merge_owner
     return order
 
 
@@ -59,6 +66,11 @@ def main() -> int:
     parser.add_argument("--stage-id", required=True)
     parser.add_argument("--context-packet", required=True)
     parser.add_argument("--agent-roster")
+    parser.add_argument("--execution-carrier", choices=["main_session", "subagent", "separate_session", "human", "external"], default="main_session")
+    parser.add_argument("--context-isolation", choices=["none", "role_contract_only", "fresh_context"], default="role_contract_only")
+    parser.add_argument("--workspace-policy", choices=["shared_readonly", "shared_writer", "isolated_worktree"], default="shared_readonly")
+    parser.add_argument("--worktree-ref", default="")
+    parser.add_argument("--merge-owner", default="main_agent")
     parser.add_argument("--objective", required=True)
     parser.add_argument("--output-artifact-type", required=True)
     parser.add_argument("--output-schema-ref", default="")

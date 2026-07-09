@@ -153,6 +153,32 @@ def main() -> int:
         ])
         run([sys.executable, str(ORCH / "scripts" / "validate_work_result.py"), str(result_path), "--work-order", str(order_path)])
 
+        good_order = json.loads(order_path.read_text(encoding="utf-8"))
+        if good_order["execution_carrier"] != "main_session" or good_order["context_isolation"] != "role_contract_only" or good_order["workspace_policy"] != "shared_readonly":
+            raise SystemExit("generated work order did not use safe default runtime policy")
+
+        bad_fresh_context = dict(good_order)
+        bad_fresh_context["context_isolation"] = "fresh_context"
+        bad_fresh_context_path = write_json(root / "bad_fresh_context_work_order.json", bad_fresh_context)
+        run([sys.executable, str(ORCH / "scripts" / "validate_work_order.py"), str(bad_fresh_context_path), "--agent-roster", str(roster_path), "--context-packet", str(context_path)], expect_ok=False)
+
+        bad_shared_writer = dict(good_order)
+        bad_shared_writer["execution_carrier"] = "subagent"
+        bad_shared_writer["context_isolation"] = "fresh_context"
+        bad_shared_writer["workspace_policy"] = "shared_writer"
+        bad_shared_writer_path = write_json(root / "bad_shared_writer_work_order.json", bad_shared_writer)
+        run([sys.executable, str(ORCH / "scripts" / "validate_work_order.py"), str(bad_shared_writer_path), "--agent-roster", str(roster_path), "--context-packet", str(context_path)], expect_ok=False)
+
+        bad_worktree = dict(good_order)
+        bad_worktree["role"] = "implementer"
+        bad_worktree["assigned_agent_id"] = "agent-implementer"
+        bad_worktree["execution_carrier"] = "subagent"
+        bad_worktree["context_isolation"] = "fresh_context"
+        bad_worktree["workspace_policy"] = "isolated_worktree"
+        bad_worktree.pop("worktree_ref", None)
+        bad_worktree_path = write_json(root / "bad_worktree_work_order.json", bad_worktree)
+        run([sys.executable, str(ORCH / "scripts" / "validate_work_order.py"), str(bad_worktree_path)], expect_ok=False)
+
         bad_context = json.loads(context_path.read_text(encoding="utf-8"))
         bad_context["instructions"] = ["Read the full chat history and continue."]
         bad_context_path = write_json(root / "bad_context_packet.json", bad_context)
@@ -172,6 +198,7 @@ def main() -> int:
     print("Agent orchestration E2E eval passed")
     print("- roster/context/work-order/result positive flow: pass")
     print("- full-chat context negative check: pass")
+    print("- runtime isolation policy negative checks: pass")
     print("- wrong result artifact type negative check: pass")
     print("- progress summary: pass")
     return 0

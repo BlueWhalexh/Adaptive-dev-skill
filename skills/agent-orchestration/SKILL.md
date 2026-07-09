@@ -7,6 +7,8 @@ description: Coordinate role-based AI agents through agent rosters, work orders,
 
 目标：让 orchestrator 管状态和上下文投影，不亲自写 spec、代码、review 或 verification。Agent 之间不传聊天记录，只通过 workflow state、artifact refs、context packet 和 structured result 协作。
 
+This skill is an orchestration contract, not an agent runtime. It prepares role work that can be executed by the main session, a subagent, a separate session, a human, or an external worker.
+
 ## Responsibilities
 
 - Create and validate `agent_roster.json`.
@@ -22,6 +24,8 @@ description: Coordinate role-based AI agents through agent rosters, work orders,
 - Do not let a producer approve its own spec/design/review output.
 - Do not treat role output as a delivery claim; `delivery-verification` owns claim attestations.
 - Do not spawn agents merely because a role exists; use roles only when isolation, maker/checker, or parallelism adds value.
+- Do not claim fresh-context isolation when `execution_carrier=main_session`.
+- Do not let non-main execution carriers write in the shared workspace; use `workspace_policy=isolated_worktree`.
 
 ## Contracts
 
@@ -29,7 +33,7 @@ Canonical JSON contracts:
 
 - `schemas/agent-roster.schema.json`: available roles, agent ids, capabilities, limits.
 - `schemas/context-packet.schema.json`: role-scoped artifact refs, allowed paths, omissions, instructions.
-- `schemas/work-order.schema.json`: objective, role, stage, context packet ref, expected output.
+- `schemas/work-order.schema.json`: objective, role, stage, execution carrier, workspace policy, context packet ref, expected output.
 - `schemas/work-result.schema.json`: structured role output, produced artifacts, facts, blockers.
 
 Use scripts rather than hand-writing contracts when possible:
@@ -46,7 +50,7 @@ python3 skills/agent-orchestration/scripts/summarize_progress.py --work-orders .
 1. Read `workflow_manifest.json` and strategy stage from `workflow-control-plane`.
 2. Select a role from `agent_roster.json`; if none exists, create a minimal roster first.
 3. Build the smallest context packet for that role. Include artifact refs and explicit omissions.
-4. Create one work order with one objective and one output contract.
+4. Create one work order with one objective, one output contract, an `execution_carrier`, a `context_isolation`, and a `workspace_policy`.
 5. Give the role agent only the work order and context packet, not the whole chat.
 6. Validate the work result. Convert accepted outputs into a `transition_request.json` for `workflow-control-plane`.
 
@@ -54,7 +58,7 @@ python3 skills/agent-orchestration/scripts/summarize_progress.py --work-orders .
 
 - `references/role-contracts.md`: standard role boundaries and anti-patterns.
 - `references/context-projection.md`: how to decide included/omitted context.
-- `references/orchestration-patterns.md`: sequential, maker/checker, and parallel review patterns.
+- `references/orchestration-patterns.md`: sequential, maker/checker, parallel review, runtime carrier, and worktree policy patterns.
 
 Read only the reference needed for the current orchestration decision.
 
