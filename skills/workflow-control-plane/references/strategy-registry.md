@@ -10,20 +10,24 @@ python3 skills/workflow-control-plane/scripts/validate_strategy_registry.py
 
 ## Strategies
 
-| Strategy | Use When | Design | Typical skills |
-| --- | --- | --- |
-| `quick-change` | L0 docs/mechanical change | none/none | none |
-| `focused-change` | L1 local implementation or narrow bugfix | embedded/self | TDD when automatable, verification-before-completion |
-| `root-cause-debug` | debug mode or unknown failure | embedded/self | systematic-debugging |
-| `spec-driven-feature` | L2 behavior/API/UI feature | embedded/self | context-grounding if needed, specflow, technical-design, writing-plans, TDD |
-| `complex-real-slice` | L3 complex feature/MVP/handoff chain | standalone/independent | context-grounding, specflow, technical-design, project-harness-init, delivery-verification, review |
-| `migration-critical` | data/auth/security/migration/public protocol | standalone/human | context-grounding, specflow/OpenSpec, technical-design, delivery-verification, security/data review |
-| `spike` | high uncertainty exploration | none/independent decision record | context-grounding, decision evidence, no delivery claim |
-| `review-only` | code/spec/design/plan/evidence review | none/independent | no implementation, verifier focus |
+| Strategy | Use When | Depth | Design | Typical skills |
+| --- | --- | --- | --- | --- |
+| `quick-change` | L0 docs/mechanical change | direct | none/none | none |
+| `sop-guided-change` | L1 known pattern with ready project SOP | direct | none/self | project SOP validator |
+| `focused-change` | Other L1 local implementation or narrow bugfix | selective | embedded/self | focused evidence, no default Superpowers |
+| `sop-guided-iteration` | Non-critical L2 known/adjacent pattern with ready project SOP | selective | embedded/independent | project SOP and delivery-verification |
+| `root-cause-debug` | debug mode or unknown failure | selective | embedded/self | systematic-debugging |
+| `spec-driven-feature` | Novel L2 behavior/UI feature | lifecycle/local | embedded/self | specflow, technical-design, writing-plans, delivery verification |
+| `complex-real-slice` | L3 complex feature/MVP/handoff chain | lifecycle/full | standalone/independent | context, spec, design, execution, verification, review |
+| `migration-critical` | data/auth/security/migration/public protocol | lifecycle/full | standalone/human | context, spec/design, staged execution, rollback review |
+| `spike` | high uncertainty exploration | selective | none/independent decision record | context-grounding, no delivery claim |
+| `review-only` | code/spec/design/plan/evidence review | direct | none/independent | no implementation |
 
 ## Stage Ownership
 
 The selected strategy owns stages. The adaptive router only records `selected_strategy` and `current_stage`.
+
+Each strategy also owns `stage_skills`. The resolver emits a complete `skill_plan`, while `required_skills` contains only the current stage entry. `transition_workflow.py` replaces `required_skills` when the stage advances; names scheduled for future stages are not instructions to preload those skills.
 
 ## Claim Rule
 

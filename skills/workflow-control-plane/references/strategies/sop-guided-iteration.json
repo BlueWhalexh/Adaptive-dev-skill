@@ -1,0 +1,17 @@
+{
+  "id": "sop-guided-iteration",
+  "version": "1.1",
+  "risk": ["L2"],
+  "modes": ["implement", "design"],
+  "process_depth": "selective",
+  "manifest_policy": "required",
+  "execution_engine": "local",
+  "stages": ["read_project_sop", "delta_alignment", "method_selection", "implementation", "chain_verification", "independent_review", "close"],
+  "required_artifacts": ["evidence_manifest"],
+  "stage_skills": {
+    "chain_verification": ["delivery-verification"]
+  },
+  "design_policy": "embedded",
+  "design_review": "independent",
+  "max_claim_request": "integration_done"
+}

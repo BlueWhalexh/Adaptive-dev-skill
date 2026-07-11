@@ -8,7 +8,8 @@ Admission Router + Workflow Control Plane + Narrow Skills + Verifier-signed Clai
 
 核心判断：
 
-- 轻任务保持快：不用为了文档或机械修改强行进入完整 SDD。
+- 轻任务保持快：`direct` 路由不创建 workflow manifest，也不加载 Superpowers。
+- 成熟项目复用 SOP：已知模式走 project skill 与固定 validator，只按需调用单个原生 Superpowers skill。
 - 高风险任务保持稳：权限、数据、API、迁移、handoff 不允许只靠 happy path 或口头完成。
 - 复杂任务先固定 current truth：用 Analysis Pack / Context Manifest 裁剪上下文，再写 spec、technical design 和 plan。
 - 交付声明由证据签发：实现者只能 request claim，不能 self-sign validated claim。
@@ -29,7 +30,7 @@ Admission Router + Workflow Control Plane + Narrow Skills + Verifier-signed Clai
 | `knowledge-promotion` | 把重复 SOP、踩坑、用户反馈沉淀为 learning candidate，再进入项目 skill / AGENTS.md |
 | `project-harness-init` | 初始化项目级 harness：AGENTS.md、agent team、Goal Loop Mode、spec/technical design/plan/evidence 结构、项目 skill |
 
-Superpowers 仍然是执行纪律，不被重写：TDD、systematic debugging、writing plans、requesting code review、verification before completion 等由原生 skill 执行。
+Superpowers 仍然是执行纪律，不被重写。普通 `direct/selective` 默认不加载 Superpowers，Debug 只调用 `systematic-debugging`；普通 L2 lifecycle 只在 plan stage 调用 `writing-plans`；只有复杂 lifecycle strategy 才允许完整执行链路。
 
 ## Control Plane Model
 
@@ -39,76 +40,63 @@ Route decision:
 
 ```json
 {
-  "schema_version": 1,
+  "schema_version": 2,
+  "status": "provisional",
   "classification": {
     "risk": "L2",
-    "intent_mode": "implement",
+    "work_intent": "implement",
     "delivery_shape": "feature",
     "scope": "module",
     "uncertainty": "medium",
+    "pattern_familiarity": "novel",
     "profiles": ["api"],
     "change_types": ["api_contract"]
   },
-  "capabilities": {
-    "spec_systems": ["fallback"],
-    "execution_engines": ["superpowers"],
-    "project_harness": "present"
-  },
-  "constraints": {
-    "human_design_approval_required": false,
-    "isolated_review_required": true
+  "capability_report_ref": ".agent/runtime/capability-report.json",
+  "user_constraints": {
+    "network_access": "unknown",
+    "production_changes": "forbidden",
+    "required_spec_system": null,
+    "required_execution_engine": null
   },
   "user_overrides": [],
   "ambiguity": { "status": "clear", "reasons": [] }
 }
 ```
 
-Resolved workflow manifest:
+Resolved strategy:
 
 ```json
 {
-  "schema_version": 3,
-  "skill_suite_version": "2026-06-26",
-  "run_id": "workflow-001",
+  "schema_version": 2,
+  "strategy_id": "spec-driven-feature",
   "strategy_version": "1.0",
-  "workflow_state": "intake",
-  "classification": {
-    "risk": "L2",
-    "mode": "implement",
-    "scope": "module",
-    "uncertainty": "medium",
-    "profiles": ["api"]
-  },
-  "routing": {
-    "spec_system": "fallback",
-    "execution_engine": "superpowers",
-    "strategy_id": "spec-driven-feature",
-    "required_skills": ["specflow", "delivery-verification"]
-  },
-  "selected_strategy": "spec-driven-feature",
-  "current_stage": "ground",
-  "resume": {
-    "checkpoint_id": "cp-init",
-    "resume_from_stage": "ground",
-    "last_validated_artifact_ids": [],
-    "blocked_reason": ""
+  "process_depth": "lifecycle",
+  "manifest_policy": "required",
+  "spec_system": "fallback",
+  "execution_engine": "local",
+  "required_skills": [],
+  "skill_plan": {
+    "ground": [],
+    "context_pack_if_needed": ["context-grounding"],
+    "pack_backed_specflow": ["specflow"],
+    "embedded_design": ["technical-design"],
+    "plan": ["superpowers:writing-plans"],
+    "focused_and_chain_verification": ["delivery-verification"]
   },
   "design_control": {
     "policy": "embedded",
     "review": "self",
     "documentation_topology": "compact",
-    "triggers": [],
-    "embedded_in": "plan-001",
-    "section_ref": "docs/superpowers/plans/2026-06-23-feature.md#technical-design",
-    "approval": {
-      "status": "approved",
-      "reviewer": "superpowers:writing-plans",
-      "reviewer_kind": "agent",
-      "evidence_ids": []
-    }
+    "triggers": []
   },
-  "artifacts": [],
-  "claims": { "requested": "none", "validated": [] }
+  "gates": {
+    "human_design_approval_required": false,
+    "isolated_review_required": false,
+    "integration_evidence_required": true
+  },
+  "capability_report_ref": ".agent/runtime/capability-report.json",
+  "reason": "L2 implement -> lifecycle; project_sop=missing, pattern=novel"
 }
 ```
 
@@ -125,38 +113,44 @@ Deprecated and intentionally unsupported as canonical artifacts:
 Classification describes task facts in `route_decision.json`:
 
 - `risk`: `L0 | L1 | L2 | L3`
-- `intent_mode`: `implement | debug | review | spike | mvp | migration`
-- `delivery_shape`: `none | doc_only | local_change | feature | mvp | migration | handoff`
+- `work_intent`: `implement | debug | review | design | verify | research | handoff`
+- `delivery_shape`: `none | doc_only | local_change | feature | mvp | spike`
 - `scope`: `local | module | cross_module | cross_service`
 - `uncertainty`: `low | medium | high`
-- `profiles`: `frontend | api | data | auth | security | release | docs | delivery | infra`
-- `change_types`: `docs | visual | bugfix | feature | api_contract | migration | refactor | handoff | review | research`
+- `pattern_familiarity`: `known | adjacent | novel | unknown`
+- `profiles`: `frontend | api | data | auth | security | release | docs | infra`
+- `change_types`: `docs | visual | bugfix | feature | api_contract | migration | refactor`
 
 Routing describes execution choices after `workflow-control-plane` resolves the strategy:
 
 - `spec_system`: `none | openspec | repo_native | fallback`
+- `process_depth`: `direct | selective | lifecycle`
+- `manifest_policy`: `none | required`
 - `execution_engine`: `none | local | superpowers`
 - `strategy_id`: selected strategy
-- `required_skills`: narrow skills to load
+- `required_skills`: 当前 stage 才允许加载的 narrow skills
+- `skill_plan`: 后续 stage 到 skill 的延迟加载计划
 
-`OpenSpec` is a spec system. `Superpowers` is an execution engine. `debug/review/spike/mvp/migration` are modes.
+`OpenSpec` 是 spec system。`Superpowers` 既可以作为 lifecycle execution engine，也可以只提供一个被明确选择的原生方法 skill。项目 SOP 是否可复用由 capability report 单独证明。
 
 ## Strategies
 
 Strategy manifests live in `skills/workflow-control-plane/references/strategies/*.json`.
 
-| Strategy | Use when |
-| --- | --- |
-| `quick-change` | L0 docs/mechanical/local work |
-| `focused-change` | L1 local implementation or narrow bugfix |
-| `root-cause-debug` | debug mode or unknown failure |
-| `spec-driven-feature` | L2 behavior/API/UI feature; embedded design |
-| `complex-real-slice` | L3 complex workflow, first MVP vertical slice, package handoff, long loop; standalone design |
-| `migration-critical` | data/auth/security/migration/public protocol; standalone + human design review |
-| `spike` | bounded exploration, decision record, no delivery claim |
-| `review-only` | review without edits |
+| Strategy | Depth | Use when |
+| --- | --- | --- |
+| `quick-change` | direct | L0 docs/mechanical/local work |
+| `sop-guided-change` | direct | Ready project SOP 中的 L1 known pattern |
+| `focused-change` | selective | 其他 L1 implementation/bugfix；默认不加载 Superpowers |
+| `sop-guided-iteration` | selective | Ready project SOP 中的非关键 L2 known/adjacent pattern；使用项目 SOP 与 evidence gate |
+| `root-cause-debug` | selective | debug mode，按需只调用 systematic-debugging |
+| `spec-driven-feature` | lifecycle/local | 缺少成熟 SOP 或 novel 的 L2 feature |
+| `complex-real-slice` | lifecycle/full | L3、first MVP、handoff、关键边界 |
+| `migration-critical` | lifecycle/full | data/auth/security/migration/public protocol |
+| `spike` | selective | bounded research，无 delivery claim |
+| `review-only` | direct | review without edits |
 
-The strategy owns stages. The router does not own strategy policy; `workflow-control-plane` records `selected_strategy` and `current_stage`.
+The strategy owns stages. `direct` 不创建 manifest；`selective/lifecycle` 由 `workflow-control-plane` 记录 `selected_strategy` 和 `current_stage`。检测到 Superpowers 已安装本身不会改变 process depth。
 
 Project harness initialization is a local scaffold operation: route it with `execution_engine: local` and `project-harness-init`. Use `superpowers` later when executing the product implementation plan, not while merely creating AGENTS.md, Goal Loop Mode, project skill, spec/design/plan surfaces, and evidence docs.
 
@@ -187,8 +181,6 @@ Artifacts are independent from workflow state:
   "covers_acceptance": ["AC-1"],
   "path": "docs/context/ctx-001.json"
 }
-```
-
 Graph rules:
 
 - `spec` depends on approved `analysis_pack`, unless there is a declared lightweight exception.
@@ -256,7 +248,7 @@ Use $adaptive-dev-workflow.
 Recommended project `AGENTS.md` line:
 
 ```md
-For implementation, fix, refactor, design, planning, verification, review, or handoff tasks, use adaptive-dev-workflow to classify task facts and emit route_decision.json; use workflow-control-plane to resolve strategy and create/update workflow_manifest.json; request verifier-signed claims only through delivery-verification after evidence.
+For implementation, fix, refactor, design, planning, verification, review, or handoff tasks, use adaptive-dev-workflow to classify task facts and let workflow-control-plane resolve strategy. Direct routes use project SOP and focused validation without a workflow manifest. Selective/lifecycle routes create or update workflow_manifest.json and load only the skills required by the active stage. Request verifier-signed claims only through delivery-verification after evidence.
 Human-facing docs default to Chinese; keep commands, paths, schema keys, validator types, skill names, and tool errors in English.
 ```
 
@@ -294,6 +286,8 @@ Fresh semantic route eval:
 
 ```sh
 python3 scripts/run-fresh-agent-route-eval.py --repeat 3 --case tiny-readme-command
+python3 scripts/run-fresh-agent-route-eval.py --repeat 3 --case sop-guided-existing-project
+python3 scripts/run-fresh-agent-route-eval.py --repeat 3 --case sop-guided-small-fix
 python3 scripts/run-fresh-agent-route-eval.py --repeat 3 --case debug-ci
 python3 scripts/run-fresh-agent-route-eval.py --repeat 3 --case specflow-intent-to-spec
 python3 scripts/run-fresh-agent-route-eval.py --repeat 3 --case complex-frontend-context-pack

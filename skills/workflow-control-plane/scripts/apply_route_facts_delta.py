@@ -41,6 +41,8 @@ def apply_delta(route: dict[str, Any], delta: dict[str, Any]) -> dict[str, Any]:
     classification["risk"] = max_by_rank(classification["risk"], facts.get("risk_floor"), RISK_RANK)
     classification["scope"] = max_by_rank(classification["scope"], facts.get("scope"), SCOPE_RANK)
     classification["uncertainty"] = max_by_rank(classification["uncertainty"], facts.get("uncertainty"), UNCERTAINTY_RANK)
+    if facts.get("pattern_familiarity"):
+        classification["pattern_familiarity"] = facts["pattern_familiarity"]
     classification["profiles"] = sorted_unique(classification["profiles"] + facts.get("add_profiles", []))
     classification["change_types"] = sorted_unique(classification["change_types"] + facts.get("add_change_types", []))
     updated["status"] = "provisional"

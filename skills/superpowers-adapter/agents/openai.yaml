@@ -1,3 +1,6 @@
 interface:
   display_name: "Superpowers Adapter"
-  short_description: "Map workflow artifacts to native Superpowers skills"
+  short_description: "Invoke exact native Superpowers skills by active stage"
+
+policy:
+  allow_implicit_invocation: false

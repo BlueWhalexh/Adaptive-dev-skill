@@ -36,6 +36,8 @@ ROUTING_TOKENS = {
     "superpowers",
     "quick-change",
     "focused-change",
+    "sop-guided-change",
+    "sop-guided-iteration",
     "root-cause-debug",
     "spec-driven-feature",
     "complex-real-slice",
@@ -121,6 +123,8 @@ def validate(path: Path) -> list[str]:
         errors.append("classification.profiles must not contain routing/strategy tokens: " + ", ".join(mixed_profiles))
 
     routing = manifest["routing"]
+    if routing["manifest_policy"] != "required":
+        errors.append("workflow manifests are forbidden for direct routes; manifest_policy must be required")
     if routing["strategy_id"] != manifest["selected_strategy"]:
         errors.append("routing.strategy_id must match selected_strategy")
     strategy, strategy_error = load_strategy(manifest["selected_strategy"])
@@ -135,6 +139,15 @@ def validate(path: Path) -> list[str]:
             errors.append(f"classification.risk {classification['risk']} is not allowed by selected strategy")
         if classification["mode"] not in strategy["modes"]:
             errors.append(f"classification.mode {classification['mode']} is not allowed by selected strategy")
+        if routing["process_depth"] != strategy["process_depth"]:
+            errors.append(f"routing.process_depth must match selected strategy: expected {strategy['process_depth']}")
+        if routing["manifest_policy"] != strategy["manifest_policy"]:
+            errors.append(f"routing.manifest_policy must match selected strategy: expected {strategy['manifest_policy']}")
+        skill_plan = routing["skill_plan"]
+        if set(skill_plan) != set(strategy["stages"]):
+            errors.append("routing.skill_plan must contain exactly the selected strategy stages")
+        if routing["required_skills"] != skill_plan.get(manifest["current_stage"], []):
+            errors.append("routing.required_skills must equal skill_plan for current_stage")
         design = manifest["design_control"]
         if design["policy"] != strategy["design_policy"]:
             errors.append(f"design_control.policy must match selected strategy: expected {strategy['design_policy']}")

@@ -1,11 +1,14 @@
 {
   "id": "focused-change",
-  "version": "1.0",
+  "version": "1.1",
   "risk": ["L1"],
   "modes": ["implement"],
+  "process_depth": "selective",
+  "manifest_policy": "required",
+  "execution_engine": "local",
   "stages": ["ground", "validator_selection", "red_or_alternate_evidence", "implementation", "focused_verification", "self_review", "close"],
   "required_artifacts": ["evidence_manifest"],
-  "required_skills": ["delivery-verification"],
+  "stage_skills": {"close": ["delivery-verification"]},
   "design_policy": "embedded",
   "design_review": "self",
   "max_claim_request": "dev_done"

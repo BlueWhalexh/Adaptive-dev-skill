@@ -2,6 +2,8 @@
 
 This adapter only maps contracts. The native Superpowers skill remains the owner of its methodology.
 
+`process_depth=selective` means invoke only the exact mapped row selected by the resolver. `process_depth=lifecycle` with `execution_engine=superpowers` may traverse multiple rows as their owning stages become active, but must not load every skill at intake.
+
 | Workflow situation | Native Superpowers skill | Input artifact |
 | --- | --- | --- |
 | Implementation approach is unclear | `superpowers:brainstorming` | route decision, approved spec, constraints |

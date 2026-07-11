@@ -1,15 +1,36 @@
 {
   "type": "object",
   "additionalProperties": false,
-  "required": ["id", "version", "risk", "modes", "stages", "required_artifacts", "required_skills", "design_policy", "design_review", "max_claim_request"],
+  "required": ["id", "version", "risk", "modes", "process_depth", "manifest_policy", "execution_engine", "stages", "required_artifacts", "stage_skills", "design_policy", "design_review", "max_claim_request"],
   "properties": {
     "id": { "type": "string" },
     "version": { "type": "string" },
     "risk": { "type": "array", "items": { "type": "string", "enum": ["L0", "L1", "L2", "L3"] } },
     "modes": { "type": "array", "items": { "type": "string", "enum": ["implement", "debug", "review", "design", "verify", "research", "handoff"] } },
+    "process_depth": { "type": "string", "enum": ["direct", "selective", "lifecycle"] },
+    "manifest_policy": { "type": "string", "enum": ["none", "required"] },
+    "execution_engine": { "type": "string", "enum": ["none", "local", "superpowers"] },
     "stages": { "type": "array", "items": { "type": "string" } },
     "required_artifacts": { "type": "array", "items": { "type": "string" } },
-    "required_skills": { "type": "array", "items": { "type": "string" } },
+    "stage_skills": {
+      "type": "object",
+      "additionalProperties": { "type": "array", "items": { "type": "string" } }
+    },
+    "conditional_skills": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["stages", "skills"],
+        "properties": {
+          "stages": { "type": "array", "items": { "type": "string" } },
+          "change_types": { "type": "array", "items": { "type": "string", "enum": ["docs", "visual", "bugfix", "feature", "api_contract", "migration", "refactor"] } },
+          "delivery_shapes": { "type": "array", "items": { "type": "string", "enum": ["none", "doc_only", "local_change", "feature", "mvp", "spike"] } },
+          "project_harness_statuses": { "type": "array", "items": { "type": "string", "enum": ["present", "missing", "unknown"] } },
+          "skills": { "type": "array", "items": { "type": "string" } }
+        }
+      }
+    },
     "design_policy": { "type": "string", "enum": ["none", "embedded", "standalone"] },
     "design_review": { "type": "string", "enum": ["none", "self", "independent", "human"] },
     "max_claim_request": { "type": "string", "enum": ["none", "dev_done", "integration_done", "handoff_done"] }

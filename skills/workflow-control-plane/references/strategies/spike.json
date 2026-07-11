@@ -1,11 +1,14 @@
 {
   "id": "spike",
-  "version": "1.0",
+  "version": "1.1",
   "risk": ["L1", "L2", "L3"],
   "modes": ["research"],
+  "process_depth": "selective",
+  "manifest_policy": "required",
+  "execution_engine": "none",
   "stages": ["question", "bounded_research", "prototype_or_probe", "decision_record", "next_strategy_recommendation"],
   "required_artifacts": ["analysis_pack", "decision_record", "evidence_manifest"],
-  "required_skills": ["context-grounding"],
+  "stage_skills": {"question": ["context-grounding"]},
   "design_policy": "none",
   "design_review": "independent",
   "max_claim_request": "none"

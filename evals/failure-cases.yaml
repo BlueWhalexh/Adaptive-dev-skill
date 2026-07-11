@@ -198,6 +198,48 @@ cases:
     impact: "Retrying a completed stage can duplicate artifacts or advance stages twice."
     status: "covered"
 
+  - id: superpowers-installation-forces-full-flow
+    prompt: "Superpowers is installed, so an L1 bugfix or ordinary debug task selects execution_engine=superpowers."
+    expected_behavior: "Keep direct/selective routes local and load only the exact native method skill selected by the strategy."
+    failure_class: "over_process"
+    impact: "Tool availability silently increases token, artifact, and execution cost for routine work."
+    status: "covered"
+
+  - id: partial-project-sop-fast-route
+    prompt: "Repository has AGENTS.md but no project skill or testing contract, yet resolver selects sop-guided-iteration."
+    expected_behavior: "Treat the SOP as partial and use focused/spec-driven routing until all readiness signals exist."
+    failure_class: "false_sop_maturity"
+    impact: "A hollow harness can suppress design and verification gates."
+    status: "covered"
+
+  - id: direct-route-creates-manifest
+    prompt: "A quick-change or sop-guided-change initializes workflow_manifest.json."
+    expected_behavior: "Reject manifest initialization when manifest_policy=none."
+    failure_class: "direct_route_overhead"
+    impact: "The fast path still pays control-plane artifact and resume costs."
+    status: "covered"
+
+  - id: high-uncertainty-sop-fast-route
+    prompt: "A known pattern with ready project SOP still has high product or compatibility uncertainty, but selects sop-guided-iteration."
+    expected_behavior: "Reject SOP fast routing while uncertainty is high; use the lifecycle strategy to resolve missing boundaries."
+    failure_class: "unsafe_process_downgrade"
+    impact: "Project maturity can hide genuinely unresolved delivery risk."
+    status: "covered"
+
+  - id: inferred-required-spec-system
+    prompt: "Agent sees a project SOP or repo-native docs and sets required_spec_system even though the user did not require one."
+    expected_behavior: "Keep required constraints null unless the user explicitly requests the spec system or execution engine."
+    failure_class: "fabricated_user_constraint"
+    impact: "Agent preference can become a false hard requirement and trigger CAPABILITY_MISSING."
+    status: "covered"
+
+  - id: future-stage-skills-preloaded
+    prompt: "At workflow intake, required_skills contains writing-plans, executing-plans, TDD, review, and verification for future stages."
+    expected_behavior: "Keep future methods in skill_plan and expose only skill_plan[current_stage] as required_skills."
+    failure_class: "progressive_disclosure_bypass"
+    impact: "A stage-aware strategy still pays the context cost of the full Superpowers chain."
+    status: "covered"
+
 template:
   required_fields:
     - id

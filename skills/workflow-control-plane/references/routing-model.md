@@ -16,6 +16,7 @@ Adaptive emits:
     "delivery_shape": "feature",
     "scope": "module",
     "uncertainty": "medium",
+    "pattern_familiarity": "novel",
     "profiles": ["api"],
     "change_types": ["api_contract"]
   },
@@ -51,18 +52,24 @@ python3 skills/workflow-control-plane/scripts/resolve_strategy.py route_decision
 - `work_intent=debug` -> `root-cause-debug`.
 - `change_types` contains `migration` -> `migration-critical`.
 - `risk=L0` -> `quick-change`.
-- `risk=L1` -> `focused-change`.
+- `risk=L1` + ready project SOP + known pattern + non-high uncertainty -> `sop-guided-change`.
+- Other `risk=L1` -> `focused-change`.
 - `risk=L3` -> `complex-real-slice` unless migration.
 - `risk=L2` with API contract, auth/security/data/release profile or handoff intent -> `complex-real-slice`.
+- Ready project SOP + known/adjacent, non-high uncertainty, non-critical `risk=L2` change -> `sop-guided-iteration`.
 - Other `risk=L2` behavior changes -> `spec-driven-feature`.
 
 ## Capability Rules
 
 - L0/L1/review/spike/debug usually use `spec_system=none`.
 - L2/L3 implementation prefers `openspec`, then `repo_native`, then `fallback`.
-- `execution_engine=superpowers` when available for L2/L3 implementation/debug/migration.
+- `process_depth=direct` skips workflow manifest creation.
+- `process_depth=selective` loads only exact native skills selected by the strategy.
+- `process_depth=lifecycle` runs spec/design/plan/execute/verify stages.
+- Full `execution_engine=superpowers` is Registry policy for complex lifecycle/migration work, not a consequence of installation.
 - `execution_engine=none` for review-only and spike.
-- `execution_engine=local` for L0 fast path when available.
+- `execution_engine=local` is the default for direct and selective implementation/debug work.
+- `project_sop=ready` requires instructions, a project skill, and a testing contract. Partial harness evidence must not trigger SOP-guided routing.
 
 ## Ambiguity
 

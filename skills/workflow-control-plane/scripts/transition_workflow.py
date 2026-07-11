@@ -117,6 +117,10 @@ def apply_transition(manifest: dict[str, Any], request: dict[str, Any]) -> tuple
 
     updated["artifacts"] = artifacts
     updated["current_stage"] = target_stage
+    updated["routing"] = {
+        **manifest["routing"],
+        "required_skills": manifest["routing"]["skill_plan"].get(target_stage, []),
+    }
     updated["workflow_state"] = state
     updated["manifest_revision"] = manifest["manifest_revision"] + 1
     updated["resume"] = {

@@ -64,9 +64,8 @@ def choose_spec_system(route: dict[str, Any], report: dict[str, Any]) -> str:
     return "none"
 
 
-def choose_execution_engine(route: dict[str, Any], report: dict[str, Any]) -> str:
+def choose_execution_engine(route: dict[str, Any], report: dict[str, Any], strategy: dict[str, Any]) -> str:
     mode = route["classification"]["work_intent"]
-    risk = route["classification"]["risk"]
     constraints = route["user_constraints"]
     available = available_ids(report, "execution_engines")
     required = constraints["required_execution_engine"]
@@ -74,12 +73,11 @@ def choose_execution_engine(route: dict[str, Any], report: dict[str, Any]) -> st
         if required == "none" or required in available:
             return required
         fail(f"CAPABILITY_MISSING: required execution engine unavailable: {required}")
-    if mode in {"review", "research", "verify"}:
+    if mode in {"review", "research", "verify", "design"}:
         return "none"
-    if risk == "L0":
-        return "local" if "local" in available else "none"
-    if "superpowers" in available:
-        return "superpowers"
+    preferred = strategy["execution_engine"]
+    if preferred in available:
+        return preferred
     if "local" in available:
         return "local"
     return "none"
@@ -107,13 +105,16 @@ def hard_triggers(route: dict[str, Any]) -> list[str]:
     return sorted(set(triggers))
 
 
-def choose_strategy(route: dict[str, Any]) -> str:
+def choose_strategy(route: dict[str, Any], report: dict[str, Any]) -> str:
     classification = route["classification"]
     mode = classification["work_intent"]
     risk = classification["risk"]
     change_types = set(classification["change_types"])
     profiles = set(classification["profiles"])
     delivery_shape = classification["delivery_shape"]
+    familiarity = classification["pattern_familiarity"]
+    uncertainty = classification["uncertainty"]
+    sop_ready = report["project_sop"]["status"] == "ready"
 
     if mode == "review":
         return "review-only"
@@ -125,13 +126,40 @@ def choose_strategy(route: dict[str, Any]) -> str:
         return "migration-critical"
     if risk == "L0":
         return "quick-change"
+    if risk == "L1" and sop_ready and familiarity == "known" and uncertainty != "high":
+        return "sop-guided-change"
     if risk == "L1":
         return "focused-change"
     if risk == "L3":
         return "complex-real-slice"
     if mode == "handoff" or "api_contract" in change_types or profiles.intersection({"release", "auth", "security", "data"}):
         return "complex-real-slice"
+    if sop_ready and familiarity in {"known", "adjacent"} and uncertainty != "high":
+        return "sop-guided-iteration"
     return "spec-driven-feature"
+
+
+def rule_matches(route: dict[str, Any], report: dict[str, Any], rule: dict[str, Any]) -> bool:
+    classification = route["classification"]
+    change_types = set(route["classification"]["change_types"])
+    if rule.get("change_types") and not change_types.intersection(rule["change_types"]):
+        return False
+    if rule.get("delivery_shapes") and classification["delivery_shape"] not in rule["delivery_shapes"]:
+        return False
+    if rule.get("project_harness_statuses") and report["project_harness"]["status"] not in rule["project_harness_statuses"]:
+        return False
+    return True
+
+
+def choose_skill_plan(route: dict[str, Any], report: dict[str, Any], strategy: dict[str, Any]) -> dict[str, list[str]]:
+    plan = {stage: list(strategy.get("stage_skills", {}).get(stage, [])) for stage in strategy["stages"]}
+    for rule in strategy.get("conditional_skills", []):
+        if rule_matches(route, report, rule):
+            for stage in rule["stages"]:
+                plan[stage].extend(rule["skills"])
+    if "superpowers" not in available_ids(report, "execution_engines"):
+        plan = {stage: [skill for skill in skills if not skill.startswith("superpowers:")] for stage, skills in plan.items()}
+    return {stage: list(dict.fromkeys(skills)) for stage, skills in plan.items()}
 
 
 def choose_topology(route: dict[str, Any], strategy: dict[str, Any]) -> str:
@@ -160,15 +188,21 @@ def resolve(route: dict[str, Any], base_dir: Path | None = None) -> dict[str, An
         fail(f"ROUTE_AMBIGUOUS: {reasons}")
 
     capability_report = load_capability_report(route, base_dir or Path.cwd())
-    strategy_id = choose_strategy(route)
+    strategy_id = choose_strategy(route, capability_report)
     strategy = load_strategy(strategy_id)
+    execution_engine = choose_execution_engine(route, capability_report, strategy)
+    skill_plan = choose_skill_plan(route, capability_report, strategy)
+    first_stage = strategy["stages"][0]
     resolved = {
-        "schema_version": 1,
+        "schema_version": 2,
         "strategy_id": strategy_id,
         "strategy_version": strategy["version"],
+        "process_depth": strategy["process_depth"],
+        "manifest_policy": strategy["manifest_policy"],
         "spec_system": choose_spec_system(route, capability_report),
-        "execution_engine": choose_execution_engine(route, capability_report),
-        "required_skills": strategy["required_skills"],
+        "execution_engine": execution_engine,
+        "required_skills": skill_plan[first_stage],
+        "skill_plan": skill_plan,
         "design_control": {
             "policy": strategy["design_policy"],
             "review": strategy["design_review"],
@@ -177,7 +211,11 @@ def resolve(route: dict[str, Any], base_dir: Path | None = None) -> dict[str, An
         },
         "gates": strategy_gates(strategy),
         "capability_report_ref": route["capability_report_ref"],
-        "reason": f"{route['classification']['risk']} {route['classification']['work_intent']} resolved by workflow-control-plane",
+        "reason": (
+            f"{route['classification']['risk']} {route['classification']['work_intent']} -> {strategy['process_depth']}; "
+            f"project_sop={capability_report['project_sop']['status']}, "
+            f"pattern={route['classification']['pattern_familiarity']}"
+        ),
     }
     resolved_errors = validate_instance(resolved, load_json(RESOLVED_SCHEMA))
     if resolved_errors:

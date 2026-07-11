@@ -16,6 +16,8 @@ STRATEGIES = SKILL_DIR / "references" / "strategies"
 REQUIRED_IDS = {
     "quick-change",
     "focused-change",
+    "sop-guided-change",
+    "sop-guided-iteration",
     "root-cause-debug",
     "spec-driven-feature",
     "complex-real-slice",
@@ -63,10 +65,36 @@ def validate(root: Path = STRATEGIES) -> list[str]:
         for stage in strategy.get("stages", []):
             if not SAFE_ID.match(str(stage)):
                 errors.append(f"{strategy_id}: stage id is unsafe: {stage}")
-        for field in ["risk", "modes", "required_artifacts", "required_skills"]:
+        for field in ["risk", "modes", "required_artifacts"]:
             values = strategy.get(field, [])
             if len(values) != len(set(values)):
                 errors.append(f"{strategy_id}: {field} must not contain duplicates")
+        if strategy.get("process_depth") == "direct" and strategy.get("manifest_policy") != "none":
+            errors.append(f"{strategy_id}: direct process depth must use manifest_policy=none")
+        if strategy.get("process_depth") != "direct" and strategy.get("manifest_policy") != "required":
+            errors.append(f"{strategy_id}: selective/lifecycle process depth must require a manifest")
+        if strategy.get("execution_engine") == "superpowers" and strategy.get("process_depth") != "lifecycle":
+            errors.append(f"{strategy_id}: full Superpowers execution is only valid for lifecycle strategies")
+        if strategy.get("execution_engine") == "superpowers" and strategy_id not in {"complex-real-slice", "migration-critical"}:
+            errors.append(f"{strategy_id}: default full Superpowers execution is reserved for complex-real-slice or migration-critical")
+        stages = set(strategy.get("stages", []))
+        stage_skills = strategy.get("stage_skills", {})
+        unknown_stage_skill_keys = sorted(set(stage_skills) - stages)
+        if unknown_stage_skill_keys:
+            errors.append(f"{strategy_id}: stage_skills references unknown stages: {', '.join(unknown_stage_skill_keys)}")
+        for stage, skills in stage_skills.items():
+            if len(skills) != len(set(skills)):
+                errors.append(f"{strategy_id}: stage_skills.{stage} must not contain duplicates")
+        for rule in strategy.get("conditional_skills", []):
+            if not any(rule.get(field) for field in ["change_types", "delivery_shapes", "project_harness_statuses"]):
+                errors.append(f"{strategy_id}: conditional skill rule needs at least one routing condition")
+            unknown_rule_stages = sorted(set(rule.get("stages", [])) - stages)
+            if unknown_rule_stages:
+                errors.append(f"{strategy_id}: conditional_skills references unknown stages: {', '.join(unknown_rule_stages)}")
+            for field in ["stages", "change_types", "delivery_shapes", "project_harness_statuses", "skills"]:
+                values = rule.get(field, [])
+                if len(values) != len(set(values)):
+                    errors.append(f"{strategy_id}: conditional_skills.{field} must not contain duplicates")
         unknown_artifacts = sorted(set(strategy.get("required_artifacts", [])) - KNOWN_ARTIFACTS)
         if unknown_artifacts:
             errors.append(f"{strategy_id}: unknown required_artifacts: {', '.join(unknown_artifacts)}")

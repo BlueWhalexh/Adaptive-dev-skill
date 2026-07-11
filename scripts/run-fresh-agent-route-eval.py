@@ -18,6 +18,7 @@ SEED = ROOT / "evals" / "seed-cases.yaml"
 RESOLVER = ROOT / "skills" / "workflow-control-plane" / "scripts" / "resolve_strategy.py"
 DEFAULT_CASES = [
     "tiny-readme-command",
+    "sop-guided-existing-project",
     "debug-ci",
     "specflow-intent-to-spec",
     "complex-frontend-context-pack",
@@ -40,13 +41,14 @@ OUTPUT_SCHEMA: dict[str, Any] = {
         "classification": {
             "type": "object",
             "additionalProperties": False,
-            "required": ["risk", "work_intent", "delivery_shape", "scope", "uncertainty", "profiles", "change_types"],
+            "required": ["risk", "work_intent", "delivery_shape", "scope", "uncertainty", "pattern_familiarity", "profiles", "change_types"],
             "properties": {
                 "risk": {"type": "string"},
                 "work_intent": {"type": "string"},
                 "delivery_shape": {"type": "string"},
                 "scope": {"type": "string"},
                 "uncertainty": {"type": "string"},
+                "pattern_familiarity": {"type": "string"},
                 "profiles": {"type": "array", "items": {"type": "string"}},
                 "change_types": {"type": "array", "items": {"type": "string"}},
             },
@@ -142,11 +144,13 @@ def load_cases() -> dict[str, dict[str, Any]]:
                 "mode": scalar_value(block, "mode"),
                 "scope": scalar_value(block, "scope"),
                 "uncertainty": scalar_value(block, "uncertainty"),
+                "pattern_familiarity": scalar_value(block, "pattern_familiarity"),
                 "profiles": list_value(block, "profiles"),
             },
             "routing": {
                 "spec_system": scalar_value(block, "spec_system"),
                 "execution_engine": scalar_value(block, "execution_engine"),
+                "process_depth": scalar_value(block, "process_depth"),
                 "strategy_id": scalar_value(block, "strategy_id"),
                 "required_skills": list_value(block, "required_skills"),
             },
@@ -172,8 +176,8 @@ only; do not resolve the strategy yourself.
 Evaluator instructions such as "do not edit files" are not user overrides.
 For this eval, set `capability_report_ref` to `capability-report.json`.
 Assume the deterministic capability report says `local`, `superpowers`, and
-`fallback` are available, while OpenSpec/repo-native/project harness are unknown
-unless the user task explicitly says otherwise.
+`fallback` are available. Project SOP is ready only for a case that explicitly
+says AGENTS.md, a project skill, and a testing contract already exist.
 
 Do not set `ambiguity.status=ambiguous` only because implementation details,
 acceptance details, migration rollout, or exact tests are missing. Use
@@ -184,9 +188,9 @@ User task:
 {case["prompt"]}
 
 Return only JSON with:
-- schema_version: 1
+- schema_version: 2
 - status: provisional or confirmed
-- classification: risk, work_intent, delivery_shape, scope, uncertainty, profiles, change_types
+- classification: risk, work_intent, delivery_shape, scope, uncertainty, pattern_familiarity, profiles, change_types
 - capability_report_ref
 - user_constraints: network_access, production_changes, required_spec_system, required_execution_engine
 - user_overrides
@@ -264,9 +268,9 @@ def canonical_expected(expected: str, actual: Any) -> str:
     return normalize(expected) if value_matches(expected, actual) else normalize(actual)
 
 
-def capability_report() -> dict[str, Any]:
+def capability_report(*, project_sop_ready: bool = False) -> dict[str, Any]:
     return {
-        "schema_version": 1,
+        "schema_version": 2,
         "repo_revision": "fresh-route-eval",
         "spec_systems": [{"id": "fallback", "status": "available", "evidence": ["eval"]}],
         "execution_engines": [
@@ -274,14 +278,24 @@ def capability_report() -> dict[str, Any]:
             {"id": "superpowers", "status": "available", "version": "unknown"},
         ],
         "project_harness": {"status": "unknown", "version": "unknown", "evidence": []},
+        "project_sop": {
+            "status": "ready" if project_sop_ready else "missing",
+            "evidence": ["AGENTS.md", ".agent/skills/project/SKILL.md", ".agent/skills/project/references/testing.md"] if project_sop_ready else [],
+            "signals": {
+                "instructions": ["AGENTS.md"] if project_sop_ready else [],
+                "project_skills": [".agent/skills/project/SKILL.md"] if project_sop_ready else [],
+                "test_contracts": [".agent/skills/project/references/testing.md"] if project_sop_ready else [],
+            },
+        },
     }
 
 
-def resolve_route(actual: dict[str, Any]) -> dict[str, Any]:
+def resolve_route(actual: dict[str, Any], case: dict[str, Any]) -> dict[str, Any]:
     route = {key: actual[key] for key in ["schema_version", "status", "classification", "capability_report_ref", "user_constraints", "user_overrides", "ambiguity"]}
     with tempfile.TemporaryDirectory(prefix="adaptive-resolve-route-") as tmp:
         route_path = Path(tmp) / "route.json"
-        (Path(tmp) / "capability-report.json").write_text(json.dumps(capability_report(), ensure_ascii=False), encoding="utf-8")
+        ready = case["id"].startswith("sop-guided-")
+        (Path(tmp) / "capability-report.json").write_text(json.dumps(capability_report(project_sop_ready=ready), ensure_ascii=False), encoding="utf-8")
         route_path.write_text(json.dumps(route, ensure_ascii=False), encoding="utf-8")
         result = subprocess.run([sys.executable, str(RESOLVER), str(route_path)], text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, check=False)
         if result.returncode != 0:
@@ -296,8 +310,10 @@ def stable_key(case: dict[str, Any], actual: dict[str, Any], resolved: dict[str,
         "mode": canonical_expected(case["classification"]["mode"], classification.get("work_intent")),
         "scope": canonical_expected(case["classification"]["scope"], classification.get("scope")),
         "uncertainty": canonical_expected(case["classification"]["uncertainty"], classification.get("uncertainty")),
+        "pattern_familiarity": canonical_expected(case["classification"]["pattern_familiarity"], classification.get("pattern_familiarity")),
         "spec_system": canonical_expected(case["routing"]["spec_system"], resolved.get("spec_system")),
         "execution_engine": canonical_expected(case["routing"]["execution_engine"], resolved.get("execution_engine")),
+        "process_depth": canonical_expected(case["routing"]["process_depth"], resolved.get("process_depth")),
         "strategy_id": canonical_expected(case["routing"]["strategy_id"], resolved.get("strategy_id")),
         "design_policy": canonical_expected(case["design_control"]["policy"], (resolved.get("design_control") or {}).get("policy")),
         "design_review": canonical_expected(case["design_control"]["review"], (resolved.get("design_control") or {}).get("review")),
@@ -308,7 +324,7 @@ def stable_key(case: dict[str, Any], actual: dict[str, Any], resolved: dict[str,
 
 def validate_result(case: dict[str, Any], actual: dict[str, Any], resolved: dict[str, Any]) -> list[str]:
     errors: list[str] = []
-    for field in ["risk", "mode", "scope", "uncertainty"]:
+    for field in ["risk", "mode", "scope", "uncertainty", "pattern_familiarity"]:
         actual_field = "work_intent" if field == "mode" else field
         got = actual.get("classification", {}).get(actual_field)
         want = case["classification"][field]
@@ -317,7 +333,7 @@ def validate_result(case: dict[str, Any], actual: dict[str, Any], resolved: dict
     if not contains_all(actual.get("classification", {}).get("profiles") or [], case["classification"]["profiles"]):
         errors.append(f"classification.profiles missing expected {case['classification']['profiles']!r}")
 
-    for field in ["spec_system", "execution_engine", "strategy_id"]:
+    for field in ["spec_system", "execution_engine", "process_depth", "strategy_id"]:
         got = resolved.get(field)
         want = case["routing"][field]
         if not value_matches(want, got):
@@ -368,7 +384,7 @@ def main() -> int:
         for run_index in range(args.repeat):
             try:
                 actual = run_fresh_agent(case, codex_bin=args.codex_bin, model=args.model, timeout_seconds=args.timeout_seconds)
-                resolved = resolve_route(actual)
+                resolved = resolve_route(actual, case)
                 actuals.append(actual)
                 case_errors.extend(f"run {run_index + 1}: {error}" for error in validate_result(case, actual, resolved))
                 stable_results.append(stable_key(case, actual, resolved))
@@ -387,7 +403,7 @@ def main() -> int:
                 print("  last actual:", json.dumps(actuals[-1], ensure_ascii=False, sort_keys=True), flush=True)
         else:
             last = actuals[-1]
-            resolved = resolve_route(last)
+            resolved = resolve_route(last, case)
             print(f"PASS {case_id}: {last['classification']['risk']} / {resolved['strategy_id']} / none", flush=True)
 
     if failures:

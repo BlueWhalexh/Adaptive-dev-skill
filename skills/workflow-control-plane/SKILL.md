@@ -10,9 +10,11 @@ description: Owns workflow runtime state for adaptive AI coding tasks. Use when 
 ## Responsibilities
 
 - Resolve `route_decision.json` into a versioned strategy.
+- Resolve `process_depth=direct|selective|lifecycle` from Registry policy and project SOP evidence.
 - Create and update `workflow_manifest.json`.
 - Validate strategy version, stage, resume checkpoint, artifact graph, and claim ceiling.
 - Apply specialist skill exit contracts through deterministic scripts.
+- Expose only current-stage `required_skills`; keep future methods in `skill_plan` until their stage becomes active.
 - Reject ambiguous routes, stale artifacts, invalid transitions, and untrusted claims.
 
 ## Never
@@ -21,6 +23,8 @@ description: Owns workflow runtime state for adaptive AI coding tasks. Use when 
 - Do not duplicate SpecFlow, technical-design, context-grounding, delivery-verification, or Superpowers methodology.
 - Do not invent global stages; every stage must come from `references/strategies/<strategy>.json`.
 - Do not accept a claim signer or claim level that violates `delivery-verification` verifier authority.
+- Do not initialize a manifest when the resolved strategy says `manifest_policy=none`.
+- Do not select full Superpowers execution merely because it is installed.
 
 ## Inputs
 
@@ -31,6 +35,8 @@ python3 skills/workflow-control-plane/scripts/detect_capabilities.py --root . --
 ```
 
 Specialist skills return revision-checked transition requests using `schemas/transition-request.schema.json`. They may produce artifact changes, evidence refs, claim requests, and discovered facts, but the control plane writes the manifest and computes stale propagation.
+
+`direct` routes stop before manifest initialization. `selective` routes load only the exact skill selected for the active stage. `lifecycle` routes traverse the Registry stages and may use full Superpowers execution only when explicitly resolved.
 
 ## Core Commands
 

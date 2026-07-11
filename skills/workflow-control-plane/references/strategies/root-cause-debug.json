@@ -1,11 +1,17 @@
 {
   "id": "root-cause-debug",
-  "version": "1.0",
+  "version": "1.1",
   "risk": ["L1", "L2", "L3"],
   "modes": ["debug"],
+  "process_depth": "selective",
+  "manifest_policy": "required",
+  "execution_engine": "local",
   "stages": ["capture_failure", "reproduce_or_read_logs", "hypothesis", "minimal_fix", "same_signal_verification", "regression_guard", "close"],
   "required_artifacts": ["evidence_manifest"],
-  "required_skills": ["superpowers:systematic-debugging", "delivery-verification"],
+  "stage_skills": {
+    "capture_failure": ["superpowers:systematic-debugging"],
+    "close": ["delivery-verification"]
+  },
   "design_policy": "embedded",
   "design_review": "self",
   "max_claim_request": "dev_done"

@@ -12,6 +12,7 @@
         "risk_floor": { "type": "string", "enum": ["L0", "L1", "L2", "L3"] },
         "scope": { "type": "string", "enum": ["local", "module", "cross_module", "cross_service"] },
         "uncertainty": { "type": "string", "enum": ["low", "medium", "high"] },
+        "pattern_familiarity": { "type": "string", "enum": ["known", "adjacent", "novel", "unknown"] },
         "add_profiles": {
           "type": "array",
           "items": { "type": "string", "enum": ["frontend", "api", "data", "auth", "security", "release", "docs", "infra"] }

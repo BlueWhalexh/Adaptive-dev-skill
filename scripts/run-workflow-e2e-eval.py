@@ -49,7 +49,7 @@ def sha256(path: Path) -> str:
 
 def route_decision() -> dict[str, Any]:
     return {
-        "schema_version": 1,
+        "schema_version": 2,
         "status": "provisional",
         "classification": {
             "risk": "L3",
@@ -57,6 +57,7 @@ def route_decision() -> dict[str, Any]:
             "delivery_shape": "mvp",
             "scope": "cross_module",
             "uncertainty": "high",
+            "pattern_familiarity": "novel",
             "profiles": ["auth", "security", "data"],
             "change_types": ["migration"],
         },
@@ -74,7 +75,7 @@ def route_decision() -> dict[str, Any]:
 
 def capability_report() -> dict[str, Any]:
     return {
-        "schema_version": 1,
+        "schema_version": 2,
         "repo_revision": "e2e",
         "spec_systems": [
             {"id": "openspec", "status": "available", "evidence": ["openspec/config.yaml"]},
@@ -85,6 +86,11 @@ def capability_report() -> dict[str, Any]:
             {"id": "superpowers", "status": "available", "version": "unknown"},
         ],
         "project_harness": {"status": "present", "version": "2", "evidence": ["AGENTS.md"]},
+        "project_sop": {
+            "status": "partial",
+            "evidence": ["AGENTS.md"],
+            "signals": {"instructions": ["AGENTS.md"], "project_skills": [], "test_contracts": []},
+        },
     }
 
 
@@ -102,26 +108,63 @@ def route_facts_delta() -> dict[str, Any]:
     }
 
 
+def complex_skill_plan() -> dict[str, list[str]]:
+    return {
+        "ground": [],
+        "context_pack_review": ["context-grounding"],
+        "pack_backed_specflow": ["specflow"],
+        "spec_review": [],
+        "technical_design": ["technical-design"],
+        "design_review": [],
+        "minimum_real_slice_plan": ["superpowers:writing-plans"],
+        "slice_execution": ["superpowers:executing-plans"],
+        "architecture_checkpoint": [],
+        "remaining_slice_execution": ["superpowers:executing-plans"],
+        "system_verification": ["superpowers:verification-before-completion", "delivery-verification"],
+        "delivery_review": ["superpowers:requesting-code-review"],
+        "learning_capture": ["knowledge-promotion"],
+    }
+
+
+def spec_feature_skill_plan() -> dict[str, list[str]]:
+    return {
+        "ground": [],
+        "context_pack_if_needed": ["context-grounding"],
+        "pack_backed_specflow": ["specflow"],
+        "spec_review": [],
+        "embedded_design": ["technical-design"],
+        "plan": ["superpowers:writing-plans"],
+        "implementation": [],
+        "focused_and_chain_verification": ["delivery-verification"],
+        "review": [],
+        "close": [],
+    }
+
+
 def workflow_manifest(*, requested: str = "integration_done", validated_claim: str = "integration_done") -> dict[str, Any]:
     return {
-        "schema_version": 3,
+        "schema_version": 4,
         "skill_suite_version": "2026-06-24",
         "run_id": "run-control-plane-e2e",
         "manifest_revision": 1,
-        "strategy_version": "1.0",
+        "strategy_version": "1.1",
         "workflow_state": "review_ready",
         "classification": {
             "risk": "L3",
             "mode": "implement",
             "scope": "cross_module",
             "uncertainty": "high",
+            "pattern_familiarity": "novel",
             "profiles": ["frontend", "api"],
         },
         "routing": {
+            "process_depth": "lifecycle",
+            "manifest_policy": "required",
             "spec_system": "fallback",
             "execution_engine": "superpowers",
             "strategy_id": "complex-real-slice",
-            "required_skills": ["context-grounding", "specflow", "technical-design", "delivery-verification"],
+            "required_skills": ["superpowers:requesting-code-review"],
+            "skill_plan": complex_skill_plan(),
             "capability_report_ref": "capability-report.json",
         },
         "selected_strategy": "complex-real-slice",
@@ -241,7 +284,7 @@ def workflow_manifest(*, requested: str = "integration_done", validated_claim: s
                         "claim_type": validated_claim,
                         "commit_sha": "abc123",
                         "strategy_id": "complex-real-slice",
-                        "strategy_version": "1.0",
+                        "strategy_version": "1.1",
                         "registry_digest": "sha256:registry",
                         "evidence_manifest_digest": "sha256:evidence",
                         "verifier_id": "evidence-manifest-validator",
@@ -310,12 +353,76 @@ def main() -> int:
         run([sys.executable, str(HARNESS_INIT), "--root", str(repo), "--feature-id", feature, "--project-skill", "billing"])
         run([sys.executable, str(HARNESS_VALIDATE), "--root", str(repo), "--feature-id", feature, "--project-skill", "billing"])
         assert_harness_paths(repo, "billing-mvp")
+        detected_capability_path = root / "detected-capability-report.json"
+        run([sys.executable, str(WORKFLOW / "scripts" / "detect_capabilities.py"), "--root", str(repo), "--output", str(detected_capability_path)])
+        detected_capability = json.loads(detected_capability_path.read_text(encoding="utf-8"))
+        if detected_capability["project_sop"]["status"] != "ready":
+            raise SystemExit("initialized project harness was not detected as a ready project SOP")
 
         source_file = write_text(repo / "src" / "orders" / "implementation.ts", "export const ok = true;\n")
         spec_file = write_text(repo / "docs" / "superpowers" / "specs" / "2026-06-23-feature-spec.md", "# Spec\n")
 
         write_json(root / "capability-report.json", capability_report())
         route_path = write_json(root / "route-decision.json", route_decision())
+        ready_capability = capability_report()
+        ready_capability["project_sop"] = {
+            "status": "ready",
+            "evidence": ["AGENTS.md", ".agent/skills/orders/SKILL.md", ".agent/skills/orders/references/testing.md"],
+            "signals": {
+                "instructions": ["AGENTS.md"],
+                "project_skills": [".agent/skills/orders/SKILL.md"],
+                "test_contracts": [".agent/skills/orders/references/testing.md"],
+            },
+        }
+        write_json(root / "capability-ready-sop.json", ready_capability)
+
+        sop_iteration = route_decision()
+        sop_iteration["capability_report_ref"] = "capability-ready-sop.json"
+        sop_iteration["classification"].update({
+            "risk": "L2",
+            "work_intent": "implement",
+            "delivery_shape": "feature",
+            "scope": "module",
+            "uncertainty": "low",
+            "pattern_familiarity": "known",
+            "profiles": ["frontend"],
+            "change_types": ["feature"],
+        })
+        sop_iteration_path = write_json(root / "route-sop-iteration.json", sop_iteration)
+        sop_iteration_resolved_path = root / "resolved-sop-iteration.json"
+
+        high_uncertainty_sop = json.loads(json.dumps(sop_iteration))
+        high_uncertainty_sop["classification"]["uncertainty"] = "high"
+        high_uncertainty_sop_path = write_json(root / "route-high-uncertainty-sop.json", high_uncertainty_sop)
+        high_uncertainty_sop_resolved_path = root / "resolved-high-uncertainty-sop.json"
+
+        sop_change = json.loads(json.dumps(sop_iteration))
+        sop_change["classification"].update({"risk": "L1", "delivery_shape": "local_change", "scope": "local", "change_types": ["bugfix"]})
+        sop_change_path = write_json(root / "route-sop-change.json", sop_change)
+        sop_change_resolved_path = root / "resolved-sop-change.json"
+
+        partial_iteration = json.loads(json.dumps(sop_iteration))
+        partial_iteration["capability_report_ref"] = "capability-report.json"
+        partial_iteration_path = write_json(root / "route-partial-sop-iteration.json", partial_iteration)
+        partial_iteration_resolved_path = root / "resolved-partial-sop-iteration.json"
+
+        debug_route = json.loads(json.dumps(partial_iteration))
+        debug_route["classification"].update({"work_intent": "debug", "uncertainty": "high", "pattern_familiarity": "unknown", "change_types": ["bugfix"]})
+        debug_route_path = write_json(root / "route-debug-selective.json", debug_route)
+        debug_resolved_path = root / "resolved-debug-selective.json"
+
+        direct_route = json.loads(json.dumps(partial_iteration))
+        direct_route["classification"].update({
+            "risk": "L0",
+            "delivery_shape": "doc_only",
+            "scope": "local",
+            "uncertainty": "low",
+            "pattern_familiarity": "known",
+            "profiles": ["docs"],
+            "change_types": ["docs"],
+        })
+        direct_route_path = write_json(root / "route-direct.json", direct_route)
+        direct_resolved_path = root / "resolved-direct.json"
         resolved_path = root / "resolved-strategy.json"
         initialized_manifest = root / "workflow-initialized.json"
         transition_path = write_json(root / "transition-request.json", {
@@ -372,6 +479,45 @@ def main() -> int:
         delta_path = write_json(root / "route-facts-delta.json", route_facts_delta())
         rerouted_path = root / "route-decision-v2.json"
         run([sys.executable, str(WORKFLOW / "scripts" / "resolve_strategy.py"), str(route_path), "--output", str(resolved_path)])
+        resolved = json.loads(resolved_path.read_text(encoding="utf-8"))
+        if resolved["strategy_id"] != "migration-critical" or resolved["process_depth"] != "lifecycle" or resolved["execution_engine"] != "superpowers":
+            raise SystemExit("critical migration did not retain full lifecycle Superpowers execution")
+
+        run([sys.executable, str(WORKFLOW / "scripts" / "resolve_strategy.py"), str(sop_iteration_path), "--output", str(sop_iteration_resolved_path)])
+        sop_iteration_resolved = json.loads(sop_iteration_resolved_path.read_text(encoding="utf-8"))
+        expected_iteration_skills = {"delivery-verification"}
+        planned_iteration_skills = {skill for skills in sop_iteration_resolved["skill_plan"].values() for skill in skills}
+        if (
+            sop_iteration_resolved["strategy_id"] != "sop-guided-iteration"
+            or sop_iteration_resolved["process_depth"] != "selective"
+            or sop_iteration_resolved["execution_engine"] != "local"
+            or sop_iteration_resolved["required_skills"]
+            or not expected_iteration_skills.issubset(planned_iteration_skills)
+        ):
+            raise SystemExit("ready project SOP did not select the expected selective native-skill route")
+
+        run([sys.executable, str(WORKFLOW / "scripts" / "resolve_strategy.py"), str(high_uncertainty_sop_path), "--output", str(high_uncertainty_sop_resolved_path)])
+        high_uncertainty_resolved = json.loads(high_uncertainty_sop_resolved_path.read_text(encoding="utf-8"))
+        if high_uncertainty_resolved["strategy_id"] != "spec-driven-feature":
+            raise SystemExit("high uncertainty incorrectly used SOP-guided fast routing")
+
+        run([sys.executable, str(WORKFLOW / "scripts" / "resolve_strategy.py"), str(sop_change_path), "--output", str(sop_change_resolved_path)])
+        sop_change_resolved = json.loads(sop_change_resolved_path.read_text(encoding="utf-8"))
+        if sop_change_resolved["strategy_id"] != "sop-guided-change" or sop_change_resolved["manifest_policy"] != "none" or sop_change_resolved["required_skills"]:
+            raise SystemExit("known L1 project SOP change did not use the direct route")
+
+        run([sys.executable, str(WORKFLOW / "scripts" / "resolve_strategy.py"), str(partial_iteration_path), "--output", str(partial_iteration_resolved_path)])
+        partial_iteration_resolved = json.loads(partial_iteration_resolved_path.read_text(encoding="utf-8"))
+        if partial_iteration_resolved["strategy_id"] != "spec-driven-feature" or partial_iteration_resolved["execution_engine"] != "local":
+            raise SystemExit("partial project SOP incorrectly triggered SOP-guided routing or full Superpowers execution")
+
+        run([sys.executable, str(WORKFLOW / "scripts" / "resolve_strategy.py"), str(debug_route_path), "--output", str(debug_resolved_path)])
+        debug_resolved = json.loads(debug_resolved_path.read_text(encoding="utf-8"))
+        if debug_resolved["strategy_id"] != "root-cause-debug" or debug_resolved["execution_engine"] != "local" or "superpowers:systematic-debugging" not in debug_resolved["required_skills"]:
+            raise SystemExit("debug route did not select only the native systematic-debugging method")
+
+        run([sys.executable, str(WORKFLOW / "scripts" / "resolve_strategy.py"), str(direct_route_path), "--output", str(direct_resolved_path)])
+        run([sys.executable, str(WORKFLOW / "scripts" / "init_workflow.py"), str(direct_route_path), "--resolved-strategy", str(direct_resolved_path), "--output", str(root / "direct-manifest-bad.json")], expect_ok=False)
         run([sys.executable, str(WORKFLOW / "scripts" / "resolve_strategy.py"), str(required_superpowers_path)], expect_ok=False)
         run([sys.executable, str(WORKFLOW / "scripts" / "apply_route_facts_delta.py"), str(route_path), str(delta_path), "--output", str(rerouted_path)])
         rerouted = json.loads(rerouted_path.read_text(encoding="utf-8"))
@@ -383,6 +529,9 @@ def main() -> int:
         run([sys.executable, str(WORKFLOW / "scripts" / "transition_workflow.py"), str(initialized_manifest), str(stale_transition_path)], expect_ok=False)
         run([sys.executable, str(WORKFLOW / "scripts" / "transition_workflow.py"), str(initialized_manifest), str(transition_path)])
         run([sys.executable, str(WORKFLOW / "scripts" / "transition_workflow.py"), str(initialized_manifest), str(transition_path)])
+        advanced_manifest = json.loads(initialized_manifest.read_text(encoding="utf-8"))
+        if advanced_manifest["current_stage"] != "data_and_rollback_spec" or advanced_manifest["routing"]["required_skills"] != ["specflow"]:
+            raise SystemExit("stage transition did not activate only the next stage skills")
 
         wf_ok = write_json(root / "workflow-ok.json", workflow_manifest())
         wf_handoff_ok = workflow_manifest(requested="handoff_done", validated_claim="handoff_done")
@@ -417,6 +566,9 @@ def main() -> int:
         wf_profile_mix_bad = workflow_manifest()
         wf_profile_mix_bad["classification"]["profiles"] = ["superpowers"]
         wf_profile_mix_bad_path = write_json(root / "workflow-profile-mix-bad.json", wf_profile_mix_bad)
+        wf_preload_bad = workflow_manifest()
+        wf_preload_bad["routing"]["required_skills"].append("superpowers:executing-plans")
+        wf_preload_bad_path = write_json(root / "workflow-future-stage-preload-bad.json", wf_preload_bad)
         wf_plan_missing_spec_bad = workflow_manifest()
         for item in wf_plan_missing_spec_bad["artifacts"]:
             if item["type"] == "plan":
@@ -430,7 +582,10 @@ def main() -> int:
         wf_embedded_bad = workflow_manifest()
         wf_embedded_bad["selected_strategy"] = "spec-driven-feature"
         wf_embedded_bad["routing"]["strategy_id"] = "spec-driven-feature"
+        wf_embedded_bad["strategy_version"] = "1.1"
         wf_embedded_bad["current_stage"] = "plan"
+        wf_embedded_bad["routing"]["skill_plan"] = spec_feature_skill_plan()
+        wf_embedded_bad["routing"]["required_skills"] = ["superpowers:writing-plans"]
         wf_embedded_bad["resume"]["resume_from_stage"] = "plan"
         wf_embedded_bad["resume"]["last_validated_artifact_ids"] = ["ap-001", "ctx-001", "spec-001", "plan-001"]
         wf_embedded_bad["classification"]["risk"] = "L2"
@@ -460,7 +615,10 @@ def main() -> int:
         wf_split_embedded_bad = workflow_manifest()
         wf_split_embedded_bad["selected_strategy"] = "spec-driven-feature"
         wf_split_embedded_bad["routing"]["strategy_id"] = "spec-driven-feature"
+        wf_split_embedded_bad["strategy_version"] = "1.1"
         wf_split_embedded_bad["current_stage"] = "plan"
+        wf_split_embedded_bad["routing"]["skill_plan"] = spec_feature_skill_plan()
+        wf_split_embedded_bad["routing"]["required_skills"] = ["superpowers:writing-plans"]
         wf_split_embedded_bad["resume"]["resume_from_stage"] = "plan"
         wf_split_embedded_bad["resume"]["last_validated_artifact_ids"] = ["ap-001", "ctx-001", "spec-001", "plan-001"]
         wf_split_embedded_bad["classification"]["risk"] = "L2"
@@ -505,6 +663,7 @@ def main() -> int:
         run([sys.executable, str(manifest_validator), str(wf_stage_bad_path)], expect_ok=False)
         run([sys.executable, str(manifest_validator), str(wf_resume_bad_path)], expect_ok=False)
         run([sys.executable, str(manifest_validator), str(wf_profile_mix_bad_path)], expect_ok=False)
+        run([sys.executable, str(manifest_validator), str(wf_preload_bad_path)], expect_ok=False)
         run([sys.executable, str(graph_validator), str(wf_plan_missing_spec_bad_path)], expect_ok=False)
         run([sys.executable, str(graph_validator), str(wf_design_missing_spec_bad_path)], expect_ok=False)
         run([sys.executable, str(manifest_validator), str(wf_embedded_bad_path)], expect_ok=False)
@@ -559,6 +718,8 @@ def main() -> int:
     print("Workflow E2E eval passed")
     print("- project harness init + validate: pass")
     print("- route decision -> capability report -> strategy resolver -> init/transition: pass")
+    print("- project SOP maturity detection + direct/selective/lifecycle routing: pass")
+    print("- stage-scoped skill_plan lazy activation: pass")
     print("- route facts delta, capability-missing, stale/duplicate transition checks: pass")
     print("- workflow manifest + artifact graph positive/negative checks: pass")
     print("- version/stage/resume/verifier false-claim checks: pass")

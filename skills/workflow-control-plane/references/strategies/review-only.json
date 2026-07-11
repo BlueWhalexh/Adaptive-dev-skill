@@ -1,11 +1,14 @@
 {
   "id": "review-only",
-  "version": "1.0",
+  "version": "1.1",
   "risk": ["L0", "L1", "L2", "L3"],
   "modes": ["review"],
+  "process_depth": "direct",
+  "manifest_policy": "none",
+  "execution_engine": "none",
   "stages": ["identify_review_scope", "inspect_artifacts", "findings_first", "evidence_gap_check", "close"],
   "required_artifacts": [],
-  "required_skills": ["delivery-verification"],
+  "stage_skills": {},
   "design_policy": "none",
   "design_review": "independent",
   "max_claim_request": "none"

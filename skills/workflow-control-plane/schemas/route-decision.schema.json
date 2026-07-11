@@ -3,18 +3,19 @@
   "additionalProperties": false,
   "required": ["schema_version", "status", "classification", "capability_report_ref", "user_constraints", "user_overrides", "ambiguity"],
   "properties": {
-    "schema_version": { "type": "integer", "enum": [1] },
+    "schema_version": { "type": "integer", "enum": [2] },
     "status": { "type": "string", "enum": ["provisional", "confirmed"] },
     "classification": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["risk", "work_intent", "delivery_shape", "scope", "uncertainty", "profiles", "change_types"],
+      "required": ["risk", "work_intent", "delivery_shape", "scope", "uncertainty", "pattern_familiarity", "profiles", "change_types"],
       "properties": {
         "risk": { "type": "string", "enum": ["L0", "L1", "L2", "L3"] },
         "work_intent": { "type": "string", "enum": ["implement", "debug", "review", "design", "verify", "research", "handoff"] },
         "delivery_shape": { "type": "string", "enum": ["none", "doc_only", "local_change", "feature", "mvp", "spike"] },
         "scope": { "type": "string", "enum": ["local", "module", "cross_module", "cross_service"] },
         "uncertainty": { "type": "string", "enum": ["low", "medium", "high"] },
+        "pattern_familiarity": { "type": "string", "enum": ["known", "adjacent", "novel", "unknown"] },
         "profiles": {
           "type": "array",
           "items": { "type": "string", "enum": ["frontend", "api", "data", "auth", "security", "release", "docs", "infra"] }

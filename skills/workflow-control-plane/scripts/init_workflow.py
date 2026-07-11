@@ -26,6 +26,8 @@ def approval_record(review: str) -> dict[str, Any]:
 
 
 def build_manifest(route: dict[str, Any], resolved: dict[str, Any], workflow_id: str) -> dict[str, Any]:
+    if resolved["manifest_policy"] == "none":
+        raise ValueError("DIRECT_ROUTE_NO_MANIFEST: execute the direct route without workflow_manifest.json")
     classification = route["classification"]
     first_stage = "ground"
     strategy_path = SKILL_DIR / "references" / "strategies" / f"{resolved['strategy_id']}.json"
@@ -35,8 +37,8 @@ def build_manifest(route: dict[str, Any], resolved: dict[str, Any], workflow_id:
 
     design = resolved["design_control"]
     return {
-        "schema_version": 3,
-        "skill_suite_version": "2026-06-26",
+        "schema_version": 4,
+        "skill_suite_version": "2026-07-11",
         "run_id": workflow_id,
         "manifest_revision": 1,
         "strategy_version": resolved["strategy_version"],
@@ -46,13 +48,17 @@ def build_manifest(route: dict[str, Any], resolved: dict[str, Any], workflow_id:
             "mode": classification["work_intent"],
             "scope": classification["scope"],
             "uncertainty": classification["uncertainty"],
+            "pattern_familiarity": classification["pattern_familiarity"],
             "profiles": classification["profiles"],
         },
         "routing": {
+            "process_depth": resolved["process_depth"],
+            "manifest_policy": resolved["manifest_policy"],
             "spec_system": resolved["spec_system"],
             "execution_engine": resolved["execution_engine"],
             "strategy_id": resolved["strategy_id"],
             "required_skills": resolved["required_skills"],
+            "skill_plan": resolved["skill_plan"],
             "capability_report_ref": resolved["capability_report_ref"],
         },
         "selected_strategy": resolved["strategy_id"],
@@ -92,7 +98,11 @@ def main() -> int:
             print(f"FAIL: {error}")
         return 1
 
-    manifest = build_manifest(route, resolved, args.workflow_id)
+    try:
+        manifest = build_manifest(route, resolved, args.workflow_id)
+    except ValueError as exc:
+        print(f"FAIL: {exc}")
+        return 1
     output = Path(args.output)
     output.write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     errors = validate_workflow_manifest(output)

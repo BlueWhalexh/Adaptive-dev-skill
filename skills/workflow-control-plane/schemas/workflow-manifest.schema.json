@@ -18,7 +18,7 @@
     "claims"
   ],
   "properties": {
-    "schema_version": { "type": "integer", "enum": [3] },
+    "schema_version": { "type": "integer", "enum": [4] },
     "skill_suite_version": { "type": "string" },
     "run_id": { "type": "string" },
     "manifest_revision": { "type": "integer" },
@@ -30,12 +30,13 @@
     "classification": {
       "type": "object",
       "additionalProperties": false,
-        "required": ["risk", "mode", "scope", "uncertainty", "profiles"],
+        "required": ["risk", "mode", "scope", "uncertainty", "pattern_familiarity", "profiles"],
       "properties": {
         "risk": { "type": "string", "enum": ["L0", "L1", "L2", "L3"] },
         "mode": { "type": "string", "enum": ["implement", "debug", "review", "design", "verify", "research", "handoff"] },
         "scope": { "type": "string", "enum": ["local", "module", "cross_module", "cross_service"] },
         "uncertainty": { "type": "string", "enum": ["low", "medium", "high"] },
+        "pattern_familiarity": { "type": "string", "enum": ["known", "adjacent", "novel", "unknown"] },
         "profiles": {
           "type": "array",
           "items": {
@@ -48,12 +49,18 @@
     "routing": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["spec_system", "execution_engine", "strategy_id", "required_skills", "capability_report_ref"],
+      "required": ["process_depth", "manifest_policy", "spec_system", "execution_engine", "strategy_id", "required_skills", "skill_plan", "capability_report_ref"],
       "properties": {
+        "process_depth": { "type": "string", "enum": ["direct", "selective", "lifecycle"] },
+        "manifest_policy": { "type": "string", "enum": ["none", "required"] },
         "spec_system": { "type": "string", "enum": ["none", "openspec", "repo_native", "fallback"] },
         "execution_engine": { "type": "string", "enum": ["none", "local", "superpowers"] },
         "strategy_id": { "type": "string" },
         "required_skills": { "type": "array", "items": { "type": "string" } },
+        "skill_plan": {
+          "type": "object",
+          "additionalProperties": { "type": "array", "items": { "type": "string" } }
+        },
         "capability_report_ref": { "type": "string" }
       }
     },

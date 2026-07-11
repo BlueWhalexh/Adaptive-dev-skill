@@ -1,11 +1,20 @@
 {
   "id": "spec-driven-feature",
-  "version": "1.0",
+  "version": "1.1",
   "risk": ["L2"],
   "modes": ["implement", "design"],
+  "process_depth": "lifecycle",
+  "manifest_policy": "required",
+  "execution_engine": "local",
   "stages": ["ground", "context_pack_if_needed", "pack_backed_specflow", "spec_review", "embedded_design", "plan", "implementation", "focused_and_chain_verification", "review", "close"],
   "required_artifacts": ["spec", "plan", "evidence_manifest"],
-  "required_skills": ["specflow", "technical-design", "delivery-verification", "superpowers:writing-plans"],
+  "stage_skills": {
+    "context_pack_if_needed": ["context-grounding"],
+    "pack_backed_specflow": ["specflow"],
+    "embedded_design": ["technical-design"],
+    "plan": ["superpowers:writing-plans"],
+    "focused_and_chain_verification": ["delivery-verification"]
+  },
   "design_policy": "embedded",
   "design_review": "self",
   "max_claim_request": "integration_done"

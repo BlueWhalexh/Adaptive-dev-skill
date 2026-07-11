@@ -1,9 +1,9 @@
 {
   "type": "object",
   "additionalProperties": false,
-  "required": ["schema_version", "repo_revision", "spec_systems", "execution_engines", "project_harness"],
+  "required": ["schema_version", "repo_revision", "spec_systems", "execution_engines", "project_harness", "project_sop"],
   "properties": {
-    "schema_version": { "type": "integer", "enum": [1] },
+    "schema_version": { "type": "integer", "enum": [2] },
     "repo_revision": { "type": "string" },
     "spec_systems": {
       "type": "array",
@@ -39,6 +39,25 @@
         "status": { "type": "string", "enum": ["present", "missing", "unknown"] },
         "version": { "type": "string" },
         "evidence": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "project_sop": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "evidence", "signals"],
+      "properties": {
+        "status": { "type": "string", "enum": ["missing", "partial", "ready"] },
+        "evidence": { "type": "array", "items": { "type": "string" } },
+        "signals": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["instructions", "project_skills", "test_contracts"],
+          "properties": {
+            "instructions": { "type": "array", "items": { "type": "string" } },
+            "project_skills": { "type": "array", "items": { "type": "string" } },
+            "test_contracts": { "type": "array", "items": { "type": "string" } }
+          }
+        }
       }
     }
   }

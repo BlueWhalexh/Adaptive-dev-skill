@@ -25,13 +25,39 @@ def git_revision(root: Path) -> str:
     return result.stdout.strip() if result.returncode == 0 else "unknown"
 
 
+def existing(root: Path, patterns: list[str]) -> list[Path]:
+    found: set[Path] = set()
+    for pattern in patterns:
+        found.update(path for path in root.glob(pattern) if path.exists())
+    return sorted(found)
+
+
 def detect(root: Path) -> dict[str, Any]:
     openspec_evidence = [path for path in [root / "openspec" / "config.yaml", root / "openspec" / "changes"] if path.exists()]
     repo_native_evidence = [path for path in [root / "docs" / "superpowers" / "specs", root / "docs" / "superpowers" / "plans"] if path.exists()]
     harness_evidence = [path for path in [root / "AGENTS.md", root / ".agent"] if path.exists()]
+    sop_instructions = existing(root, ["AGENTS.md"])
+    sop_skills = existing(root, [".agent/skills/*/SKILL.md", ".agents/skills/*/SKILL.md"])
+    sop_tests = existing(
+        root,
+        [
+            ".agent/skills/*/references/testing.md",
+            ".agents/skills/*/references/testing.md",
+            ".agent/test-matrix.json",
+            "docs/testing.md",
+            "docs/test-strategy.md",
+        ],
+    )
+    sop_evidence = sorted(set(sop_instructions + sop_skills + sop_tests))
+    if sop_instructions and sop_skills and sop_tests:
+        sop_status = "ready"
+    elif sop_evidence:
+        sop_status = "partial"
+    else:
+        sop_status = "missing"
     superpowers_path = Path.home() / ".codex" / "superpowers" / "skills"
     report = {
-        "schema_version": 1,
+        "schema_version": 2,
         "repo_revision": git_revision(root),
         "spec_systems": [
             {"id": "openspec", "status": "available" if openspec_evidence else "missing", "evidence": [rel(path, root) for path in openspec_evidence]},
@@ -46,6 +72,15 @@ def detect(root: Path) -> dict[str, Any]:
             "status": "present" if harness_evidence else "missing",
             "version": "unknown",
             "evidence": [rel(path, root) for path in harness_evidence],
+        },
+        "project_sop": {
+            "status": sop_status,
+            "evidence": [rel(path, root) for path in sop_evidence],
+            "signals": {
+                "instructions": [rel(path, root) for path in sop_instructions],
+                "project_skills": [rel(path, root) for path in sop_skills],
+                "test_contracts": [rel(path, root) for path in sop_tests],
+            },
         },
     }
     errors = validate_instance(report, load_json(SCHEMA))

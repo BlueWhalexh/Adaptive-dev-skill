@@ -1,14 +1,20 @@
 {
   "type": "object",
   "additionalProperties": false,
-  "required": ["schema_version", "strategy_id", "strategy_version", "spec_system", "execution_engine", "required_skills", "design_control", "reason"],
+  "required": ["schema_version", "strategy_id", "strategy_version", "process_depth", "manifest_policy", "spec_system", "execution_engine", "required_skills", "skill_plan", "design_control", "reason"],
   "properties": {
-    "schema_version": { "type": "integer", "enum": [1] },
+    "schema_version": { "type": "integer", "enum": [2] },
     "strategy_id": { "type": "string" },
     "strategy_version": { "type": "string" },
+    "process_depth": { "type": "string", "enum": ["direct", "selective", "lifecycle"] },
+    "manifest_policy": { "type": "string", "enum": ["none", "required"] },
     "spec_system": { "type": "string", "enum": ["none", "openspec", "repo_native", "fallback"] },
     "execution_engine": { "type": "string", "enum": ["none", "local", "superpowers"] },
     "required_skills": { "type": "array", "items": { "type": "string" } },
+    "skill_plan": {
+      "type": "object",
+      "additionalProperties": { "type": "array", "items": { "type": "string" } }
+    },
     "design_control": {
       "type": "object",
       "additionalProperties": false,

@@ -1,4 +1,4 @@
-schema_version: 2
+schema_version: 3
 description: Adaptive Dev control-plane routing regression cases.
 
 cases:
@@ -9,10 +9,12 @@ cases:
       mode: implement
       scope: local
       uncertainty: low
+      pattern_familiarity: known|unknown
       profiles: [docs]
     expected_routing:
       spec_system: none
       execution_engine: local
+      process_depth: direct
       strategy_id: quick-change
       required_skills: []
     expected_design_control:
@@ -32,10 +34,12 @@ cases:
       mode: implement
       scope: local
       uncertainty: low
+      pattern_familiarity: known
       profiles: [frontend]
     expected_routing:
       spec_system: none
       execution_engine: local
+      process_depth: direct
       strategy_id: quick-change
       required_skills: []
     expected_design_control:
@@ -54,10 +58,12 @@ cases:
       mode: debug
       scope: module
       uncertainty: medium|high
+      pattern_familiarity: unknown
       profiles: [frontend]
     expected_routing:
       spec_system: none
-      execution_engine: superpowers
+      execution_engine: local
+      process_depth: selective
       strategy_id: root-cause-debug
       required_skills: [superpowers:systematic-debugging]
     expected_design_control:
@@ -69,6 +75,54 @@ cases:
       - no handoff claim
       - no broad redesign
 
+  - id: sop-guided-existing-project
+    prompt: "项目已有 AGENTS.md、.agent/skills/orders/SKILL.md 和 testing.md。按现有订单筛选 SOP 增加组合筛选，涉及筛选面板、URL query 持久化和前端筛选状态 selector；覆盖空值、刷新恢复、旧链接兼容，并复用既有测试命令。"
+    expected_classification:
+      risk: L2
+      mode: implement
+      scope: module|cross_module
+      uncertainty: low|medium
+      pattern_familiarity: known|adjacent
+      profiles: [frontend]
+    expected_routing:
+      spec_system: fallback
+      execution_engine: local
+      process_depth: selective
+      strategy_id: sop-guided-iteration
+      required_skills: []
+    expected_design_control:
+      policy: embedded
+      review: independent
+      documentation_topology: compact
+    expected_claim_requested: none
+    expected_no:
+      - no full SpecFlow lifecycle
+      - no Superpowers executing-plans
+
+  - id: sop-guided-small-fix
+    prompt: "项目已有 AGENTS.md、.agent/skills/orders/SKILL.md 和 testing.md。按现有 SOP 修正订单列表里一个已知的空状态文案分支，并运行项目规定的 focused validator。"
+    expected_classification:
+      risk: L1
+      mode: implement
+      scope: local|module
+      uncertainty: low
+      pattern_familiarity: known
+      profiles: [frontend]
+    expected_routing:
+      spec_system: none
+      execution_engine: local
+      process_depth: direct
+      strategy_id: sop-guided-change
+      required_skills: []
+    expected_design_control:
+      policy: none
+      review: self
+      documentation_topology: compact
+    expected_claim_requested: none
+    expected_no:
+      - no workflow manifest
+      - no Superpowers skill
+
   - id: medium-api-contract
     prompt: "给导出接口加 format 参数"
     expected_classification:
@@ -76,12 +130,14 @@ cases:
       mode: implement
       scope: module|cross_module
       uncertainty: low|medium
+      pattern_familiarity: adjacent|novel|unknown
       profiles: [api]
     expected_routing:
       spec_system: fallback
-      execution_engine: none|superpowers
+      execution_engine: superpowers
+      process_depth: lifecycle
       strategy_id: complex-real-slice
-      required_skills: [context-grounding, specflow, technical-design, delivery-verification]
+      required_skills: []
     expected_design_control:
       policy: standalone
       review: independent
@@ -97,12 +153,14 @@ cases:
       mode: implement
       scope: cross_module
       uncertainty: high
+      pattern_familiarity: novel|unknown
       profiles: [auth, security, data]
     expected_routing:
       spec_system: fallback
       execution_engine: superpowers
+      process_depth: lifecycle
       strategy_id: migration-critical
-      required_skills: [context-grounding, specflow, technical-design, delivery-verification]
+      required_skills: [context-grounding]
     expected_design_control:
       policy: standalone
       review: human
@@ -118,12 +176,14 @@ cases:
       mode: design
       scope: cross_service
       uncertainty: high
+      pattern_familiarity: adjacent|unknown
       profiles: [frontend, auth, api]
     expected_routing:
       spec_system: fallback
       execution_engine: none
+      process_depth: lifecycle
       strategy_id: complex-real-slice
-      required_skills: [context-grounding]
+      required_skills: []
     expected_design_control:
       policy: standalone
       review: independent
@@ -139,12 +199,14 @@ cases:
       mode: design
       scope: module|cross_module
       uncertainty: high
+      pattern_familiarity: novel|unknown
       profiles: []
     expected_routing:
       spec_system: fallback
       execution_engine: none
+      process_depth: lifecycle
       strategy_id: spec-driven-feature
-      required_skills: [specflow]
+      required_skills: []
     expected_design_control:
       policy: none|embedded
       review: none|self
@@ -160,12 +222,14 @@ cases:
       mode: handoff
       scope: module|cross_module
       uncertainty: medium|high
+      pattern_familiarity: adjacent|unknown
       profiles: [release]
     expected_routing:
       spec_system: none|fallback
       execution_engine: superpowers
+      process_depth: lifecycle
       strategy_id: complex-real-slice
-      required_skills: [technical-design, delivery-verification]
+      required_skills: []
     expected_design_control:
       policy: standalone
       review: independent
@@ -181,10 +245,12 @@ cases:
       mode: debug
       scope: cross_module
       uncertainty: high
+      pattern_familiarity: unknown
       profiles: [infra]
     expected_routing:
       spec_system: none
-      execution_engine: superpowers
+      execution_engine: local
+      process_depth: selective
       strategy_id: root-cause-debug
       required_skills: [superpowers:systematic-debugging]
     expected_design_control:
@@ -202,10 +268,12 @@ cases:
       mode: review
       scope: local|module|cross_module
       uncertainty: medium|high
+      pattern_familiarity: unknown
       profiles: []
     expected_routing:
       spec_system: none
       execution_engine: none
+      process_depth: direct
       strategy_id: review-only
       required_skills: []
     expected_design_control:
@@ -223,10 +291,12 @@ cases:
       mode: research
       scope: cross_module|cross_service
       uncertainty: high
+      pattern_familiarity: unknown
       profiles: [api, data]
     expected_routing:
       spec_system: none
       execution_engine: none
+      process_depth: selective
       strategy_id: spike
       required_skills: [context-grounding]
     expected_design_control:
@@ -244,12 +314,14 @@ cases:
       mode: implement
       scope: cross_module
       uncertainty: high
+      pattern_familiarity: adjacent|novel|unknown
       profiles: [data]
     expected_routing:
       spec_system: fallback
       execution_engine: superpowers
+      process_depth: lifecycle
       strategy_id: migration-critical
-      required_skills: [context-grounding, specflow, technical-design, delivery-verification]
+      required_skills: [context-grounding]
     expected_design_control:
       policy: standalone
       review: human
@@ -265,12 +337,14 @@ cases:
       mode: implement
       scope: cross_module
       uncertainty: medium|high
+      pattern_familiarity: novel|unknown
       profiles: [docs, infra]
     expected_routing:
       spec_system: fallback
       execution_engine: local
+      process_depth: lifecycle
       strategy_id: complex-real-slice
-      required_skills: [project-harness-init, context-grounding, specflow, technical-design, delivery-verification, knowledge-promotion]
+      required_skills: [project-harness-init]
     expected_design_control:
       policy: standalone
       review: independent
@@ -286,12 +360,14 @@ cases:
       mode: implement
       scope: cross_module
       uncertainty: low|medium|high
+      pattern_familiarity: adjacent|known|unknown
       profiles: [docs, infra]
     expected_routing:
       spec_system: openspec
       execution_engine: local
+      process_depth: lifecycle
       strategy_id: complex-real-slice
-      required_skills: [project-harness-init, technical-design, delivery-verification, knowledge-promotion]
+      required_skills: [project-harness-init]
     expected_design_control:
       policy: standalone
       review: independent
@@ -307,12 +383,14 @@ cases:
       mode: implement
       scope: cross_module|cross_service
       uncertainty: medium|high
+      pattern_familiarity: novel|unknown
       profiles: [frontend, api, data]
     expected_routing:
       spec_system: fallback|repo_native
-      execution_engine: none
+      execution_engine: none|superpowers
+      process_depth: lifecycle
       strategy_id: complex-real-slice
-      required_skills: [context-grounding, specflow, technical-design, delivery-verification]
+      required_skills: []
     expected_design_control:
       policy: standalone
       review: independent

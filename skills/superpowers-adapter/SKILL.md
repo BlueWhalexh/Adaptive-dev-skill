@@ -1,6 +1,6 @@
 ---
 name: superpowers-adapter
-description: Bridge approved adaptive workflow artifacts into native Superpowers skills without copying their methodology. Use when workflow-control-plane selects execution_engine=superpowers, when approved spec/design/plan artifacts must be handed to superpowers:writing-plans, executing-plans, test-driven-development, systematic-debugging, requesting-code-review, or verification-before-completion, or when Superpowers outputs must be mapped back to workflow transition results. 当 adaptive 工作流需要调用 Superpowers 原生技能、转换 approved artifacts、执行计划、TDD/debug/review 或把执行结果写回 workflow-control-plane 时使用。
+description: Bridge approved adaptive workflow artifacts into exact native Superpowers skills without copying their methodology. Use when workflow-control-plane selects full execution_engine=superpowers or lists a specific superpowers:* skill for the active stage, and when outputs must be mapped back to workflow transition results. 当 adaptive 工作流明确选择完整 Superpowers 执行，或当前阶段只需调用某个指定的 Superpowers 原生 skill 时使用。
 ---
 
 # Superpowers Adapter
@@ -16,7 +16,8 @@ description: Bridge approved adaptive workflow artifacts into native Superpowers
 ## Never
 
 - Do not copy or summarize full Superpowers procedures into this skill.
-- Do not bypass native Superpowers skills when `execution_engine=superpowers`.
+- Do not load the whole Superpowers chain for a selective route; invoke only the exact `superpowers:*` skill selected for the active stage.
+- Do not bypass native Superpowers stages when `execution_engine=superpowers` and `process_depth=lifecycle`.
 - Do not mutate `workflow_manifest.json` directly.
 - Do not treat Superpowers local/unit evidence as `handoff_done`.
 
@@ -24,7 +25,7 @@ description: Bridge approved adaptive workflow artifacts into native Superpowers
 
 Use `references/superpowers-mapping.md` before calling a Superpowers execution skill.
 
-General mapping:
+General mapping. Apply only the row required by the current stage; do not preload other rows:
 
 - Missing or unclear implementation approach -> `superpowers:brainstorming`.
 - Approved spec but no implementation plan -> `superpowers:writing-plans`.
