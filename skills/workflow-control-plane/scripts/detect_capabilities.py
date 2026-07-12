@@ -57,7 +57,7 @@ def detect(root: Path) -> dict[str, Any]:
         sop_status = "missing"
     superpowers_path = Path.home() / ".codex" / "superpowers" / "skills"
     report = {
-        "schema_version": 2,
+        "schema_version": 3,
         "repo_revision": git_revision(root),
         "spec_systems": [
             {"id": "openspec", "status": "available" if openspec_evidence else "missing", "evidence": [rel(path, root) for path in openspec_evidence]},
@@ -66,7 +66,14 @@ def detect(root: Path) -> dict[str, Any]:
         ],
         "execution_engines": [
             {"id": "local", "status": "available", "version": "builtin"},
-            {"id": "superpowers", "status": "available" if superpowers_path.exists() else "missing", "version": "unknown"},
+        ],
+        "method_providers": [
+            {
+                "id": "superpowers-native",
+                "status": "available" if superpowers_path.exists() else "missing",
+                "version": "unknown",
+                "evidence": ["~/.codex/superpowers/skills"] if superpowers_path.exists() else [],
+            },
         ],
         "project_harness": {
             "status": "present" if harness_evidence else "missing",

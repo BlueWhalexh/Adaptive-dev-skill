@@ -171,7 +171,7 @@ cases:
     status: "covered"
 
   - id: required-capability-missing
-    prompt: "User requires Superpowers but capability_report.json says superpowers is missing."
+    prompt: "User requires OpenSpec but capability_report.json says openspec is missing."
     expected_behavior: "Resolver returns CAPABILITY_MISSING instead of silently falling back."
     failure_class: "capability_fallback_bypass"
     impact: "Agent may claim to follow a methodology that is unavailable."
@@ -199,8 +199,8 @@ cases:
     status: "covered"
 
   - id: superpowers-installation-forces-full-flow
-    prompt: "Superpowers is installed, so an L1 bugfix or ordinary debug task selects execution_engine=superpowers."
-    expected_behavior: "Keep direct/selective routes local and load only the exact native method skill selected by the strategy."
+    prompt: "Superpowers is installed, so a route or strategy emits execution_engine=superpowers."
+    expected_behavior: "Reject Superpowers as an execution engine; report it only as a method provider and load exact stage skills."
     failure_class: "over_process"
     impact: "Tool availability silently increases token, artifact, and execution cost for routine work."
     status: "covered"

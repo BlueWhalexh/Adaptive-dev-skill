@@ -1,11 +1,11 @@
 {
   "id": "complex-real-slice",
-  "version": "1.1",
+  "version": "1.2",
   "risk": ["L2", "L3"],
   "modes": ["implement", "handoff"],
   "process_depth": "lifecycle",
   "manifest_policy": "required",
-  "execution_engine": "superpowers",
+  "execution_engine": "local",
   "stages": ["ground", "context_pack_review", "pack_backed_specflow", "spec_review", "technical_design", "design_review", "minimum_real_slice_plan", "slice_execution", "architecture_checkpoint", "remaining_slice_execution", "system_verification", "delivery_review", "learning_capture"],
   "required_artifacts": ["analysis_pack", "context_manifest", "spec", "technical_design", "plan", "task_packet", "evidence_manifest", "learning_candidate"],
   "stage_skills": {

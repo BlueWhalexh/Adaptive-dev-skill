@@ -1,6 +1,6 @@
 ---
 name: superpowers-adapter
-description: Bridge approved adaptive workflow artifacts into exact native Superpowers skills without copying their methodology. Use when workflow-control-plane selects full execution_engine=superpowers or lists a specific superpowers:* skill for the active stage, and when outputs must be mapped back to workflow transition results. 当 adaptive 工作流明确选择完整 Superpowers 执行，或当前阶段只需调用某个指定的 Superpowers 原生 skill 时使用。
+description: Bridge approved adaptive workflow artifacts into one exact native Superpowers skill without copying its methodology. Use only when workflow-control-plane lists a specific superpowers:* skill for the active stage and its output must be mapped back to a transition result. 当 control plane 为当前阶段明确列出某个 Superpowers 原生 skill 时使用；不提供完整 Superpowers 工作流。
 ---
 
 # Superpowers Adapter
@@ -17,7 +17,7 @@ description: Bridge approved adaptive workflow artifacts into exact native Super
 
 - Do not copy or summarize full Superpowers procedures into this skill.
 - Do not load the whole Superpowers chain for a selective route; invoke only the exact `superpowers:*` skill selected for the active stage.
-- Do not bypass native Superpowers stages when `execution_engine=superpowers` and `process_depth=lifecycle`.
+- Do not turn lifecycle depth into a multi-skill Superpowers workflow.
 - Do not mutate `workflow_manifest.json` directly.
 - Do not treat Superpowers local/unit evidence as `handoff_done`.
 

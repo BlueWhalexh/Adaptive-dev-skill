@@ -134,7 +134,7 @@ cases:
       profiles: [api]
     expected_routing:
       spec_system: fallback
-      execution_engine: superpowers
+      execution_engine: local
       process_depth: lifecycle
       strategy_id: complex-real-slice
       required_skills: []
@@ -157,7 +157,7 @@ cases:
       profiles: [auth, security, data]
     expected_routing:
       spec_system: fallback
-      execution_engine: superpowers
+      execution_engine: local
       process_depth: lifecycle
       strategy_id: migration-critical
       required_skills: [context-grounding]
@@ -226,7 +226,7 @@ cases:
       profiles: [release]
     expected_routing:
       spec_system: none|fallback
-      execution_engine: superpowers
+      execution_engine: local
       process_depth: lifecycle
       strategy_id: complex-real-slice
       required_skills: []
@@ -318,7 +318,7 @@ cases:
       profiles: [data]
     expected_routing:
       spec_system: fallback
-      execution_engine: superpowers
+      execution_engine: local
       process_depth: lifecycle
       strategy_id: migration-critical
       required_skills: [context-grounding]
@@ -387,7 +387,7 @@ cases:
       profiles: [frontend, api, data]
     expected_routing:
       spec_system: fallback|repo_native
-      execution_engine: none|superpowers
+      execution_engine: none|local
       process_depth: lifecycle
       strategy_id: complex-real-slice
       required_skills: []

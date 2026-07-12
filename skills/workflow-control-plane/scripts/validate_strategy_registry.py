@@ -73,10 +73,6 @@ def validate(root: Path = STRATEGIES) -> list[str]:
             errors.append(f"{strategy_id}: direct process depth must use manifest_policy=none")
         if strategy.get("process_depth") != "direct" and strategy.get("manifest_policy") != "required":
             errors.append(f"{strategy_id}: selective/lifecycle process depth must require a manifest")
-        if strategy.get("execution_engine") == "superpowers" and strategy.get("process_depth") != "lifecycle":
-            errors.append(f"{strategy_id}: full Superpowers execution is only valid for lifecycle strategies")
-        if strategy.get("execution_engine") == "superpowers" and strategy_id not in {"complex-real-slice", "migration-critical"}:
-            errors.append(f"{strategy_id}: default full Superpowers execution is reserved for complex-real-slice or migration-critical")
         stages = set(strategy.get("stages", []))
         stage_skills = strategy.get("stage_skills", {})
         unknown_stage_skill_keys = sorted(set(stage_skills) - stages)

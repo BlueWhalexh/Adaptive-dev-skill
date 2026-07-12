@@ -37,7 +37,7 @@ def build_manifest(route: dict[str, Any], resolved: dict[str, Any], workflow_id:
 
     design = resolved["design_control"]
     return {
-        "schema_version": 4,
+        "schema_version": 5,
         "skill_suite_version": "2026-07-11",
         "run_id": workflow_id,
         "manifest_revision": 1,

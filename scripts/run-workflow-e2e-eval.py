@@ -49,7 +49,7 @@ def sha256(path: Path) -> str:
 
 def route_decision() -> dict[str, Any]:
     return {
-        "schema_version": 2,
+        "schema_version": 3,
         "status": "provisional",
         "classification": {
             "risk": "L3",
@@ -75,7 +75,7 @@ def route_decision() -> dict[str, Any]:
 
 def capability_report() -> dict[str, Any]:
     return {
-        "schema_version": 2,
+        "schema_version": 3,
         "repo_revision": "e2e",
         "spec_systems": [
             {"id": "openspec", "status": "available", "evidence": ["openspec/config.yaml"]},
@@ -83,7 +83,9 @@ def capability_report() -> dict[str, Any]:
         ],
         "execution_engines": [
             {"id": "local", "status": "available", "version": "builtin"},
-            {"id": "superpowers", "status": "available", "version": "unknown"},
+        ],
+        "method_providers": [
+            {"id": "superpowers-native", "status": "available", "version": "unknown", "evidence": ["eval"]},
         ],
         "project_harness": {"status": "present", "version": "2", "evidence": ["AGENTS.md"]},
         "project_sop": {
@@ -143,11 +145,11 @@ def spec_feature_skill_plan() -> dict[str, list[str]]:
 
 def workflow_manifest(*, requested: str = "integration_done", validated_claim: str = "integration_done") -> dict[str, Any]:
     return {
-        "schema_version": 4,
+        "schema_version": 5,
         "skill_suite_version": "2026-06-24",
         "run_id": "run-control-plane-e2e",
         "manifest_revision": 1,
-        "strategy_version": "1.1",
+        "strategy_version": "1.2",
         "workflow_state": "review_ready",
         "classification": {
             "risk": "L3",
@@ -161,7 +163,7 @@ def workflow_manifest(*, requested: str = "integration_done", validated_claim: s
             "process_depth": "lifecycle",
             "manifest_policy": "required",
             "spec_system": "fallback",
-            "execution_engine": "superpowers",
+            "execution_engine": "local",
             "strategy_id": "complex-real-slice",
             "required_skills": ["superpowers:requesting-code-review"],
             "skill_plan": complex_skill_plan(),
@@ -284,7 +286,7 @@ def workflow_manifest(*, requested: str = "integration_done", validated_claim: s
                         "claim_type": validated_claim,
                         "commit_sha": "abc123",
                         "strategy_id": "complex-real-slice",
-                        "strategy_version": "1.1",
+                        "strategy_version": "1.2",
                         "registry_digest": "sha256:registry",
                         "evidence_manifest_digest": "sha256:evidence",
                         "verifier_id": "evidence-manifest-validator",
@@ -470,18 +472,32 @@ def main() -> int:
             "error": None,
         })
         capability_missing = capability_report()
-        capability_missing["execution_engines"] = [{"id": "local", "status": "available", "version": "builtin"}]
-        write_json(root / "capability-missing-superpowers.json", capability_missing)
-        required_superpowers_route = route_decision()
-        required_superpowers_route["capability_report_ref"] = "capability-missing-superpowers.json"
-        required_superpowers_route["user_constraints"]["required_execution_engine"] = "superpowers"
-        required_superpowers_path = write_json(root / "route-required-superpowers-bad.json", required_superpowers_route)
+        capability_missing["spec_systems"] = [{"id": "fallback", "status": "available", "evidence": ["workflow fallback"]}]
+        write_json(root / "capability-missing-openspec.json", capability_missing)
+        required_openspec_route = route_decision()
+        required_openspec_route["capability_report_ref"] = "capability-missing-openspec.json"
+        required_openspec_route["user_constraints"]["required_spec_system"] = "openspec"
+        required_openspec_path = write_json(root / "route-required-openspec-bad.json", required_openspec_route)
+        forbidden_superpowers_engine_route = route_decision()
+        forbidden_superpowers_engine_route["user_constraints"]["required_execution_engine"] = "superpowers"
+        forbidden_superpowers_engine_path = write_json(root / "route-superpowers-engine-bad.json", forbidden_superpowers_engine_route)
+        capability_without_methods = capability_report()
+        capability_without_methods["method_providers"] = [{"id": "superpowers-native", "status": "missing", "version": "unknown", "evidence": []}]
+        write_json(root / "capability-without-methods.json", capability_without_methods)
+        local_only_route = route_decision()
+        local_only_route["capability_report_ref"] = "capability-without-methods.json"
+        local_only_route_path = write_json(root / "route-local-only-migration.json", local_only_route)
+        local_only_resolved_path = root / "resolved-local-only-migration.json"
         delta_path = write_json(root / "route-facts-delta.json", route_facts_delta())
         rerouted_path = root / "route-decision-v2.json"
         run([sys.executable, str(WORKFLOW / "scripts" / "resolve_strategy.py"), str(route_path), "--output", str(resolved_path)])
         resolved = json.loads(resolved_path.read_text(encoding="utf-8"))
-        if resolved["strategy_id"] != "migration-critical" or resolved["process_depth"] != "lifecycle" or resolved["execution_engine"] != "superpowers":
-            raise SystemExit("critical migration did not retain full lifecycle Superpowers execution")
+        if resolved["strategy_id"] != "migration-critical" or resolved["process_depth"] != "lifecycle" or resolved["execution_engine"] != "local":
+            raise SystemExit("critical migration did not retain local lifecycle execution ownership")
+        run([sys.executable, str(WORKFLOW / "scripts" / "resolve_strategy.py"), str(local_only_route_path), "--output", str(local_only_resolved_path)])
+        local_only_resolved = json.loads(local_only_resolved_path.read_text(encoding="utf-8"))
+        if any(skill.startswith("superpowers:") for skills in local_only_resolved["skill_plan"].values() for skill in skills):
+            raise SystemExit("missing method provider did not remove Superpowers native skills")
 
         run([sys.executable, str(WORKFLOW / "scripts" / "resolve_strategy.py"), str(sop_iteration_path), "--output", str(sop_iteration_resolved_path)])
         sop_iteration_resolved = json.loads(sop_iteration_resolved_path.read_text(encoding="utf-8"))
@@ -509,7 +525,7 @@ def main() -> int:
         run([sys.executable, str(WORKFLOW / "scripts" / "resolve_strategy.py"), str(partial_iteration_path), "--output", str(partial_iteration_resolved_path)])
         partial_iteration_resolved = json.loads(partial_iteration_resolved_path.read_text(encoding="utf-8"))
         if partial_iteration_resolved["strategy_id"] != "spec-driven-feature" or partial_iteration_resolved["execution_engine"] != "local":
-            raise SystemExit("partial project SOP incorrectly triggered SOP-guided routing or full Superpowers execution")
+            raise SystemExit("partial project SOP incorrectly triggered SOP-guided routing")
 
         run([sys.executable, str(WORKFLOW / "scripts" / "resolve_strategy.py"), str(debug_route_path), "--output", str(debug_resolved_path)])
         debug_resolved = json.loads(debug_resolved_path.read_text(encoding="utf-8"))
@@ -518,7 +534,8 @@ def main() -> int:
 
         run([sys.executable, str(WORKFLOW / "scripts" / "resolve_strategy.py"), str(direct_route_path), "--output", str(direct_resolved_path)])
         run([sys.executable, str(WORKFLOW / "scripts" / "init_workflow.py"), str(direct_route_path), "--resolved-strategy", str(direct_resolved_path), "--output", str(root / "direct-manifest-bad.json")], expect_ok=False)
-        run([sys.executable, str(WORKFLOW / "scripts" / "resolve_strategy.py"), str(required_superpowers_path)], expect_ok=False)
+        run([sys.executable, str(WORKFLOW / "scripts" / "resolve_strategy.py"), str(required_openspec_path)], expect_ok=False)
+        run([sys.executable, str(WORKFLOW / "scripts" / "resolve_strategy.py"), str(forbidden_superpowers_engine_path)], expect_ok=False)
         run([sys.executable, str(WORKFLOW / "scripts" / "apply_route_facts_delta.py"), str(route_path), str(delta_path), "--output", str(rerouted_path)])
         rerouted = json.loads(rerouted_path.read_text(encoding="utf-8"))
         if rerouted["classification"]["risk"] != "L3" or rerouted["classification"]["scope"] != "cross_service":
@@ -566,6 +583,9 @@ def main() -> int:
         wf_profile_mix_bad = workflow_manifest()
         wf_profile_mix_bad["classification"]["profiles"] = ["superpowers"]
         wf_profile_mix_bad_path = write_json(root / "workflow-profile-mix-bad.json", wf_profile_mix_bad)
+        wf_superpowers_engine_bad = workflow_manifest()
+        wf_superpowers_engine_bad["routing"]["execution_engine"] = "superpowers"
+        wf_superpowers_engine_bad_path = write_json(root / "workflow-superpowers-engine-bad.json", wf_superpowers_engine_bad)
         wf_preload_bad = workflow_manifest()
         wf_preload_bad["routing"]["required_skills"].append("superpowers:executing-plans")
         wf_preload_bad_path = write_json(root / "workflow-future-stage-preload-bad.json", wf_preload_bad)
@@ -663,6 +683,7 @@ def main() -> int:
         run([sys.executable, str(manifest_validator), str(wf_stage_bad_path)], expect_ok=False)
         run([sys.executable, str(manifest_validator), str(wf_resume_bad_path)], expect_ok=False)
         run([sys.executable, str(manifest_validator), str(wf_profile_mix_bad_path)], expect_ok=False)
+        run([sys.executable, str(manifest_validator), str(wf_superpowers_engine_bad_path)], expect_ok=False)
         run([sys.executable, str(manifest_validator), str(wf_preload_bad_path)], expect_ok=False)
         run([sys.executable, str(graph_validator), str(wf_plan_missing_spec_bad_path)], expect_ok=False)
         run([sys.executable, str(graph_validator), str(wf_design_missing_spec_bad_path)], expect_ok=False)
@@ -720,6 +741,7 @@ def main() -> int:
     print("- route decision -> capability report -> strategy resolver -> init/transition: pass")
     print("- project SOP maturity detection + direct/selective/lifecycle routing: pass")
     print("- stage-scoped skill_plan lazy activation: pass")
+    print("- local lifecycle ownership + optional Superpowers method provider: pass")
     print("- route facts delta, capability-missing, stale/duplicate transition checks: pass")
     print("- workflow manifest + artifact graph positive/negative checks: pass")
     print("- version/stage/resume/verifier false-claim checks: pass")

@@ -157,7 +157,7 @@ def choose_skill_plan(route: dict[str, Any], report: dict[str, Any], strategy: d
         if rule_matches(route, report, rule):
             for stage in rule["stages"]:
                 plan[stage].extend(rule["skills"])
-    if "superpowers" not in available_ids(report, "execution_engines"):
+    if "superpowers-native" not in available_ids(report, "method_providers"):
         plan = {stage: [skill for skill in skills if not skill.startswith("superpowers:")] for stage, skills in plan.items()}
     return {stage: list(dict.fromkeys(skills)) for stage, skills in plan.items()}
 
@@ -194,7 +194,7 @@ def resolve(route: dict[str, Any], base_dir: Path | None = None) -> dict[str, An
     skill_plan = choose_skill_plan(route, capability_report, strategy)
     first_stage = strategy["stages"][0]
     resolved = {
-        "schema_version": 2,
+        "schema_version": 3,
         "strategy_id": strategy_id,
         "strategy_version": strategy["version"],
         "process_depth": strategy["process_depth"],

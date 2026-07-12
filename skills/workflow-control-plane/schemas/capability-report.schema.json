@@ -1,9 +1,9 @@
 {
   "type": "object",
   "additionalProperties": false,
-  "required": ["schema_version", "repo_revision", "spec_systems", "execution_engines", "project_harness", "project_sop"],
+  "required": ["schema_version", "repo_revision", "spec_systems", "execution_engines", "method_providers", "project_harness", "project_sop"],
   "properties": {
-    "schema_version": { "type": "integer", "enum": [2] },
+    "schema_version": { "type": "integer", "enum": [3] },
     "repo_revision": { "type": "string" },
     "spec_systems": {
       "type": "array",
@@ -25,9 +25,23 @@
         "additionalProperties": false,
         "required": ["id", "status", "version"],
         "properties": {
-          "id": { "type": "string", "enum": ["none", "local", "superpowers"] },
+          "id": { "type": "string", "enum": ["none", "local"] },
           "status": { "type": "string", "enum": ["available", "missing", "unknown"] },
           "version": { "type": "string" }
+        }
+      }
+    },
+    "method_providers": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "status", "version", "evidence"],
+        "properties": {
+          "id": { "type": "string", "enum": ["superpowers-native"] },
+          "status": { "type": "string", "enum": ["available", "missing", "unknown"] },
+          "version": { "type": "string" },
+          "evidence": { "type": "array", "items": { "type": "string" } }
         }
       }
     },

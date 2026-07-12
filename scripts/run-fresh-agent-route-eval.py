@@ -175,8 +175,8 @@ only; do not resolve the strategy yourself.
 
 Evaluator instructions such as "do not edit files" are not user overrides.
 For this eval, set `capability_report_ref` to `capability-report.json`.
-Assume the deterministic capability report says `local`, `superpowers`, and
-`fallback` are available. Project SOP is ready only for a case that explicitly
+Assume the deterministic capability report says local execution, the
+`superpowers-native` method provider, and `fallback` are available. Project SOP is ready only for a case that explicitly
 says AGENTS.md, a project skill, and a testing contract already exist.
 
 Do not set `ambiguity.status=ambiguous` only because implementation details,
@@ -188,7 +188,7 @@ User task:
 {case["prompt"]}
 
 Return only JSON with:
-- schema_version: 2
+- schema_version: 3
 - status: provisional or confirmed
 - classification: risk, work_intent, delivery_shape, scope, uncertainty, pattern_familiarity, profiles, change_types
 - capability_report_ref
@@ -270,12 +270,14 @@ def canonical_expected(expected: str, actual: Any) -> str:
 
 def capability_report(*, project_sop_ready: bool = False) -> dict[str, Any]:
     return {
-        "schema_version": 2,
+        "schema_version": 3,
         "repo_revision": "fresh-route-eval",
         "spec_systems": [{"id": "fallback", "status": "available", "evidence": ["eval"]}],
         "execution_engines": [
             {"id": "local", "status": "available", "version": "builtin"},
-            {"id": "superpowers", "status": "available", "version": "unknown"},
+        ],
+        "method_providers": [
+            {"id": "superpowers-native", "status": "available", "version": "unknown", "evidence": ["eval"]},
         ],
         "project_harness": {"status": "unknown", "version": "unknown", "evidence": []},
         "project_sop": {

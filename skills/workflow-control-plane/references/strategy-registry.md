@@ -18,8 +18,8 @@ python3 skills/workflow-control-plane/scripts/validate_strategy_registry.py
 | `sop-guided-iteration` | Non-critical L2 known/adjacent pattern with ready project SOP | selective | embedded/independent | project SOP and delivery-verification |
 | `root-cause-debug` | debug mode or unknown failure | selective | embedded/self | systematic-debugging |
 | `spec-driven-feature` | Novel L2 behavior/UI feature | lifecycle/local | embedded/self | specflow, technical-design, writing-plans, delivery verification |
-| `complex-real-slice` | L3 complex feature/MVP/handoff chain | lifecycle/full | standalone/independent | context, spec, design, execution, verification, review |
-| `migration-critical` | data/auth/security/migration/public protocol | lifecycle/full | standalone/human | context, spec/design, staged execution, rollback review |
+| `complex-real-slice` | L3 complex feature/MVP/handoff chain | lifecycle | standalone/independent | context, spec, design, execution, verification, review |
+| `migration-critical` | data/auth/security/migration/public protocol | lifecycle | standalone/human | context, spec/design, staged execution, rollback review |
 | `spike` | high uncertainty exploration | selective | none/independent decision record | context-grounding, no delivery claim |
 | `review-only` | code/spec/design/plan/evidence review | direct | none/independent | no implementation |
 

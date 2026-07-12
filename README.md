@@ -30,7 +30,7 @@ Admission Router + Workflow Control Plane + Narrow Skills + Verifier-signed Clai
 | `knowledge-promotion` | 把重复 SOP、踩坑、用户反馈沉淀为 learning candidate，再进入项目 skill / AGENTS.md |
 | `project-harness-init` | 初始化项目级 harness：AGENTS.md、agent team、Goal Loop Mode、spec/technical design/plan/evidence 结构、项目 skill |
 
-Superpowers 仍然是执行纪律，不被重写。普通 `direct/selective` 默认不加载 Superpowers，Debug 只调用 `systematic-debugging`；普通 L2 lifecycle 只在 plan stage 调用 `writing-plans`；只有复杂 lifecycle strategy 才允许完整执行链路。
+Superpowers 仍然是执行纪律，不被重写。普通 `direct/selective` 默认不加载 Superpowers，Debug 只调用 `systematic-debugging`；L2/L3 lifecycle 也只在当前 stage 调用一个明确的原生 skill，不存在完整 Superpowers 执行链路。
 
 ## Control Plane Model
 
@@ -40,7 +40,7 @@ Route decision:
 
 ```json
 {
-  "schema_version": 2,
+  "schema_version": 3,
   "status": "provisional",
   "classification": {
     "risk": "L2",
@@ -68,7 +68,7 @@ Resolved strategy:
 
 ```json
 {
-  "schema_version": 2,
+  "schema_version": 3,
   "strategy_id": "spec-driven-feature",
   "strategy_version": "1.0",
   "process_depth": "lifecycle",
@@ -126,12 +126,13 @@ Routing describes execution choices after `workflow-control-plane` resolves the 
 - `spec_system`: `none | openspec | repo_native | fallback`
 - `process_depth`: `direct | selective | lifecycle`
 - `manifest_policy`: `none | required`
-- `execution_engine`: `none | local | superpowers`
+- `execution_engine`: `none | local`
+- `method_provider`: capability report 中的 `superpowers-native`，仅提供 stage-scoped method skill
 - `strategy_id`: selected strategy
 - `required_skills`: 当前 stage 才允许加载的 narrow skills
 - `skill_plan`: 后续 stage 到 skill 的延迟加载计划
 
-`OpenSpec` 是 spec system。`Superpowers` 既可以作为 lifecycle execution engine，也可以只提供一个被明确选择的原生方法 skill。项目 SOP 是否可复用由 capability report 单独证明。
+`OpenSpec` 是 spec system。`Superpowers` 不是 execution engine，只是原生 method skill provider。项目 SOP 是否可复用由 capability report 单独证明。
 
 ## Strategies
 
@@ -145,14 +146,14 @@ Strategy manifests live in `skills/workflow-control-plane/references/strategies/
 | `sop-guided-iteration` | selective | Ready project SOP 中的非关键 L2 known/adjacent pattern；使用项目 SOP 与 evidence gate |
 | `root-cause-debug` | selective | debug mode，按需只调用 systematic-debugging |
 | `spec-driven-feature` | lifecycle/local | 缺少成熟 SOP 或 novel 的 L2 feature |
-| `complex-real-slice` | lifecycle/full | L3、first MVP、handoff、关键边界 |
-| `migration-critical` | lifecycle/full | data/auth/security/migration/public protocol |
+| `complex-real-slice` | lifecycle | L3、first MVP、handoff、关键边界；按 stage 选择方法 |
+| `migration-critical` | lifecycle | data/auth/security/migration/public protocol；按 stage 选择方法 |
 | `spike` | selective | bounded research，无 delivery claim |
 | `review-only` | direct | review without edits |
 
 The strategy owns stages. `direct` 不创建 manifest；`selective/lifecycle` 由 `workflow-control-plane` 记录 `selected_strategy` 和 `current_stage`。检测到 Superpowers 已安装本身不会改变 process depth。
 
-Project harness initialization is a local scaffold operation: route it with `execution_engine: local` and `project-harness-init`. Use `superpowers` later when executing the product implementation plan, not while merely creating AGENTS.md, Goal Loop Mode, project skill, spec/design/plan surfaces, and evidence docs.
+Project harness initialization is a local scaffold operation. Later stages may call one exact Superpowers native skill when scheduled, but project implementation remains owned by the workflow runtime.
 
 ## Documentation Topology
 

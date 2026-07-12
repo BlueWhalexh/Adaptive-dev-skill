@@ -3,7 +3,7 @@
   "additionalProperties": false,
   "required": ["schema_version", "status", "classification", "capability_report_ref", "user_constraints", "user_overrides", "ambiguity"],
   "properties": {
-    "schema_version": { "type": "integer", "enum": [2] },
+    "schema_version": { "type": "integer", "enum": [3] },
     "status": { "type": "string", "enum": ["provisional", "confirmed"] },
     "classification": {
       "type": "object",
@@ -35,7 +35,7 @@
         "network_access": { "type": "string", "enum": ["allowed", "forbidden", "unknown"] },
         "production_changes": { "type": "string", "enum": ["allowed", "forbidden", "unknown"] },
         "required_spec_system": { "type": ["string", "null"], "enum": ["none", "openspec", "repo_native", "fallback", null] },
-        "required_execution_engine": { "type": ["string", "null"], "enum": ["none", "local", "superpowers", null] }
+        "required_execution_engine": { "type": ["string", "null"], "enum": ["none", "local", null] }
       }
     },
     "user_overrides": { "type": "array", "items": { "type": "string" } },

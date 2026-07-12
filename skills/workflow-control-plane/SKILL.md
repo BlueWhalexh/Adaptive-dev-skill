@@ -24,7 +24,7 @@ description: Owns workflow runtime state for adaptive AI coding tasks. Use when 
 - Do not invent global stages; every stage must come from `references/strategies/<strategy>.json`.
 - Do not accept a claim signer or claim level that violates `delivery-verification` verifier authority.
 - Do not initialize a manifest when the resolved strategy says `manifest_policy=none`.
-- Do not select full Superpowers execution merely because it is installed.
+- Do not model or select full Superpowers execution. Superpowers is a method provider; only current-stage native skills may be activated.
 
 ## Inputs
 
@@ -36,7 +36,7 @@ python3 skills/workflow-control-plane/scripts/detect_capabilities.py --root . --
 
 Specialist skills return revision-checked transition requests using `schemas/transition-request.schema.json`. They may produce artifact changes, evidence refs, claim requests, and discovered facts, but the control plane writes the manifest and computes stale propagation.
 
-`direct` routes stop before manifest initialization. `selective` routes load only the exact skill selected for the active stage. `lifecycle` routes traverse the Registry stages and may use full Superpowers execution only when explicitly resolved.
+`direct` routes stop before manifest initialization. `selective` and `lifecycle` routes load only the exact skills selected for the active stage. Lifecycle depth changes artifact/review/evidence gates, not execution ownership.
 
 ## Core Commands
 

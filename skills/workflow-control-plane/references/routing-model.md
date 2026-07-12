@@ -66,7 +66,7 @@ python3 skills/workflow-control-plane/scripts/resolve_strategy.py route_decision
 - `process_depth=direct` skips workflow manifest creation.
 - `process_depth=selective` loads only exact native skills selected by the strategy.
 - `process_depth=lifecycle` runs spec/design/plan/execute/verify stages.
-- Full `execution_engine=superpowers` is Registry policy for complex lifecycle/migration work, not a consequence of installation.
+- `execution_engine` is `local` for implementation/debug/migration. Superpowers availability appears only as `method_providers=superpowers-native` and may add exact stage skills.
 - `execution_engine=none` for review-only and spike.
 - `execution_engine=local` is the default for direct and selective implementation/debug work.
 - `project_sop=ready` requires instructions, a project skill, and a testing contract. Partial harness evidence must not trigger SOP-guided routing.

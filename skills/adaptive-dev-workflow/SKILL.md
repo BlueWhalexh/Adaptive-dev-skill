@@ -21,7 +21,7 @@ skills/workflow-control-plane/schemas/route-decision.schema.json
 
 ```json
 {
-  "schema_version": 2,
+  "schema_version": 3,
   "status": "provisional | confirmed",
   "classification": {
     "risk": "L0 | L1 | L2 | L3",
@@ -38,7 +38,7 @@ skills/workflow-control-plane/schemas/route-decision.schema.json
     "network_access": "allowed | forbidden | unknown",
     "production_changes": "allowed | forbidden | unknown",
     "required_spec_system": "none | openspec | repo_native | fallback | null",
-    "required_execution_engine": "none | local | superpowers | null"
+    "required_execution_engine": "none | local | null"
   },
   "user_overrides": [],
   "ambiguity": { "status": "clear | ambiguous", "reasons": [] }
@@ -74,7 +74,7 @@ Intent rules:
 
 Non-downgradable facts: `auth`、`security`、`data`、`migration`、`release`、`handoff`。这些事实不允许为了省流程降级为 L0/L1。
 
-`user_constraints.required_spec_system` 和 `required_execution_engine` 只记录用户显式要求。不要因为仓库已有 SOP/OpenSpec/Superpowers，或因为 Agent 自己偏好某种方法而填写 required constraint；能力与默认选择属于 capability report 和 resolver。
+`user_constraints.required_spec_system` 和 `required_execution_engine` 只记录用户显式要求。Superpowers 不是 execution engine，用户点名某个原生 skill 时把它作为 method request 交给 control plane/adapter，不要写入 execution engine。能力与默认选择属于 capability report 和 resolver。
 
 ## Capability Detection
 
@@ -101,7 +101,7 @@ python3 skills/workflow-control-plane/scripts/resolve_strategy.py route_decision
 
    - `direct`: execute the focused change with repo instructions/project SOP and the smallest validator. Do not initialize a workflow manifest or load Superpowers.
    - `selective`: initialize workflow state, then load only the exact `required_skills` needed by the active stage.
-   - `lifecycle`: initialize workflow state and follow the versioned strategy stages. Full Superpowers execution is allowed only when the resolver explicitly returns `execution_engine=superpowers`.
+   - `lifecycle`: initialize workflow state and follow the versioned strategy stages. Load only `skill_plan[current_stage]`; lifecycle depth never implies a full Superpowers workflow.
 
 6. For `manifest_policy=required`, let `workflow-control-plane` initialize or update workflow state:
 
@@ -136,7 +136,7 @@ python3 skills/workflow-control-plane/scripts/apply_route_facts_delta.py route_d
 - Do not self-sign or validate claims.
 - Do not invent a parallel spec/design system when OpenSpec or repo-native surfaces exist.
 - Do not force L0/L1 tasks through full spec/design/E2E flow.
-- Do not treat Superpowers availability as a reason to select full execution. Use Registry policy and exact native skill requirements.
+- Do not model Superpowers as an execution engine or full workflow. It is only a provider of explicitly scheduled native method skills.
 - Do not create `workflow_manifest.json` for `manifest_policy=none`.
 - Do not start a new subagent merely because a different skill is used; isolate only for review, sufficiency eval, security, parallel tasks, or context-contamination control.
 

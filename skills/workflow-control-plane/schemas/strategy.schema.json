@@ -9,7 +9,7 @@
     "modes": { "type": "array", "items": { "type": "string", "enum": ["implement", "debug", "review", "design", "verify", "research", "handoff"] } },
     "process_depth": { "type": "string", "enum": ["direct", "selective", "lifecycle"] },
     "manifest_policy": { "type": "string", "enum": ["none", "required"] },
-    "execution_engine": { "type": "string", "enum": ["none", "local", "superpowers"] },
+    "execution_engine": { "type": "string", "enum": ["none", "local"] },
     "stages": { "type": "array", "items": { "type": "string" } },
     "required_artifacts": { "type": "array", "items": { "type": "string" } },
     "stage_skills": {

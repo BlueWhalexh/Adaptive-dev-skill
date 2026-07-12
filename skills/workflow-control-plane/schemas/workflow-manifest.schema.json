@@ -18,7 +18,7 @@
     "claims"
   ],
   "properties": {
-    "schema_version": { "type": "integer", "enum": [4] },
+    "schema_version": { "type": "integer", "enum": [5] },
     "skill_suite_version": { "type": "string" },
     "run_id": { "type": "string" },
     "manifest_revision": { "type": "integer" },
@@ -54,7 +54,7 @@
         "process_depth": { "type": "string", "enum": ["direct", "selective", "lifecycle"] },
         "manifest_policy": { "type": "string", "enum": ["none", "required"] },
         "spec_system": { "type": "string", "enum": ["none", "openspec", "repo_native", "fallback"] },
-        "execution_engine": { "type": "string", "enum": ["none", "local", "superpowers"] },
+        "execution_engine": { "type": "string", "enum": ["none", "local"] },
         "strategy_id": { "type": "string" },
         "required_skills": { "type": "array", "items": { "type": "string" } },
         "skill_plan": {
