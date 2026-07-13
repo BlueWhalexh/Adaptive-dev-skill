@@ -12,6 +12,7 @@ Admission Router + Workflow Control Plane + Narrow Skills + Verifier-signed Clai
 - 成熟项目复用 SOP：已知模式走 project skill 与固定 validator，只按需调用单个原生 Superpowers skill。
 - 高风险任务保持稳：权限、数据、API、迁移、handoff 不允许只靠 happy path 或口头完成。
 - 复杂任务先固定 current truth：用 Analysis Pack / Context Manifest 裁剪上下文，再写 spec、technical design 和 plan。
+- 开发循环跑增量测试：按 diff 选择受影响测试，task/slice checkpoint 再扩大；全量 suite 留给显式 CI/release/project policy 或 global-impact 变更。
 - 交付声明由证据签发：实现者只能 request claim，不能 self-sign validated claim。
 - 中文团队的人读项目文档默认中文；文件名、路径、schema keys、命令、validator types、skill names 和工具报错保留英文。
 
@@ -25,6 +26,7 @@ Admission Router + Workflow Control Plane + Narrow Skills + Verifier-signed Clai
 | `specflow` | 把 intent 或 Analysis Pack 转成 reviewed spec artifact；OpenSpec repo 走 adapter |
 | `technical-design` | 在 approved spec 和 implementation plan 之间生成/审查 technical design、设计边界、契约、回滚和 approval |
 | `agent-orchestration` | 生成 role roster、context packet、work order 和 structured role result，支持多 Agent 角色隔离协作 |
+| `change-aware-testing` | 根据 task diff 选择增量测试，管理 inner-loop/checkpoint/completion cadence 和 broad-test escalation |
 | `superpowers-adapter` | 把 approved artifacts 转换给 Superpowers 原生 skills，并把输出映射回 transition request |
 | `delivery-verification` | JSON evidence manifest、claim level、fresh consumer / real external / integration 证据验证 |
 | `knowledge-promotion` | 把重复 SOP、踩坑、用户反馈沉淀为 learning candidate，再进入项目 skill / AGENTS.md |
@@ -151,7 +153,7 @@ Strategy manifests live in `skills/workflow-control-plane/references/strategies/
 | `spike` | selective | bounded research，无 delivery claim |
 | `review-only` | direct | review without edits |
 
-The strategy owns stages. `direct` 不创建 manifest；`selective/lifecycle` 由 `workflow-control-plane` 记录 `selected_strategy` 和 `current_stage`。检测到 Superpowers 已安装本身不会改变 process depth。
+The strategy owns stages. `direct` 不创建 manifest；`selective/lifecycle` 由 `workflow-control-plane` 记录 `selected_strategy` 和 `current_stage`。检测到 Superpowers 已安装本身不会改变 process depth。实现阶段由 `change-aware-testing` 运行受影响测试，`delivery-verification` 只负责根据 evidence 签发 claim，两者职责不混合。
 
 Project harness initialization is a local scaffold operation. Later stages may call one exact Superpowers native skill when scheduled, but project implementation remains owned by the workflow runtime.
 
@@ -222,7 +224,7 @@ This is the main guard against complex tasks drifting back into “read everythi
 ```sh
 git clone https://github.com/BlueWhalexh/Adaptive-dev-skill.git
 cd Adaptive-dev-skill
-for skill in adaptive-dev-workflow workflow-control-plane context-grounding specflow technical-design agent-orchestration superpowers-adapter delivery-verification knowledge-promotion project-harness-init; do
+for skill in adaptive-dev-workflow workflow-control-plane context-grounding specflow technical-design agent-orchestration change-aware-testing superpowers-adapter delivery-verification knowledge-promotion project-harness-init; do
   mkdir -p "$HOME/.codex/skills/$skill"
   rsync -a "skills/$skill/" "$HOME/.codex/skills/$skill/"
 done
@@ -231,7 +233,7 @@ done
 Optional `.agents` install:
 
 ```sh
-for skill in adaptive-dev-workflow workflow-control-plane context-grounding specflow technical-design agent-orchestration superpowers-adapter delivery-verification knowledge-promotion project-harness-init; do
+for skill in adaptive-dev-workflow workflow-control-plane context-grounding specflow technical-design agent-orchestration change-aware-testing superpowers-adapter delivery-verification knowledge-promotion project-harness-init; do
   mkdir -p "$HOME/.agents/skills/$skill"
   rsync -a "skills/$skill/" "$HOME/.agents/skills/$skill/"
 done
@@ -249,7 +251,7 @@ Use $adaptive-dev-workflow.
 Recommended project `AGENTS.md` line:
 
 ```md
-For implementation, fix, refactor, design, planning, verification, review, or handoff tasks, use adaptive-dev-workflow to classify task facts and let workflow-control-plane resolve strategy. Direct routes use project SOP and focused validation without a workflow manifest. Selective/lifecycle routes create or update workflow_manifest.json and load only the skills required by the active stage. Request verifier-signed claims only through delivery-verification after evidence.
+For implementation, fix, refactor, design, planning, verification, review, or handoff tasks, use adaptive-dev-workflow to classify task facts and let workflow-control-plane resolve strategy. Direct routes use project SOP and focused validation without a workflow manifest. Selective/lifecycle routes create or update workflow_manifest.json and load only the skills required by the active stage. Use change-aware-testing for diff-based inner-loop tests and expand at checkpoints instead of running the full unit suite after every task. Request verifier-signed claims only through delivery-verification after evidence.
 Human-facing docs default to Chinese; keep commands, paths, schema keys, validator types, skill names, and tool errors in English.
 ```
 
@@ -269,6 +271,7 @@ PYTHONPYCACHEPREFIX=/private/tmp/adaptive-skill-pycache python3 -m py_compile sc
 python3 scripts/run-skill-sandbox-eval.py
 python3 scripts/run-workflow-e2e-eval.py
 python3 scripts/run-agent-orchestration-e2e-eval.py
+python3 scripts/run-change-aware-testing-eval.py
 python3 scripts/run-handoff-fresh-consumer-eval.py
 python3 /Users/didi/.codex/skills/.system/skill-creator/scripts/quick_validate.py skills/adaptive-dev-workflow
 python3 /Users/didi/.codex/skills/.system/skill-creator/scripts/quick_validate.py skills/workflow-control-plane
@@ -276,6 +279,7 @@ python3 /Users/didi/.codex/skills/.system/skill-creator/scripts/quick_validate.p
 python3 /Users/didi/.codex/skills/.system/skill-creator/scripts/quick_validate.py skills/specflow
 python3 /Users/didi/.codex/skills/.system/skill-creator/scripts/quick_validate.py skills/technical-design
 python3 /Users/didi/.codex/skills/.system/skill-creator/scripts/quick_validate.py skills/agent-orchestration
+python3 /Users/didi/.codex/skills/.system/skill-creator/scripts/quick_validate.py skills/change-aware-testing
 python3 /Users/didi/.codex/skills/.system/skill-creator/scripts/quick_validate.py skills/superpowers-adapter
 python3 /Users/didi/.codex/skills/.system/skill-creator/scripts/quick_validate.py skills/delivery-verification
 python3 /Users/didi/.codex/skills/.system/skill-creator/scripts/quick_validate.py skills/knowledge-promotion
@@ -317,6 +321,7 @@ skills/
   specflow/
   technical-design/
   agent-orchestration/
+  change-aware-testing/
   delivery-verification/
   knowledge-promotion/
   project-harness-init/

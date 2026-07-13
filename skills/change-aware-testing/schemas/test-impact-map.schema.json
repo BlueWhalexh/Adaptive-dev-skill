@@ -1,0 +1,67 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "global_triggers", "rules", "fallback_commands"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "global_triggers": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "globs"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]{0,80}$" },
+          "globs": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } }
+        }
+      }
+    },
+    "rules": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "source_globs", "test_globs", "commands"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]{0,80}$" },
+          "source_globs": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } },
+          "test_globs": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } },
+          "commands": { "$ref": "#/$defs/cadenceCommands" }
+        }
+      }
+    },
+    "fallback_commands": { "$ref": "#/$defs/fallbackCommands" }
+  },
+  "$defs": {
+    "command": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "type": "string" }
+    },
+    "commandList": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/command" }
+    },
+    "cadenceCommands": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["inner_loop", "checkpoint", "completion"],
+      "properties": {
+        "inner_loop": { "$ref": "#/$defs/commandList" },
+        "checkpoint": { "$ref": "#/$defs/commandList" },
+        "completion": { "$ref": "#/$defs/commandList" }
+      }
+    },
+    "fallbackCommands": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["checkpoint", "completion"],
+      "properties": {
+        "checkpoint": { "$ref": "#/$defs/commandList" },
+        "completion": { "$ref": "#/$defs/commandList" }
+      }
+    }
+  }
+}

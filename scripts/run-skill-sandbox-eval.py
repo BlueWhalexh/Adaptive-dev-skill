@@ -21,14 +21,16 @@ TECHNICAL_DESIGN = ROOT / "skills" / "technical-design"
 PROJECT_HARNESS = ROOT / "skills" / "project-harness-init"
 SUPERPOWERS_ADAPTER = ROOT / "skills" / "superpowers-adapter"
 AGENT_ORCHESTRATION = ROOT / "skills" / "agent-orchestration"
+CHANGE_AWARE_TESTING = ROOT / "skills" / "change-aware-testing"
 SEED = ROOT / "evals" / "seed-cases.yaml"
 FAILURES = ROOT / "evals" / "failure-cases.yaml"
 WORKFLOW_E2E = ROOT / "scripts" / "run-workflow-e2e-eval.py"
 AGENT_ORCHESTRATION_E2E = ROOT / "scripts" / "run-agent-orchestration-e2e-eval.py"
 FRESH_AGENT_ROUTE_EVAL = ROOT / "scripts" / "run-fresh-agent-route-eval.py"
+CHANGE_AWARE_TESTING_EVAL = ROOT / "scripts" / "run-change-aware-testing-eval.py"
 
 
-REQUIRED_SKILLS = [ADAPTIVE, WORKFLOW, CONTEXT, SPECFLOW, TECHNICAL_DESIGN, DELIVERY, KNOWLEDGE, PROJECT_HARNESS, SUPERPOWERS_ADAPTER, AGENT_ORCHESTRATION]
+REQUIRED_SKILLS = [ADAPTIVE, WORKFLOW, CONTEXT, SPECFLOW, TECHNICAL_DESIGN, DELIVERY, KNOWLEDGE, PROJECT_HARNESS, SUPERPOWERS_ADAPTER, AGENT_ORCHESTRATION, CHANGE_AWARE_TESTING]
 REQUIRED_WORKFLOW_SCHEMAS = [
     "workflow-manifest.schema.json",
     "strategy.schema.json",
@@ -192,6 +194,9 @@ def main() -> int:
     read(CONTEXT / "scripts" / "validate_context_runtime_audit.py")
     read(CONTEXT / "scripts" / "run_context_sufficiency_eval.py")
     read(DELIVERY / "scripts" / "validate_evidence_manifest.py")
+    read(CHANGE_AWARE_TESTING / "schemas" / "test-impact-map.schema.json")
+    read(CHANGE_AWARE_TESTING / "references" / "testing-cadence.md")
+    read(CHANGE_AWARE_TESTING / "scripts" / "run_changed_tests.py")
     read(TECHNICAL_DESIGN / "references" / "design-contract.md")
     read(TECHNICAL_DESIGN / "references" / "documentation-topology.md")
     read(TECHNICAL_DESIGN / "references" / "design-review.md")
@@ -212,6 +217,7 @@ def main() -> int:
     seed_count, strategy_counts = validate_seed_cases()
     failure_count = validate_failure_cases()
     run([sys.executable, str(WORKFLOW / "scripts" / "validate_strategy_registry.py")])
+    run([sys.executable, str(CHANGE_AWARE_TESTING_EVAL)])
     run([sys.executable, str(WORKFLOW_E2E)])
     run([sys.executable, str(AGENT_ORCHESTRATION_E2E)])
     fresh_agent_ran = run_fresh_agent_route_eval()
@@ -222,6 +228,7 @@ def main() -> int:
     print(f"- seed cases: {seed_count}")
     print(f"- failure cases: {failure_count}")
     print("- workflow e2e: pass")
+    print("- change-aware testing eval: pass")
     print("- agent orchestration e2e: pass")
     print("- fresh agent route eval: pass" if fresh_agent_ran else "- fresh agent route eval: skipped (set RUN_FRESH_AGENT_ROUTE_EVAL=1)")
     print("- strategy coverage:")

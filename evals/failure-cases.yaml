@@ -240,6 +240,20 @@ cases:
     impact: "A stage-aware strategy still pays the context cost of the full Superpowers chain."
     status: "covered"
 
+  - id: full-unit-suite-after-every-task
+    prompt: "Agent finishes each implementation task by running the repository's entire unit suite, even though the diff is mapped to one module."
+    expected_behavior: "Use change-aware-testing for affected tests in the inner loop, expand at task/slice checkpoints, and reserve full-suite execution for explicit CI/release/project policy or global-impact fallback."
+    failure_class: "verification_over_process"
+    impact: "Repeated broad suites increase latency and token/tool cost without adding proportional evidence."
+    status: "covered"
+
+  - id: unmapped-diff-claims-incremental-coverage
+    prompt: "Changed-test selector finds no impact-map rule, but the agent reports focused tests passed and requests dev_done."
+    expected_behavior: "Return unmapped, run a conservative module validator or repair the impact map, and keep the completion claim blocked until evidence exists."
+    failure_class: "false_incremental_coverage"
+    impact: "An incomplete test map can hide regressions while appearing efficient."
+    status: "covered"
+
 template:
   required_fields:
     - id

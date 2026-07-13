@@ -119,10 +119,10 @@ def complex_skill_plan() -> dict[str, list[str]]:
         "technical_design": ["technical-design"],
         "design_review": [],
         "minimum_real_slice_plan": ["superpowers:writing-plans"],
-        "slice_execution": ["superpowers:executing-plans"],
+        "slice_execution": ["superpowers:executing-plans", "change-aware-testing"],
         "architecture_checkpoint": [],
-        "remaining_slice_execution": ["superpowers:executing-plans"],
-        "system_verification": ["superpowers:verification-before-completion", "delivery-verification"],
+        "remaining_slice_execution": ["superpowers:executing-plans", "change-aware-testing"],
+        "system_verification": ["change-aware-testing", "superpowers:verification-before-completion", "delivery-verification"],
         "delivery_review": ["superpowers:requesting-code-review"],
         "learning_capture": ["knowledge-promotion"],
     }
@@ -136,8 +136,8 @@ def spec_feature_skill_plan() -> dict[str, list[str]]:
         "spec_review": [],
         "embedded_design": ["technical-design"],
         "plan": ["superpowers:writing-plans"],
-        "implementation": [],
-        "focused_and_chain_verification": ["delivery-verification"],
+        "implementation": ["change-aware-testing"],
+        "focused_and_chain_verification": ["change-aware-testing", "delivery-verification"],
         "review": [],
         "close": [],
     }
@@ -149,7 +149,7 @@ def workflow_manifest(*, requested: str = "integration_done", validated_claim: s
         "skill_suite_version": "2026-06-24",
         "run_id": "run-control-plane-e2e",
         "manifest_revision": 1,
-        "strategy_version": "1.2",
+        "strategy_version": "1.3",
         "workflow_state": "review_ready",
         "classification": {
             "risk": "L3",
@@ -286,7 +286,7 @@ def workflow_manifest(*, requested: str = "integration_done", validated_claim: s
                         "claim_type": validated_claim,
                         "commit_sha": "abc123",
                         "strategy_id": "complex-real-slice",
-                        "strategy_version": "1.2",
+                        "strategy_version": "1.3",
                         "registry_digest": "sha256:registry",
                         "evidence_manifest_digest": "sha256:evidence",
                         "verifier_id": "evidence-manifest-validator",
@@ -501,7 +501,7 @@ def main() -> int:
 
         run([sys.executable, str(WORKFLOW / "scripts" / "resolve_strategy.py"), str(sop_iteration_path), "--output", str(sop_iteration_resolved_path)])
         sop_iteration_resolved = json.loads(sop_iteration_resolved_path.read_text(encoding="utf-8"))
-        expected_iteration_skills = {"delivery-verification"}
+        expected_iteration_skills = {"change-aware-testing", "delivery-verification"}
         planned_iteration_skills = {skill for skills in sop_iteration_resolved["skill_plan"].values() for skill in skills}
         if (
             sop_iteration_resolved["strategy_id"] != "sop-guided-iteration"
@@ -602,7 +602,7 @@ def main() -> int:
         wf_embedded_bad = workflow_manifest()
         wf_embedded_bad["selected_strategy"] = "spec-driven-feature"
         wf_embedded_bad["routing"]["strategy_id"] = "spec-driven-feature"
-        wf_embedded_bad["strategy_version"] = "1.1"
+        wf_embedded_bad["strategy_version"] = "1.2"
         wf_embedded_bad["current_stage"] = "plan"
         wf_embedded_bad["routing"]["skill_plan"] = spec_feature_skill_plan()
         wf_embedded_bad["routing"]["required_skills"] = ["superpowers:writing-plans"]
@@ -635,7 +635,7 @@ def main() -> int:
         wf_split_embedded_bad = workflow_manifest()
         wf_split_embedded_bad["selected_strategy"] = "spec-driven-feature"
         wf_split_embedded_bad["routing"]["strategy_id"] = "spec-driven-feature"
-        wf_split_embedded_bad["strategy_version"] = "1.1"
+        wf_split_embedded_bad["strategy_version"] = "1.2"
         wf_split_embedded_bad["current_stage"] = "plan"
         wf_split_embedded_bad["routing"]["skill_plan"] = spec_feature_skill_plan()
         wf_split_embedded_bad["routing"]["required_skills"] = ["superpowers:writing-plans"]

@@ -1,6 +1,6 @@
 {
   "id": "spec-driven-feature",
-  "version": "1.1",
+  "version": "1.2",
   "risk": ["L2"],
   "modes": ["implement", "design"],
   "process_depth": "lifecycle",
@@ -13,7 +13,8 @@
     "pack_backed_specflow": ["specflow"],
     "embedded_design": ["technical-design"],
     "plan": ["superpowers:writing-plans"],
-    "focused_and_chain_verification": ["delivery-verification"]
+    "implementation": ["change-aware-testing"],
+    "focused_and_chain_verification": ["change-aware-testing", "delivery-verification"]
   },
   "design_policy": "embedded",
   "design_review": "self",

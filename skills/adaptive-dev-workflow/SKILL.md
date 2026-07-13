@@ -1,6 +1,6 @@
 ---
 name: adaptive-dev-workflow
-description: Classify software development tasks and submit route decisions to workflow-control-plane. Use when software implementation, fixes, refactors, design, planning, verification, review, OpenSpec/Superpowers selection, SpecFlow, context pack, delivery handoff, project harness, or AI coding workflow routing is needed. 当用户要开发、修复、重构、规划、验证、交付验收、目标模式、上下文包、spec 生成、项目 skill 沉淀或选择 AI coding 工作流时使用。
+description: Classify software development tasks and submit route decisions to workflow-control-plane. Use when software implementation, fixes, refactors, design, planning, verification, review, incremental testing, OpenSpec/Superpowers selection, SpecFlow, context pack, delivery handoff, project harness, or AI coding workflow routing is needed. 当用户要开发、修复、重构、规划、验证、增量测试、交付验收、目标模式、上下文包、spec 生成、项目 skill 沉淀或选择 AI coding 工作流时使用。
 ---
 
 # Adaptive Dev Workflow
@@ -99,7 +99,7 @@ python3 skills/workflow-control-plane/scripts/resolve_strategy.py route_decision
 
 5. Inspect `process_depth` and `manifest_policy` from the resolver:
 
-   - `direct`: execute the focused change with repo instructions/project SOP and the smallest validator. Do not initialize a workflow manifest or load Superpowers.
+   - `direct`: execute the focused change with repo instructions/project SOP and the smallest validator. For behavior changes, use `change-aware-testing` in inner-loop mode instead of repeatedly running the full unit suite. Do not initialize a workflow manifest or load Superpowers.
    - `selective`: initialize workflow state, then load only the exact `required_skills` needed by the active stage.
    - `lifecycle`: initialize workflow state and follow the versioned strategy stages. Load only `skill_plan[current_stage]`; lifecycle depth never implies a full Superpowers workflow.
 
@@ -124,6 +124,7 @@ python3 skills/workflow-control-plane/scripts/apply_route_facts_delta.py route_d
 - `specflow`: Product spec and OpenSpec adapter.
 - `technical-design`: architecture/design topology/design review.
 - `agent-orchestration`: role roster, work orders, context packets, structured role results.
+- `change-aware-testing`: diff-based test selection, inner-loop/checkpoint/completion cadence, broad-test escalation.
 - `superpowers-adapter`: contract bridge to native Superpowers skills.
 - `delivery-verification`: evidence manifest, verifier authority, claim issuance.
 - `project-harness-init`: AGENTS/project skill/spec evidence scaffold.

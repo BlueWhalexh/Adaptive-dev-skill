@@ -1,0 +1,2 @@
+allow_implicit_invocation: true
+description: Diff-aware incremental test selection with checkpoint and completion escalation.

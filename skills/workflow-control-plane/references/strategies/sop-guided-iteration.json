@@ -1,6 +1,6 @@
 {
   "id": "sop-guided-iteration",
-  "version": "1.1",
+  "version": "1.2",
   "risk": ["L2"],
   "modes": ["implement", "design"],
   "process_depth": "selective",
@@ -9,7 +9,8 @@
   "stages": ["read_project_sop", "delta_alignment", "method_selection", "implementation", "chain_verification", "independent_review", "close"],
   "required_artifacts": ["evidence_manifest"],
   "stage_skills": {
-    "chain_verification": ["delivery-verification"]
+    "implementation": ["change-aware-testing"],
+    "chain_verification": ["change-aware-testing", "delivery-verification"]
   },
   "design_policy": "embedded",
   "design_review": "independent",

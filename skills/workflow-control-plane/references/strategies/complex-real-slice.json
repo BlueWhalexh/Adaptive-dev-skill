@@ -1,6 +1,6 @@
 {
   "id": "complex-real-slice",
-  "version": "1.2",
+  "version": "1.3",
   "risk": ["L2", "L3"],
   "modes": ["implement", "handoff"],
   "process_depth": "lifecycle",
@@ -13,9 +13,9 @@
     "pack_backed_specflow": ["specflow"],
     "technical_design": ["technical-design"],
     "minimum_real_slice_plan": ["superpowers:writing-plans"],
-    "slice_execution": ["superpowers:executing-plans"],
-    "remaining_slice_execution": ["superpowers:executing-plans"],
-    "system_verification": ["superpowers:verification-before-completion", "delivery-verification"],
+    "slice_execution": ["superpowers:executing-plans", "change-aware-testing"],
+    "remaining_slice_execution": ["superpowers:executing-plans", "change-aware-testing"],
+    "system_verification": ["change-aware-testing", "superpowers:verification-before-completion", "delivery-verification"],
     "delivery_review": ["superpowers:requesting-code-review"],
     "learning_capture": ["knowledge-promotion"]
   },

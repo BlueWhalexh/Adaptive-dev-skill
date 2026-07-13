@@ -1,6 +1,6 @@
 {
   "id": "root-cause-debug",
-  "version": "1.1",
+  "version": "1.2",
   "risk": ["L1", "L2", "L3"],
   "modes": ["debug"],
   "process_depth": "selective",
@@ -10,6 +10,8 @@
   "required_artifacts": ["evidence_manifest"],
   "stage_skills": {
     "capture_failure": ["superpowers:systematic-debugging"],
+    "same_signal_verification": ["change-aware-testing"],
+    "regression_guard": ["change-aware-testing"],
     "close": ["delivery-verification"]
   },
   "design_policy": "embedded",
