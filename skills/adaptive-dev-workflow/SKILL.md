@@ -163,8 +163,7 @@ After modifying this skill, run:
 
 ```sh
 python3 scripts/run-skill-sandbox-eval.py
-python3 scripts/run-workflow-e2e-eval.py
 python3 /Users/didi/.codex/skills/.system/skill-creator/scripts/quick_validate.py skills/adaptive-dev-workflow
 ```
 
-High-risk changes also require fresh-agent route eval and old/new comparison.
+`run-skill-sandbox-eval.py` 已聚合 workflow、change-aware testing 和 orchestration E2E；不要再重复运行这些 child eval。High-risk changes also require fresh-agent route eval and old/new comparison.

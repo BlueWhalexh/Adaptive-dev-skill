@@ -47,11 +47,12 @@ def main() -> int:
     parser.add_argument("--skip-fresh", action="store_true", help="skip codex exec fresh-agent route eval")
     args = parser.parse_args()
 
-    commands: list[tuple[str, list[str], bool]] = [
+    # Sandbox owns deterministic child evals. Fresh-agent routing remains a
+    # separate semantic eval because it is not covered unless explicitly enabled.
+    deterministic_commands: list[tuple[str, list[str], bool]] = [
         ("Deterministic Sandbox", [sys.executable, "scripts/run-skill-sandbox-eval.py"], False),
-        ("Workflow E2E", [sys.executable, "scripts/run-workflow-e2e-eval.py"], False),
-        ("Handoff Fresh Consumer", [sys.executable, "scripts/run-handoff-fresh-consumer-eval.py"], False),
     ]
+    commands = list(deterministic_commands)
     if not args.skip_fresh:
         commands.append(("Full Fresh-Agent Route Eval", [sys.executable, "scripts/run-fresh-agent-route-eval.py", "--repeat", str(args.repeat), "--all"], True))
 
@@ -60,7 +61,7 @@ def main() -> int:
         "",
         f"Date: {dt.date.today().isoformat()}",
         "",
-        "Scope: project-harness-init technical design surface, full route eval, and old/new comparison notes.",
+        "Scope: one aggregated deterministic suite plus a separate fresh-agent semantic route eval.",
         "",
     ]
 

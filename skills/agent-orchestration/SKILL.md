@@ -73,5 +73,6 @@ After modifying this skill, run:
 ```sh
 python3 /Users/didi/.codex/skills/.system/skill-creator/scripts/quick_validate.py skills/agent-orchestration
 python3 scripts/run-agent-orchestration-e2e-eval.py
-python3 scripts/run-skill-sandbox-eval.py
 ```
+
+局部修改只运行以上 focused checks。Suite release 由顶层 `run-skill-sandbox-eval.py` 聚合执行，不要在这里重复运行。

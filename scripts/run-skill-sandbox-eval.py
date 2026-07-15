@@ -253,6 +253,17 @@ def main() -> int:
     if skill_lines > 170:
         fail(f"adaptive SKILL.md is too heavy for the router: {skill_lines} lines")
 
+    adaptive_validation = read(ADAPTIVE / "SKILL.md")
+    if "python3 scripts/run-workflow-e2e-eval.py" in adaptive_validation:
+        fail("adaptive validation duplicates workflow E2E already owned by the sandbox aggregator")
+    orchestration_validation = read(AGENT_ORCHESTRATION / "SKILL.md")
+    if "python3 scripts/run-skill-sandbox-eval.py" in orchestration_validation:
+        fail("agent-orchestration focused validation recursively invokes the suite aggregator")
+    phase2_runner = read(ROOT / "scripts" / "run-phase2-eval.py")
+    for duplicate in ["scripts/run-workflow-e2e-eval.py", "scripts/run-handoff-fresh-consumer-eval.py"]:
+        if duplicate in phase2_runner:
+            fail(f"phase2 runner duplicates child eval already covered by sandbox: {duplicate}")
+
     seed_count, strategy_counts = validate_seed_cases()
     failure_count = validate_failure_cases()
     run([sys.executable, str(WORKFLOW / "scripts" / "validate_strategy_registry.py")])
