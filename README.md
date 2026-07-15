@@ -72,7 +72,7 @@ Resolved strategy:
 {
   "schema_version": 4,
   "strategy_id": "spec-driven-feature",
-  "strategy_version": "2.0",
+  "strategy_version": "2.1",
   "process_depth": "lifecycle",
   "manifest_policy": "required",
   "spec_system": "fallback",
@@ -167,7 +167,7 @@ The strategy owns stages. `direct` 不创建 manifest；`selective/lifecycle` �
 
 父级 L2/L3 风险只决定最终设计、集成、handoff 和 claim gate。每个 Plan Task 按自己的 changed surface 和 uncertainty 重新判断风险；Plan checkbox 不自动产生 subagent、Review、commit、report、artifact package 或 manifest transition。`continuous_batch` 才是复杂实现阶段的默认执行单位。
 
-Managed review 与 high-risk milestone 使用 Strategy-owned `stage_gates`：transition 必须匹配 allowed producer、minimum evidence 和 review mode。Independent review 还校验 reviewer actor 与 reviewed producer 分离；第二次仍有 Major/Critical 时 workflow 进入 `blocked`。
+Managed review 与 high-risk milestone 使用 Strategy-owned `stage_gates`：transition 必须匹配 allowed producer、minimum evidence 和 review mode。Independent review 还校验 reviewer actor 与 reviewed producer 分离；`changes_requested` 按 gate 的 `repair_stage` 返回修复，第二次仍有问题只重置 bounded Review cycle，不阻塞 Goal Mode。只有人工/外部能力/不可逆风险等真实 impasse 才进入 `blocked`。
 
 Project harness initialization is a local scaffold operation. Later stages may call one exact Superpowers native skill when scheduled, but project implementation remains owned by the workflow runtime.
 

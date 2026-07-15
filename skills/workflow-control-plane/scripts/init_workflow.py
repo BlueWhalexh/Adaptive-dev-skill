@@ -38,8 +38,8 @@ def build_manifest(route: dict[str, Any], resolved: dict[str, Any], workflow_id:
 
     design = resolved["design_control"]
     return {
-        "schema_version": 5,
-        "skill_suite_version": "2026-07-11",
+        "schema_version": 6,
+        "skill_suite_version": "2026-07-15",
         "run_id": workflow_id,
         "manifest_revision": 1,
         "strategy_version": resolved["strategy_version"],
@@ -78,7 +78,15 @@ def build_manifest(route: dict[str, Any], resolved: dict[str, Any], workflow_id:
             "triggers": design["triggers"],
             "approval": approval_record(design["review"]),
         },
-        "review_control": {"stage_id": "", "passes_completed": 0, "last_severity": "none", "decision": "pending"},
+        "review_control": {
+            "stage_id": "",
+            "passes_completed": 0,
+            "last_severity": "none",
+            "decision": "pending",
+            "next_action": "none",
+            "repair_stage": "",
+            "finding_refs": [],
+        },
         "artifacts": [],
         "claims": {"requested": "none", "validated": []},
         "transition_log": [],

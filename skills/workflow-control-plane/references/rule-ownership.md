@@ -16,7 +16,7 @@ Rules have exactly one owner. Other skills may reference a rule id, but should n
 | `STAGE-FROM-STRATEGY` | `workflow-control-plane` | `validate_workflow_manifest.py` |
 | `STAGE-COMPLETION-GATE` | `workflow-control-plane` | strategy `stage_gates`, `transition_workflow.py` |
 | `RESUME-CHECKPOINT-VALID` | `workflow-control-plane` | `resume_workflow.py`, `validate_workflow_manifest.py` |
-| `REVIEW-BOUNDED-ESCALATION` | `workflow-control-plane` | `transition_workflow.py`, `review_control` |
+| `REVIEW-BOUNDED-REPAIR` | `workflow-control-plane` | `transition_workflow.py`, `review_control` |
 | `ARTIFACT-STALE-PROPAGATES` | `workflow-control-plane` | `validate_artifact_graph.py` |
 | `CLAIM-NO-SELF-SIGN` | `delivery-verification` | `validate_evidence_manifest.py`, verifier registry |
 | `CLAIM-VERIFIER-AUTHORITY` | `delivery-verification` | `verifier-registry.json`, workflow manifest validator |

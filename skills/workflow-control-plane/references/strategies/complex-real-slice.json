@@ -1,6 +1,6 @@
 {
   "id": "complex-real-slice",
-  "version": "2.0",
+  "version": "2.1",
   "risk": ["L2", "L3"],
   "modes": ["implement", "handoff"],
   "process_depth": "lifecycle",
@@ -24,12 +24,12 @@
     "learning_capture": ["knowledge-promotion"]
   },
   "stage_gates": {
-    "context_pack_review": {"allowed_producers": ["context-grounding"], "min_evidence_refs": 1, "review_mode": "self"},
-    "spec_review": {"allowed_producers": ["agent-orchestration", "human-reviewer"], "min_evidence_refs": 1, "review_mode": "independent"},
-    "design_review": {"allowed_producers": ["agent-orchestration", "human-reviewer"], "min_evidence_refs": 1, "review_mode": "independent"},
-    "architecture_checkpoint": {"allowed_producers": ["agent-orchestration", "human-reviewer"], "min_evidence_refs": 1, "review_mode": "independent"},
+    "context_pack_review": {"allowed_producers": ["context-grounding"], "min_evidence_refs": 1, "review_mode": "self", "repair_stage": "ground"},
+    "spec_review": {"allowed_producers": ["agent-orchestration", "human-reviewer"], "min_evidence_refs": 1, "review_mode": "independent", "repair_stage": "pack_backed_specflow"},
+    "design_review": {"allowed_producers": ["agent-orchestration", "human-reviewer"], "min_evidence_refs": 1, "review_mode": "independent", "repair_stage": "technical_design"},
+    "architecture_checkpoint": {"allowed_producers": ["agent-orchestration", "human-reviewer"], "min_evidence_refs": 1, "review_mode": "independent", "repair_stage": "slice_execution"},
     "system_verification": {"allowed_producers": ["delivery-verification"], "min_evidence_refs": 1, "review_mode": "none"},
-    "delivery_review": {"allowed_producers": ["agent-orchestration", "human-reviewer"], "min_evidence_refs": 1, "review_mode": "independent"}
+    "delivery_review": {"allowed_producers": ["agent-orchestration", "human-reviewer"], "min_evidence_refs": 1, "review_mode": "independent", "repair_stage": "remaining_slice_execution"}
   },
   "conditional_skills": [
     {"stages": ["ground"], "delivery_shapes": ["mvp"], "project_harness_statuses": ["missing", "unknown"], "skills": ["project-harness-init"]}

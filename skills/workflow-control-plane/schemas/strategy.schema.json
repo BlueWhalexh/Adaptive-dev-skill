@@ -26,7 +26,8 @@
         "properties": {
           "allowed_producers": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
           "min_evidence_refs": { "type": "integer", "minimum": 0 },
-          "review_mode": { "type": "string", "enum": ["none", "self", "independent", "human"] }
+          "review_mode": { "type": "string", "enum": ["none", "self", "independent", "human"] },
+          "repair_stage": { "type": "string" }
         }
       }
     },

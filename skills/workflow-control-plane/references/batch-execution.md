@@ -35,7 +35,7 @@ batch_id; task_ids; changed_surfaces; boundary_flags; focused_signals; checkpoin
 
 This makes task-local risk auditable without creating a new artifact package for every Task.
 
-Review-stage transitions must submit `review_result {pass_number, max_severity, decision}`. The control plane rejects approval with unresolved Major/Critical findings and blocks with `REVIEW_LIMIT_REACHED` when the second pass still requests changes.
+Review-stage transitions must submit `review_result {pass_number, max_severity, decision}`. The control plane rejects approval with unresolved Major/Critical findings. `changes_requested` returns to the Strategy gate's `repair_stage`; a second pass with findings resets the bounded review cycle but remains `active`. Only a real human/external/capability/risk impasse may become `blocked`.
 
 At completion, use `delivery-verification` for acceptance, integration/E2E/system, fresh consumer, real external, and claim signing. A broad unit suite is not a substitute for the required evidence type.
 

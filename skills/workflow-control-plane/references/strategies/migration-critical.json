@@ -1,6 +1,6 @@
 {
   "id": "migration-critical",
-  "version": "2.0",
+  "version": "2.1",
   "risk": ["L3"],
   "modes": ["implement"],
   "process_depth": "lifecycle",
@@ -20,10 +20,10 @@
     "rollback_review": ["agent-orchestration"]
   },
   "stage_gates": {
-    "human_design_review": {"allowed_producers": ["human-reviewer"], "min_evidence_refs": 1, "review_mode": "human"},
+    "human_design_review": {"allowed_producers": ["human-reviewer"], "min_evidence_refs": 1, "review_mode": "human", "repair_stage": "technical_design"},
     "negative_tests": {"allowed_producers": ["change-aware-testing"], "min_evidence_refs": 1, "review_mode": "none"},
     "system_verification": {"allowed_producers": ["delivery-verification"], "min_evidence_refs": 1, "review_mode": "none"},
-    "rollback_review": {"allowed_producers": ["agent-orchestration", "human-reviewer"], "min_evidence_refs": 1, "review_mode": "independent"}
+    "rollback_review": {"allowed_producers": ["agent-orchestration", "human-reviewer"], "min_evidence_refs": 1, "review_mode": "independent", "repair_stage": "staged_execution"}
   },
   "design_policy": "standalone",
   "design_review": "human",

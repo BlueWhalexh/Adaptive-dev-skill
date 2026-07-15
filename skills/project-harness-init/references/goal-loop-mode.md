@@ -37,13 +37,13 @@ Loop 规则：
 2. 每 Task 运行 focused signal；文档/机械改动使用最小 validator
 3. batch 内只更新 Plan checkbox 和必要失败记录
 4. batch/milestone 统一运行 adjacent regression、diff/scope review、commit 和汇报
-5. 只在高风险边界调用独立 reviewer；Critical/Major 修复后最多一次 delta re-review
+5. 只在高风险边界调用独立 reviewer；Critical/Major 修复后最多一次 delta re-review，仍有问题则保留 findings 并进入新的修复 cycle
 6. 判断 continue / stop / ask human
 
 必须暂停：
 - public API / data model / permission / security posture 需要改变
 - acceptance 或 claim ceiling 需要降低
-- 连续两轮验证失败仍无法定位
+- 验证失败且不存在可执行的诊断/修复路径，需要人工决策或外部能力
 - 发现 docs/current truth 冲突会影响方案
 - 需要真实凭证、生产副作用、破坏性命令或外部写操作
 
@@ -72,6 +72,7 @@ Do not let the final claim exceed the weakest evidence that actually ran.
 - Capture each Task's focused signal, then update the durable evidence summary once per batch/milestone.
 - Use reviewer agents for new or materially changed design/plan/evidence/security boundaries when risk justifies it.
 - Reuse approved artifacts; do not re-review them merely because the next Task started.
+- Treat review-pass limits as a bounded Review cycle, not a stop condition; unresolved findings return to repair and the next repaired diff/evidence starts another bounded cycle.
 - Promote project lessons only after evidence and scope are clear.
 - Prefer scripts/hooks/CI for repeated mechanical checks.
 

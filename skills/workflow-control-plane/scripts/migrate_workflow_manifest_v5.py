@@ -44,6 +44,7 @@ def migrate(manifest: dict) -> dict:
         skill_plan[stage_id] = [skill for skill in dict.fromkeys(skills) if skill not in FORBIDDEN_LEGACY_METHODS]
 
     migrated = dict(manifest)
+    migrated["schema_version"] = 6
     migrated["strategy_version"] = strategy["version"]
     migrated["skill_suite_version"] = "2026-07-15"
     migrated["routing"] = {
@@ -55,9 +56,27 @@ def migrate(manifest: dict) -> dict:
         "skill_plan": skill_plan,
         "required_skills": skill_plan[stage],
     }
-    migrated["review_control"] = {"stage_id": "", "passes_completed": 0, "last_severity": "none", "decision": "pending"}
+    migrated["review_control"] = {
+        "stage_id": "",
+        "passes_completed": 0,
+        "last_severity": "none",
+        "decision": "pending",
+        "next_action": "none",
+        "repair_stage": "",
+        "finding_refs": [],
+    }
+    recovered_review_limit = manifest.get("workflow_state") == "blocked" and manifest.get("resume", {}).get("blocked_reason") == "REVIEW_LIMIT_REACHED"
+    if recovered_review_limit:
+        review_stage = manifest.get("review_control", {}).get("stage_id") or stage
+        if review_stage not in strategy.get("stage_gates", {}) or strategy["stage_gates"][review_stage].get("review_mode") == "none":
+            raise ValueError("legacy REVIEW_LIMIT_REACHED manifest has no recoverable review stage")
+        stage = review_stage
+        migrated["current_stage"] = stage
+        migrated["workflow_state"] = "active"
+        migrated["routing"]["required_skills"] = skill_plan[stage]
     migrated["manifest_revision"] = int(manifest.get("manifest_revision", 0)) + 1
-    migrated["resume"] = {**manifest["resume"], "checkpoint_id": f"cp-{stage}", "resume_from_stage": stage}
+    blocked_reason = "" if recovered_review_limit else manifest["resume"].get("blocked_reason", "")
+    migrated["resume"] = {**manifest["resume"], "checkpoint_id": f"cp-{stage}", "resume_from_stage": stage, "blocked_reason": blocked_reason}
     return migrated
 
 
@@ -67,7 +86,9 @@ def main() -> int:
     parser.add_argument("--output", required=True)
     args = parser.parse_args()
     try:
-        migrated = migrate(load_json(Path(args.manifest)))
+        source = load_json(Path(args.manifest))
+        recovered_review_limit = source.get("workflow_state") == "blocked" and source.get("resume", {}).get("blocked_reason") == "REVIEW_LIMIT_REACHED"
+        migrated = migrate(source)
     except ValueError as exc:
         print(f"FAIL: {exc}")
         return 1
@@ -89,6 +110,8 @@ def main() -> int:
         if temp_path is not None and temp_path.exists():
             temp_path.unlink()
     print(f"Workflow manifest migrated: {output}")
+    if recovered_review_limit:
+        print("WARNING: legacy review findings were not persisted; workflow reactivated at the review stage to regenerate findings before repair")
     return 0
 
 

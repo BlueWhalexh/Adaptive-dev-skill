@@ -106,6 +106,8 @@ def validate(root: Path = STRATEGIES) -> list[str]:
                 errors.append(f"{strategy_id}: managed review stages require stage_gates: {', '.join(missing_review_gates)}")
         for stage, gate in stage_gates.items():
             required_gate_fields = {"allowed_producers", "min_evidence_refs", "review_mode"}
+            if gate.get("review_mode") != "none":
+                required_gate_fields.add("repair_stage")
             if set(gate) != required_gate_fields:
                 errors.append(f"{strategy_id}: stage_gates.{stage} must contain exactly {', '.join(sorted(required_gate_fields))}")
                 continue
@@ -115,6 +117,12 @@ def validate(root: Path = STRATEGIES) -> list[str]:
                 errors.append(f"{strategy_id}: stage_gates.{stage}.min_evidence_refs must be a non-negative integer")
             if gate["review_mode"] not in {"none", "self", "independent", "human"}:
                 errors.append(f"{strategy_id}: stage_gates.{stage}.review_mode is invalid")
+            repair_stage = gate.get("repair_stage")
+            if repair_stage:
+                if repair_stage not in stages:
+                    errors.append(f"{strategy_id}: stage_gates.{stage}.repair_stage is not a strategy stage")
+                elif strategy["stages"].index(repair_stage) >= strategy["stages"].index(stage):
+                    errors.append(f"{strategy_id}: stage_gates.{stage}.repair_stage must precede the review stage")
         stage_skills = strategy.get("stage_skills", {})
         unknown_stage_skill_keys = sorted(set(stage_skills) - stages)
         if unknown_stage_skill_keys:

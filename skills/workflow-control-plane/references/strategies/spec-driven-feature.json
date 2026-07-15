@@ -1,6 +1,6 @@
 {
   "id": "spec-driven-feature",
-  "version": "2.0",
+  "version": "2.1",
   "risk": ["L2"],
   "modes": ["implement", "design"],
   "process_depth": "lifecycle",
@@ -18,8 +18,8 @@
     "focused_and_chain_verification": ["change-aware-testing", "delivery-verification"]
   },
   "stage_gates": {
-    "spec_review": {"allowed_producers": ["local-executor"], "min_evidence_refs": 1, "review_mode": "self"},
-    "review": {"allowed_producers": ["local-executor"], "min_evidence_refs": 1, "review_mode": "self"}
+    "spec_review": {"allowed_producers": ["local-executor"], "min_evidence_refs": 1, "review_mode": "self", "repair_stage": "pack_backed_specflow"},
+    "review": {"allowed_producers": ["local-executor"], "min_evidence_refs": 1, "review_mode": "self", "repair_stage": "implementation"}
   },
   "design_policy": "embedded",
   "design_review": "self",

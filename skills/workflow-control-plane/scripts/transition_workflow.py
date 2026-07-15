@@ -21,7 +21,7 @@ CLAIM_RANK = {"none": 0, "dev_done": 1, "integration_done": 2, "handoff_done": 3
 
 def result(workflow_id: str, status: str, current_stage: str, workflow_state: str, errors: list[str], warnings: list[str]) -> dict[str, Any]:
     value = {
-        "schema_version": 1,
+        "schema_version": 2,
         "workflow_id": workflow_id,
         "status": status,
         "current_stage": current_stage,
@@ -71,7 +71,14 @@ def apply_transition(manifest: dict[str, Any], request: dict[str, Any]) -> tuple
         return manifest, result(request["workflow_id"], "rejected", manifest["current_stage"], manifest["workflow_state"], ["RESUME_CONFLICT: workflow_id mismatch"], [])
     for item in manifest.get("transition_log", []):
         if item["transition_id"] == request["transition_id"]:
-            return manifest, result(request["workflow_id"], "applied", manifest["current_stage"], manifest["workflow_state"], [], ["duplicate transition_id ignored idempotently"])
+            return manifest, result(
+                request["workflow_id"],
+                item.get("result_status", "applied"),
+                item.get("result_stage", manifest["current_stage"]),
+                item.get("result_workflow_state", manifest["workflow_state"]),
+                [],
+                ["duplicate transition_id returned its original result idempotently"],
+            )
     if request["expected_manifest_revision"] != manifest["manifest_revision"]:
         return manifest, result(request["workflow_id"], "rejected", manifest["current_stage"], manifest["workflow_state"], ["RESUME_CONFLICT: manifest revision mismatch"], [])
     if request["stage_id"] != manifest["current_stage"]:
@@ -107,6 +114,8 @@ def apply_transition(manifest: dict[str, Any], request: dict[str, Any]) -> tuple
             return manifest, result(request["workflow_id"], "rejected", manifest["current_stage"], manifest["workflow_state"], [f"REVIEW_PASS_CONFLICT: expected pass {expected_pass}"], [])
         if review["decision"] == "approved" and review["max_severity"] in {"major", "critical"}:
             return manifest, result(request["workflow_id"], "rejected", manifest["current_stage"], manifest["workflow_state"], ["REVIEW_APPROVAL_INVALID: unresolved Major/Critical finding"], [])
+        if review["decision"] in {"changes_requested", "human_required"} and not review["finding_refs"]:
+            return manifest, result(request["workflow_id"], "rejected", manifest["current_stage"], manifest["workflow_state"], ["REVIEW_FINDINGS_REQUIRED: non-approved review must reference at least one finding"], [])
     elif review is not None:
         return manifest, result(request["workflow_id"], "rejected", manifest["current_stage"], manifest["workflow_state"], ["REVIEW_RESULT_UNEXPECTED: strategy stage gate does not require review"], [])
 
@@ -129,6 +138,12 @@ def apply_transition(manifest: dict[str, Any], request: dict[str, Any]) -> tuple
             changed_ids.add(artifact_id)
     if changed_ids:
         propagate_stale(artifacts, changed_ids)
+    repair_pending = (
+        review_control.get("next_action") == "repair_required"
+        and manifest["current_stage"] == review_control.get("repair_stage")
+    )
+    if repair_pending and request["status"] == "completed" and not changed_ids:
+        return manifest, result(request["workflow_id"], "rejected", manifest["current_stage"], manifest["workflow_state"], ["REPAIR_PROGRESS_REQUIRED: repair stage must submit a content_changed artifact with a new digest"], [])
 
     requested = manifest["claims"]["requested"]
     for claim in request["claim_requests"]:
@@ -145,19 +160,24 @@ def apply_transition(manifest: dict[str, Any], request: dict[str, Any]) -> tuple
             "passes_completed": review["pass_number"],
             "last_severity": review["max_severity"],
             "decision": review["decision"],
+            "next_action": "none",
+            "repair_stage": "",
+            "finding_refs": review["finding_refs"],
         }
         if review["decision"] == "changes_requested":
-            target_stage = manifest["current_stage"]
+            repair_stage = stage_gate["repair_stage"]
+            target_stage = repair_stage
+            transition_status = "repair_required"
+            review_control["next_action"] = "repair_required"
+            review_control["repair_stage"] = repair_stage
             if review["pass_number"] >= strategy["execution_policy"]["max_review_passes"]:
-                state = "blocked"
-                blocked_reason = "REVIEW_LIMIT_REACHED"
-                transition_status = "blocked"
-                review_control["decision"] = "human_required"
+                review_control["passes_completed"] = 0
         elif review["decision"] == "human_required":
             target_stage = manifest["current_stage"]
             state = "blocked"
             blocked_reason = "REVIEW_HUMAN_REQUIRED"
             transition_status = "blocked"
+            review_control["next_action"] = "human_required"
     if request["status"] in {"blocked", "failed", "human_required"}:
         state = "blocked"
         blocked_reason = (request["error"] or {}).get("code") or request["status"]
@@ -187,6 +207,9 @@ def apply_transition(manifest: dict[str, Any], request: dict[str, Any]) -> tuple
         "producer_actor_id": request["producer"].get("actor_id", ""),
         "evidence_refs": request["evidence_refs"],
         "review_decision": (review or {}).get("decision", ""),
+        "result_status": transition_status,
+        "result_stage": target_stage,
+        "result_workflow_state": state,
     }]
     return updated, result(request["workflow_id"], transition_status, target_stage, state, [], [])
 

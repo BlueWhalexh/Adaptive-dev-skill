@@ -193,13 +193,13 @@ Loop 规则：
 3. batch 内更新 Plan checkbox 和简短失败记录，不重复创建 work order、artifact package、manifest transition、commit 或 report
 4. batch/milestone 统一运行 adjacent regression、diff/scope review、commit 和进度汇报
 5. 仅在 contract/auth/security/data/migration/concurrency/external side effect/architecture/claim 边界调用独立 reviewer
-6. Critical/Major 或契约变化修复后最多做一次 delta re-review；Minor 不重启完整 Review loop
+6. Critical/Major 或契约变化修复后最多做一次 delta re-review；仍有问题则保留 findings、返回修复阶段并开启新的 Review cycle，不因轮次耗尽停止 Goal Loop
 7. 判断 continue / stop / ask human
 
 必须暂停：
 - public API / data model / permission / security posture 需要改变
 - acceptance 或 claim ceiling 需要降低
-- 连续两轮验证失败仍无法定位
+- 验证失败且不存在可执行的诊断/修复路径，需要人工决策或外部能力
 - 发现 docs/current truth 冲突会影响方案
 - 需要真实凭证、生产副作用、破坏性命令或外部写操作
 

@@ -1,6 +1,6 @@
 {
   "id": "sop-guided-iteration",
-  "version": "2.0",
+  "version": "2.1",
   "risk": ["L2"],
   "modes": ["implement", "design"],
   "process_depth": "selective",
@@ -15,7 +15,7 @@
     "independent_review": ["agent-orchestration"]
   },
   "stage_gates": {
-    "independent_review": {"allowed_producers": ["agent-orchestration", "human-reviewer"], "min_evidence_refs": 1, "review_mode": "independent"}
+    "independent_review": {"allowed_producers": ["agent-orchestration", "human-reviewer"], "min_evidence_refs": 1, "review_mode": "independent", "repair_stage": "implementation"}
   },
   "design_policy": "embedded",
   "design_review": "independent",

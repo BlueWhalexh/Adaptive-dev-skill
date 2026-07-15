@@ -7,7 +7,7 @@
 - `intake`: route decision is not resolved yet.
 - `routed`: strategy is resolved and manifest has been initialized.
 - `active`: at least one strategy stage is in progress or completed.
-- `blocked`: execution cannot continue without repair, missing capability, or human input.
+- `blocked`: execution cannot continue autonomously because it needs human/external input, a missing capability, or a decision across an irreversible or security-sensitive boundary. Ordinary repairable findings stay `active`.
 - `review_ready`: implementation/evidence is ready for delivery review.
 - `closed`: validated claim and remaining gaps have been recorded.
 
@@ -40,6 +40,12 @@ Specialist skills must not edit `workflow_manifest.json` directly. They return a
 Then run `scripts/transition_workflow.py`.
 
 Only workflow-control-plane computes downstream stale propagation and advances the strategy stage.
+
+## Review Repair Rule
+
+`max_review_passes` limits repeated Review inside one review cycle; it is not a Goal Mode stop condition. `changes_requested` returns an `active` workflow to the Strategy gate's explicit `repair_stage`, preserves `finding_refs`, and emits `repair_required`. When the bounded pass count is reached, the pass counter resets for the next repaired diff/evidence cycle.
+
+Use `blocked` only when autonomous repair cannot proceed: `human_required`, missing capability or external state, irreversible-risk decision, unresolved permission/security ambiguity, or no executable repair path. Do not block merely because two Review passes found issues.
 
 ## Resume Rule
 

@@ -19,7 +19,7 @@
     "claims"
   ],
   "properties": {
-    "schema_version": { "type": "integer", "enum": [5] },
+    "schema_version": { "type": "integer", "enum": [6] },
     "skill_suite_version": { "type": "string" },
     "run_id": { "type": "string" },
     "manifest_revision": { "type": "integer" },
@@ -131,12 +131,15 @@
     "review_control": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["stage_id", "passes_completed", "last_severity", "decision"],
+      "required": ["stage_id", "passes_completed", "last_severity", "decision", "next_action", "repair_stage", "finding_refs"],
       "properties": {
         "stage_id": { "type": "string" },
         "passes_completed": { "type": "integer", "minimum": 0, "maximum": 2 },
         "last_severity": { "type": "string", "enum": ["none", "minor", "major", "critical"] },
-        "decision": { "type": "string", "enum": ["pending", "approved", "changes_requested", "human_required"] }
+        "decision": { "type": "string", "enum": ["pending", "approved", "changes_requested", "human_required"] },
+        "next_action": { "type": "string", "enum": ["none", "repair_required", "human_required"] },
+        "repair_stage": { "type": "string" },
+        "finding_refs": { "type": "array", "items": { "type": "string" } }
       }
     },
     "artifacts": {
@@ -220,7 +223,10 @@
           "producer_skill": { "type": "string" },
           "producer_actor_id": { "type": "string" },
           "evidence_refs": { "type": "array", "items": { "type": "string" } },
-          "review_decision": { "type": "string" }
+          "review_decision": { "type": "string" },
+          "result_status": { "type": "string", "enum": ["applied", "repair_required", "blocked"] },
+          "result_stage": { "type": "string" },
+          "result_workflow_state": { "type": "string", "enum": ["intake", "routed", "active", "blocked", "review_ready", "closed"] }
         }
       }
     }
