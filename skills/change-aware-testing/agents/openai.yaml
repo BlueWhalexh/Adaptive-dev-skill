@@ -1,2 +1,6 @@
-allow_implicit_invocation: true
-description: Diff-aware incremental test selection with checkpoint and completion escalation.
+interface:
+  display_name: "Change-Aware Testing"
+  short_description: "Select focused and checkpoint tests from the diff"
+
+policy:
+  allow_implicit_invocation: true

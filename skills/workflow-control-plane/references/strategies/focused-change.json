@@ -1,17 +1,20 @@
 {
   "id": "focused-change",
-  "version": "1.2",
+  "version": "2.0",
   "risk": ["L1"],
   "modes": ["implement"],
   "process_depth": "selective",
   "manifest_policy": "required",
   "execution_engine": "local",
+  "execution_policy": {"unit": "single_change", "task_risk": "local", "task_exit": "focused_signal", "checkpoint": "change", "review": "self", "commit": "change", "manifest_updates": "stage_only", "max_review_passes": 1},
   "stages": ["ground", "validator_selection", "red_or_alternate_evidence", "implementation", "focused_verification", "self_review", "close"],
   "required_artifacts": ["evidence_manifest"],
   "stage_skills": {
-    "validator_selection": ["change-aware-testing"],
     "focused_verification": ["change-aware-testing"],
     "close": ["delivery-verification"]
+  },
+  "stage_gates": {
+    "self_review": {"allowed_producers": ["local-executor"], "min_evidence_refs": 1, "review_mode": "self"}
   },
   "design_policy": "embedded",
   "design_review": "self",

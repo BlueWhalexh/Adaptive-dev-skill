@@ -1,11 +1,12 @@
 {
   "id": "root-cause-debug",
-  "version": "1.2",
+  "version": "2.0",
   "risk": ["L1", "L2", "L3"],
   "modes": ["debug"],
   "process_depth": "selective",
   "manifest_policy": "required",
   "execution_engine": "local",
+  "execution_policy": {"unit": "single_change", "task_risk": "local", "task_exit": "focused_signal", "checkpoint": "change", "review": "self", "commit": "change", "manifest_updates": "stage_only", "max_review_passes": 1},
   "stages": ["capture_failure", "reproduce_or_read_logs", "hypothesis", "minimal_fix", "same_signal_verification", "regression_guard", "close"],
   "required_artifacts": ["evidence_manifest"],
   "stage_skills": {

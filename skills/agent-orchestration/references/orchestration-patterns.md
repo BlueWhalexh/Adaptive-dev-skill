@@ -2,15 +2,32 @@
 
 ## Sequential
 
-Use when each stage depends on an approved upstream artifact:
+Use only for the artifact stages actually missing or materially changed. This is a dependency example, not a mandatory full chain:
 
 ```text
 context_researcher -> spec_writer -> spec_reviewer -> technical_designer -> plan_writer -> implementer -> code_reviewer -> verifier
 ```
 
+Reuse approved spec/design/plan artifacts. Do not regenerate or re-review them because a new implementation Task started.
+
+## Continuous Batch
+
+Default for L2/L3 implementation after approved artifacts:
+
+```text
+one scoped context packet
+  -> main implementer handles several low-risk Tasks
+  -> focused signal per Task
+  -> one batch checkpoint
+  -> optional boundary reviewer
+  -> one commit and progress result
+```
+
+Plan checkboxes remain progress tracking. They do not imply one work order, fresh subagent, reviewer, fixer, report, or commit each.
+
 ## Maker / Checker
 
-Use for high-impact spec, design, review, security, data, migration, and handoff work.
+Use for high-impact spec, design, security, data, migration, architecture checkpoints, and handoff work. Do not use maker/checker for ordinary docs, schema plumbing, or known-pattern Tasks inside a batch.
 
 ```text
 producer work_order
@@ -75,3 +92,5 @@ When a role returns `blocked`, `failed`, or `needs_human`:
 2. Summarize blocker and missing artifact.
 3. If new risk facts were discovered, submit a route facts delta to `workflow-control-plane`.
 4. Rebuild context packet after manifest revision changes.
+
+For review findings, fix Critical/Major or material contract findings and run at most one delta re-review. Minor non-contract findings may be fixed without restarting the full maker/checker chain.

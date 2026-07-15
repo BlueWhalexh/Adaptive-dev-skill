@@ -15,6 +15,7 @@ SKILL_DIR = Path(__file__).resolve().parents[1]
 ROUTE_SCHEMA = SKILL_DIR / "schemas" / "route-decision.schema.json"
 CAPABILITY_SCHEMA = SKILL_DIR / "schemas" / "capability-report.schema.json"
 RESOLVED_SCHEMA = SKILL_DIR / "schemas" / "resolved-strategy.schema.json"
+POLICY_SCHEMA = SKILL_DIR / "schemas" / "execution-policy.schema.json"
 STRATEGIES = SKILL_DIR / "references" / "strategies"
 
 
@@ -194,13 +195,14 @@ def resolve(route: dict[str, Any], base_dir: Path | None = None) -> dict[str, An
     skill_plan = choose_skill_plan(route, capability_report, strategy)
     first_stage = strategy["stages"][0]
     resolved = {
-        "schema_version": 3,
+        "schema_version": 4,
         "strategy_id": strategy_id,
         "strategy_version": strategy["version"],
         "process_depth": strategy["process_depth"],
         "manifest_policy": strategy["manifest_policy"],
         "spec_system": choose_spec_system(route, capability_report),
         "execution_engine": execution_engine,
+        "execution_policy": strategy["execution_policy"],
         "required_skills": skill_plan[first_stage],
         "skill_plan": skill_plan,
         "design_control": {
@@ -218,6 +220,7 @@ def resolve(route: dict[str, Any], base_dir: Path | None = None) -> dict[str, An
         ),
     }
     resolved_errors = validate_instance(resolved, load_json(RESOLVED_SCHEMA))
+    resolved_errors.extend(validate_instance(resolved["execution_policy"], load_json(POLICY_SCHEMA), "$.execution_policy"))
     if resolved_errors:
         fail("\n".join(resolved_errors))
     return resolved

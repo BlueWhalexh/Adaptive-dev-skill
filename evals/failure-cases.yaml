@@ -242,10 +242,52 @@ cases:
 
   - id: full-unit-suite-after-every-task
     prompt: "Agent finishes each implementation task by running the repository's entire unit suite, even though the diff is mapped to one module."
-    expected_behavior: "Use change-aware-testing for affected tests in the inner loop, expand at task/slice checkpoints, and reserve full-suite execution for explicit CI/release/project policy or global-impact fallback."
+    expected_behavior: "Use one focused signal per behavior Task, expand once at batch/milestone checkpoints, and reserve full-suite execution for explicit CI/release/project policy or global-impact fallback."
     failure_class: "verification_over_process"
     impact: "Repeated broad suites increase latency and token/tool cost without adding proportional evidence."
     status: "covered"
+
+  - id: parent-l3-forces-task-l3
+    prompt: "A lifecycle is L3, so every docs, schema, and local implementation Task receives the full L3 gates."
+    expected_behavior: "Use parent risk for final delivery gates and classify each Task locally; group consecutive low-risk Tasks into a continuous batch."
+    failure_class: "risk_inheritance_over_process"
+    impact: "Local work pays lifecycle ceremony without reducing boundary risk."
+    status: "fresh_behavior_eval"
+
+  - id: per-task-review-package
+    prompt: "Every Plan checkbox creates a fresh implementer, diff package, reviewer, fixer, re-review, ledger entry, commit, and report."
+    expected_behavior: "Treat checkboxes as tracking units; keep focused signals per Task and create Review, commit, report, or role handoff only at batch/milestone or material risk boundaries."
+    failure_class: "orchestration_over_process"
+    impact: "Agent coordination artifacts dominate implementation time and context."
+    status: "fresh_behavior_eval"
+
+  - id: minor-review-loop
+    prompt: "A reviewer reports one non-contract Minor finding, causing another full review cycle, then another."
+    expected_behavior: "Fix Minor findings without restarting the full chain; Critical/Major or material contract findings receive at most one delta re-review."
+    failure_class: "unbounded_review_loop"
+    impact: "Review cost grows without proportional correctness gain."
+    status: "runtime_negative_eval"
+
+  - id: per-task-manifest-transition
+    prompt: "Each Plan Task advances workflow_manifest.json and rebuilds all role context packets."
+    expected_behavior: "Update managed workflow state only when a Strategy stage advances; Tasks and Plan checkboxes are not control-plane transitions."
+    failure_class: "control_plane_over_process"
+    impact: "Runtime bookkeeping becomes the work instead of supporting it."
+    status: "fresh_behavior_eval"
+
+  - id: specialist-implicit-stack
+    prompt: "Adaptive, harness init, context grounding, SpecFlow, technical design, testing, verification, and orchestration all implicitly activate on one feature prompt."
+    expected_behavior: "Keep specialist descriptions stage-specific and load only the active Strategy stage; retain implicit availability until a real programmatic stage dispatcher exists."
+    failure_class: "progressive_disclosure_bypass"
+    impact: "Overlapping skill descriptions trigger an expensive full chain before routing."
+    status: "deterministic_policy_eval"
+
+  - id: spec-draft-inherits-future-l3
+    prompt: "User asks only for a SpecFlow draft of an unclear workflow and explicitly forbids implementation, but the router selects L3 because the future feature might become critical."
+    expected_behavior: "Route the current doc-only spec task as L2 unless non-downgradable auth/security/data/cross-service/handoff facts are already known; allow grounding to upgrade later."
+    failure_class: "premature_risk_inheritance"
+    impact: "A draft spec triggers standalone design and independent lifecycle ceremony before facts exist."
+    status: "fresh_route_eval"
 
   - id: unmapped-diff-claims-incremental-coverage
     prompt: "Changed-test selector finds no impact-map rule, but the agent reports focused tests passed and requests dev_done."

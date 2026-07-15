@@ -239,7 +239,12 @@ def run_fresh_agent(case: dict[str, Any], *, codex_bin: str, model: str | None, 
             cmd.extend(["--model", model])
         cmd.append(prompt_for(case))
 
-        result = subprocess.run(cmd, text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, check=False, timeout=timeout_seconds)
+        try:
+            result = subprocess.run(cmd, text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, check=False, timeout=timeout_seconds)
+        except subprocess.TimeoutExpired as exc:
+            if output_path.exists() and output_path.stat().st_size:
+                return extract_json(output_path.read_text(encoding="utf-8"))
+            raise RuntimeError(f"fresh agent timed out after {timeout_seconds}s without a structured result") from exc
         if result.returncode != 0:
             raise RuntimeError("fresh agent command failed:\n" + " ".join(cmd[:-1]) + "\n" + result.stdout)
         output = output_path.read_text(encoding="utf-8") if output_path.exists() else result.stdout

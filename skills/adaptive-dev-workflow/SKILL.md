@@ -71,10 +71,11 @@ Intent rules:
 - 数据/权限/状态迁移 => `change_types` 包含 `migration`，不要把 migration 写成 work intent。
 - 新项目/first MVP/project harness => `delivery_shape=mvp`。
 - SDK/package/runtime image/artifact/onboarding 交给新消费者使用，或用户要求“新项目可安装/可 import/可接入” => `work_intent=handoff`。
+- 只要求把 raw intent 生成 draft spec/design、明确禁止实现，且尚未发现不可降级事实时，按当前 artifact 交付风险通常为 `L2 + delivery_shape=doc_only`。不要因为需求名含“workflow/审核流/平台”就提前继承未来实现的 L3 风险；后续 grounding 发现 auth/security/data/cross-service/handoff 再升级。
 
 Non-downgradable facts: `auth`、`security`、`data`、`migration`、`release`、`handoff`。这些事实不允许为了省流程降级为 L0/L1。
 
-`user_constraints.required_spec_system` 和 `required_execution_engine` 只记录用户显式要求。Superpowers 不是 execution engine，用户点名某个原生 skill 时把它作为 method request 交给 control plane/adapter，不要写入 execution engine。能力与默认选择属于 capability report 和 resolver。
+`user_constraints.required_spec_system` 和 `required_execution_engine` 只记录用户显式要求。Superpowers 不是 execution engine，不要写入 execution engine；adaptive 只执行 Strategy 当前 stage 已调度的原生 method。能力与默认选择属于 capability report 和 resolver。
 
 ## Capability Detection
 
@@ -101,7 +102,9 @@ python3 skills/workflow-control-plane/scripts/resolve_strategy.py route_decision
 
    - `direct`: execute the focused change with repo instructions/project SOP and the smallest validator. For behavior changes, use `change-aware-testing` in inner-loop mode instead of repeatedly running the full unit suite. Do not initialize a workflow manifest or load Superpowers.
    - `selective`: initialize workflow state, then load only the exact `required_skills` needed by the active stage.
-   - `lifecycle`: initialize workflow state and follow the versioned strategy stages. Load only `skill_plan[current_stage]`; lifecycle depth never implies a full Superpowers workflow.
+   - `lifecycle`: initialize workflow state and follow the versioned strategy stages. Load only `skill_plan[current_stage]`; lifecycle depth never implies a full Superpowers workflow or L3 ceremony for every Task.
+
+   For implementation, obey `execution_policy`: parent risk controls final gates; Tasks use local risk. `continuous_batch` runs one focused signal per Task, then adjacent regression, Review, commit, report, and any manifest transition once per batch/milestone.
 
 6. For `manifest_policy=required`, let `workflow-control-plane` initialize or update workflow state:
 
@@ -140,6 +143,7 @@ python3 skills/workflow-control-plane/scripts/apply_route_facts_delta.py route_d
 - Do not model Superpowers as an execution engine or full workflow. It is only a provider of explicitly scheduled native method skills.
 - Do not create `workflow_manifest.json` for `manifest_policy=none`.
 - Do not start a new subagent merely because a different skill is used; isolate only for review, sufficiency eval, security, parallel tasks, or context-contamination control.
+- Do not treat Plan checkboxes as mandatory subagent, Review, commit, report, artifact package, or workflow-state boundaries.
 
 ## Validation
 

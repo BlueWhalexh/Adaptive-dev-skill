@@ -29,8 +29,23 @@ The selected strategy owns stages. The adaptive router only records `selected_st
 
 Each strategy also owns `stage_skills`. The resolver emits a complete `skill_plan`, while `required_skills` contains only the current stage entry. `transition_workflow.py` replaces `required_skills` when the stage advances; names scheduled for future stages are not instructions to preload those skills.
 
+High-risk stages may also define `stage_gates` with allowed producers, minimum evidence refs, and review mode. `transition_workflow.py` rejects unauthorized producers, empty evidence, invalid reviewer identity, maker/checker conflicts, and unresolved Major/Critical approval.
+
+## Execution Policy
+
+`execution_policy` is the single authority for execution cadence. Parent route risk controls design, integration, handoff, and claim gates. It does not make every child Task L3.
+
+- Classify each executable Task by its own changed surface and uncertainty.
+- A Plan checkbox is a tracking unit, not an automatic review, commit, subagent, artifact package, or manifest boundary.
+- `single_change` exits with one focused signal and one scoped self-review.
+- `continuous_batch` groups consecutive low-risk Tasks with shared context. Each Task gets a focused signal; adjacent regression, diff review, commit, and progress report happen once at the batch or milestone checkpoint.
+- Managed workflows update manifests only at Strategy stage boundaries.
+- `boundary_strict` review applies to contract, auth/security, data/migration, concurrency, external side effects, architecture checkpoints, and final claim boundaries. Minor findings do not trigger full review loops.
+
+Read `batch-execution.md` when an implementation stage is active.
+
 ## Claim Rule
 
 Strategies may request claims, but only `delivery-verification` or another named verifier signs validated claims.
 
-`change-aware-testing` controls test frequency inside implementation stages. It runs affected tests in the inner loop, expands at task/slice checkpoints, and leaves claim-level evidence decisions to `delivery-verification`. Full repository suites belong to explicit CI/release/project policy or a mapped global-impact fallback, not every task exit.
+`change-aware-testing` controls test frequency inside implementation stages. It runs a focused signal per behavior change, expands once at batch/milestone checkpoints, and leaves claim-level evidence decisions to `delivery-verification`. Full repository suites belong to explicit CI/release/project policy or a mapped global-impact fallback, not every Task or batch exit.

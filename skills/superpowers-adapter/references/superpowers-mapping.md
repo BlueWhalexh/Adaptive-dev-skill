@@ -8,11 +8,10 @@ Invoke only the exact mapped row selected for the active stage. A lifecycle may 
 | --- | --- | --- |
 | Implementation approach is unclear | `superpowers:brainstorming` | route decision, approved spec, constraints |
 | Multi-step implementation needed | `superpowers:writing-plans` | approved spec, approved/embedded technical design, evidence plan |
-| Written plan ready | `superpowers:executing-plans` | approved implementation plan |
-| Feature/bugfix behavior is automatable | `superpowers:test-driven-development` | acceptance criteria, focused validator target |
+| Strategy explicitly requires strict test-first behavior | `superpowers:test-driven-development` | acceptance criteria, focused validator target |
 | Bug/test/CI failure | `superpowers:systematic-debugging` | failure signal, reproduction, logs |
-| Major diff needs maker/checker | `superpowers:requesting-code-review` | diff summary, acceptance, evidence manifest |
-| Completion claim is about to be made | `superpowers:verification-before-completion` | commands run, evidence ids, remaining gaps |
+
+An approved Plan normally executes through `execution_policy=single_change|continuous_batch`. Do not infer a native Superpowers execution chain from plan existence, lifecycle depth, or parent risk.
 
 ## Output Contract
 

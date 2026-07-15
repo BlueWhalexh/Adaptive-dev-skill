@@ -1,0 +1,15 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["unit", "task_risk", "task_exit", "checkpoint", "review", "commit", "manifest_updates", "max_review_passes"],
+  "properties": {
+    "unit": { "type": "string", "enum": ["none", "single_change", "continuous_batch"] },
+    "task_risk": { "type": "string", "enum": ["local"] },
+    "task_exit": { "type": "string", "enum": ["none", "focused_signal"] },
+    "checkpoint": { "type": "string", "enum": ["none", "change", "batch", "milestone"] },
+    "review": { "type": "string", "enum": ["none", "self", "batch_risk", "boundary_strict", "independent"] },
+    "commit": { "type": "string", "enum": ["none", "change", "batch"] },
+    "manifest_updates": { "type": "string", "enum": ["none", "stage_only"] },
+    "max_review_passes": { "type": "integer", "minimum": 0, "maximum": 2 }
+  }
+}

@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -115,15 +116,15 @@ def complex_skill_plan() -> dict[str, list[str]]:
         "ground": [],
         "context_pack_review": ["context-grounding"],
         "pack_backed_specflow": ["specflow"],
-        "spec_review": [],
+        "spec_review": ["agent-orchestration"],
         "technical_design": ["technical-design"],
-        "design_review": [],
+        "design_review": ["agent-orchestration"],
         "minimum_real_slice_plan": ["superpowers:writing-plans"],
-        "slice_execution": ["superpowers:executing-plans", "change-aware-testing"],
-        "architecture_checkpoint": [],
-        "remaining_slice_execution": ["superpowers:executing-plans", "change-aware-testing"],
-        "system_verification": ["change-aware-testing", "superpowers:verification-before-completion", "delivery-verification"],
-        "delivery_review": ["superpowers:requesting-code-review"],
+        "slice_execution": ["change-aware-testing"],
+        "architecture_checkpoint": ["agent-orchestration"],
+        "remaining_slice_execution": ["change-aware-testing"],
+        "system_verification": ["change-aware-testing", "delivery-verification"],
+        "delivery_review": ["agent-orchestration"],
         "learning_capture": ["knowledge-promotion"],
     }
 
@@ -149,7 +150,7 @@ def workflow_manifest(*, requested: str = "integration_done", validated_claim: s
         "skill_suite_version": "2026-06-24",
         "run_id": "run-control-plane-e2e",
         "manifest_revision": 1,
-        "strategy_version": "1.3",
+        "strategy_version": "2.0",
         "workflow_state": "review_ready",
         "classification": {
             "risk": "L3",
@@ -164,8 +165,9 @@ def workflow_manifest(*, requested: str = "integration_done", validated_claim: s
             "manifest_policy": "required",
             "spec_system": "fallback",
             "execution_engine": "local",
+            "execution_policy": {"unit": "continuous_batch", "task_risk": "local", "task_exit": "focused_signal", "checkpoint": "milestone", "review": "boundary_strict", "commit": "batch", "manifest_updates": "stage_only", "max_review_passes": 2},
             "strategy_id": "complex-real-slice",
-            "required_skills": ["superpowers:requesting-code-review"],
+            "required_skills": ["agent-orchestration"],
             "skill_plan": complex_skill_plan(),
             "capability_report_ref": "capability-report.json",
         },
@@ -190,6 +192,7 @@ def workflow_manifest(*, requested: str = "integration_done", validated_claim: s
                 "evidence_ids": ["DR-001"],
             },
         },
+        "review_control": {"stage_id": "", "passes_completed": 0, "last_severity": "none", "decision": "pending"},
         "artifacts": [
             {
                 "id": "ap-001",
@@ -286,7 +289,7 @@ def workflow_manifest(*, requested: str = "integration_done", validated_claim: s
                         "claim_type": validated_claim,
                         "commit_sha": "abc123",
                         "strategy_id": "complex-real-slice",
-                        "strategy_version": "1.3",
+                        "strategy_version": "2.0",
                         "registry_digest": "sha256:registry",
                         "evidence_manifest_digest": "sha256:evidence",
                         "verifier_id": "evidence-manifest-validator",
@@ -602,9 +605,10 @@ def main() -> int:
         wf_embedded_bad = workflow_manifest()
         wf_embedded_bad["selected_strategy"] = "spec-driven-feature"
         wf_embedded_bad["routing"]["strategy_id"] = "spec-driven-feature"
-        wf_embedded_bad["strategy_version"] = "1.2"
+        wf_embedded_bad["strategy_version"] = "2.0"
         wf_embedded_bad["current_stage"] = "plan"
         wf_embedded_bad["routing"]["skill_plan"] = spec_feature_skill_plan()
+        wf_embedded_bad["routing"]["execution_policy"] = {"unit": "continuous_batch", "task_risk": "local", "task_exit": "focused_signal", "checkpoint": "batch", "review": "batch_risk", "commit": "batch", "manifest_updates": "stage_only", "max_review_passes": 2}
         wf_embedded_bad["routing"]["required_skills"] = ["superpowers:writing-plans"]
         wf_embedded_bad["resume"]["resume_from_stage"] = "plan"
         wf_embedded_bad["resume"]["last_validated_artifact_ids"] = ["ap-001", "ctx-001", "spec-001", "plan-001"]
@@ -635,9 +639,10 @@ def main() -> int:
         wf_split_embedded_bad = workflow_manifest()
         wf_split_embedded_bad["selected_strategy"] = "spec-driven-feature"
         wf_split_embedded_bad["routing"]["strategy_id"] = "spec-driven-feature"
-        wf_split_embedded_bad["strategy_version"] = "1.2"
+        wf_split_embedded_bad["strategy_version"] = "2.0"
         wf_split_embedded_bad["current_stage"] = "plan"
         wf_split_embedded_bad["routing"]["skill_plan"] = spec_feature_skill_plan()
+        wf_split_embedded_bad["routing"]["execution_policy"] = {"unit": "continuous_batch", "task_risk": "local", "task_exit": "focused_signal", "checkpoint": "batch", "review": "batch_risk", "commit": "batch", "manifest_updates": "stage_only", "max_review_passes": 2}
         wf_split_embedded_bad["routing"]["required_skills"] = ["superpowers:writing-plans"]
         wf_split_embedded_bad["resume"]["resume_from_stage"] = "plan"
         wf_split_embedded_bad["resume"]["last_validated_artifact_ids"] = ["ap-001", "ctx-001", "spec-001", "plan-001"]
@@ -668,6 +673,84 @@ def main() -> int:
                 item["status"] = "stale"
         wf_stale_bad_path = write_json(root / "workflow-stale-bad.json", wf_stale_bad)
 
+        review_manifest = write_json(root / "workflow-review-runtime.json", workflow_manifest())
+        review_request_base = {
+            "schema_version": 1,
+            "workflow_id": "run-control-plane-e2e",
+            "transition_id": "tr-review-001",
+            "expected_manifest_revision": 1,
+            "stage_id": "delivery_review",
+            "producer": {"skill": "agent-orchestration", "version": "1.0.0", "actor_id": "reviewer-1"},
+            "status": "completed",
+            "artifact_changes": [],
+            "evidence_refs": ["review-001"],
+            "claim_requests": [],
+            "discovered_facts": {},
+            "error": None,
+        }
+        review_missing_path = write_json(root / "review-result-missing-bad.json", review_request_base)
+        review_major_approved = json.loads(json.dumps(review_request_base))
+        review_major_approved["transition_id"] = "tr-review-major-approved"
+        review_major_approved["review_result"] = {"pass_number": 1, "max_severity": "major", "decision": "approved", "reviewer_id": "reviewer-1", "reviewed_producer_ids": ["coding-agent"], "finding_refs": ["finding-major-001"]}
+        review_major_approved_path = write_json(root / "review-major-approved-bad.json", review_major_approved)
+        review_self_approved = json.loads(json.dumps(review_request_base))
+        review_self_approved["transition_id"] = "tr-review-self-approved"
+        review_self_approved["producer"]["actor_id"] = "coding-agent"
+        review_self_approved["review_result"] = {"pass_number": 1, "max_severity": "none", "decision": "approved", "reviewer_id": "coding-agent", "reviewed_producer_ids": ["coding-agent"], "finding_refs": []}
+        review_self_approved_path = write_json(root / "review-self-approved-bad.json", review_self_approved)
+        review_changes_one = json.loads(json.dumps(review_request_base))
+        review_changes_one["transition_id"] = "tr-review-changes-1"
+        review_changes_one["review_result"] = {"pass_number": 1, "max_severity": "major", "decision": "changes_requested", "reviewer_id": "reviewer-1", "reviewed_producer_ids": ["coding-agent"], "finding_refs": ["finding-major-001"]}
+        review_changes_one_path = write_json(root / "review-changes-1.json", review_changes_one)
+        review_changes_two = json.loads(json.dumps(review_request_base))
+        review_changes_two["transition_id"] = "tr-review-changes-2"
+        review_changes_two["expected_manifest_revision"] = 2
+        review_changes_two["review_result"] = {"pass_number": 2, "max_severity": "major", "decision": "changes_requested", "reviewer_id": "reviewer-1", "reviewed_producer_ids": ["coding-agent"], "finding_refs": ["finding-major-001"]}
+        review_changes_two_path = write_json(root / "review-changes-2.json", review_changes_two)
+
+        system_gate_manifest = workflow_manifest()
+        system_gate_manifest["current_stage"] = "system_verification"
+        system_gate_manifest["resume"]["resume_from_stage"] = "system_verification"
+        system_gate_manifest["routing"]["required_skills"] = ["change-aware-testing", "delivery-verification"]
+        system_gate_manifest_path = write_json(root / "workflow-system-gate.json", system_gate_manifest)
+        system_gate_empty = json.loads(json.dumps(review_request_base))
+        system_gate_empty.update({"transition_id": "tr-system-empty", "stage_id": "system_verification"})
+        system_gate_empty["producer"] = {"skill": "delivery-verification", "version": "1.0.0"}
+        system_gate_empty["evidence_refs"] = []
+        system_gate_empty_path = write_json(root / "system-gate-empty-bad.json", system_gate_empty)
+
+        migration_negative_manifest = workflow_manifest()
+        migration_negative_manifest["selected_strategy"] = "migration-critical"
+        migration_negative_manifest["current_stage"] = "negative_tests"
+        migration_negative_manifest_path = write_json(root / "workflow-migration-negative-gate.json", migration_negative_manifest)
+        migration_negative_empty = json.loads(json.dumps(system_gate_empty))
+        migration_negative_empty.update({"transition_id": "tr-migration-negative-empty", "stage_id": "negative_tests"})
+        migration_negative_empty["producer"] = {"skill": "change-aware-testing", "version": "1.0.0"}
+        migration_negative_empty_path = write_json(root / "migration-negative-empty-bad.json", migration_negative_empty)
+
+        l2_review_manifest = workflow_manifest()
+        l2_review_manifest["selected_strategy"] = "spec-driven-feature"
+        l2_review_manifest["current_stage"] = "review"
+        l2_review_manifest_path = write_json(root / "workflow-l2-review-gate.json", l2_review_manifest)
+        l2_review_empty = json.loads(json.dumps(system_gate_empty))
+        l2_review_empty.update({"transition_id": "tr-l2-review-empty", "stage_id": "review"})
+        l2_review_empty["producer"] = {"skill": "local-executor", "version": "1.0.0", "actor_id": "coding-agent"}
+        l2_review_empty_path = write_json(root / "l2-review-empty-bad.json", l2_review_empty)
+
+        old_unsigned = workflow_manifest()
+        old_unsigned["strategy_version"] = "1.3"
+        old_unsigned["claims"] = {"requested": "none", "validated": []}
+        old_unsigned.pop("review_control")
+        old_unsigned["routing"].pop("execution_policy")
+        old_unsigned["routing"]["skill_plan"]["slice_execution"] = ["superpowers:executing-plans", "change-aware-testing"]
+        old_unsigned["routing"]["skill_plan"]["delivery_review"] = ["superpowers:requesting-code-review"]
+        old_unsigned["routing"]["required_skills"] = ["superpowers:requesting-code-review"]
+        old_unsigned_path = write_json(root / "workflow-v1-unsigned.json", old_unsigned)
+        migrated_manifest_path = root / "workflow-v2-migrated.json"
+        old_signed = json.loads(json.dumps(old_unsigned))
+        old_signed["claims"] = workflow_manifest()["claims"]
+        old_signed_path = write_json(root / "workflow-v1-signed-bad.json", old_signed)
+
         manifest_validator = WORKFLOW / "scripts" / "validate_workflow_manifest.py"
         graph_validator = WORKFLOW / "scripts" / "validate_artifact_graph.py"
         run([sys.executable, str(manifest_validator), str(wf_ok)])
@@ -691,6 +774,29 @@ def main() -> int:
         run([sys.executable, str(manifest_validator), str(wf_compact_standalone_bad_path)], expect_ok=False)
         run([sys.executable, str(manifest_validator), str(wf_split_embedded_bad_path)], expect_ok=False)
         run([sys.executable, str(graph_validator), str(wf_stale_bad_path)], expect_ok=False)
+        transition_script = WORKFLOW / "scripts" / "transition_workflow.py"
+        run([sys.executable, str(transition_script), str(review_manifest), str(review_missing_path)], expect_ok=False)
+        run([sys.executable, str(transition_script), str(review_manifest), str(review_major_approved_path)], expect_ok=False)
+        run([sys.executable, str(transition_script), str(review_manifest), str(review_self_approved_path)], expect_ok=False)
+        run([sys.executable, str(transition_script), str(system_gate_manifest_path), str(system_gate_empty_path)], expect_ok=False)
+        run([sys.executable, str(transition_script), str(migration_negative_manifest_path), str(migration_negative_empty_path)], expect_ok=False)
+        run([sys.executable, str(transition_script), str(l2_review_manifest_path), str(l2_review_empty_path)], expect_ok=False)
+        run([sys.executable, str(transition_script), str(review_manifest), str(review_changes_one_path)])
+        run([sys.executable, str(transition_script), str(review_manifest), str(review_changes_two_path)])
+        review_blocked = json.loads(review_manifest.read_text(encoding="utf-8"))
+        if review_blocked["workflow_state"] != "blocked" or review_blocked["resume"]["blocked_reason"] != "REVIEW_LIMIT_REACHED":
+            raise SystemExit("review pass limit did not block unresolved Major findings")
+        migrate_script = WORKFLOW / "scripts" / "migrate_workflow_manifest_v5.py"
+        run([sys.executable, str(migrate_script), str(old_unsigned_path), "--output", str(migrated_manifest_path)])
+        migrated_manifest = json.loads(migrated_manifest_path.read_text(encoding="utf-8"))
+        migrated_methods = {skill for skills in migrated_manifest["routing"]["skill_plan"].values() for skill in skills}
+        if migrated_manifest["strategy_version"] != "2.0" or "superpowers:executing-plans" in migrated_methods:
+            raise SystemExit("manifest migration retained legacy execution ceremony")
+        run([sys.executable, str(migrate_script), str(old_signed_path), "--output", str(root / "signed-migration-bad.json")], expect_ok=False)
+        signed_digest = sha256(old_signed_path)
+        run([sys.executable, str(migrate_script), str(old_signed_path), "--output", str(old_signed_path)], expect_ok=False)
+        if sha256(old_signed_path) != signed_digest:
+            raise SystemExit("failed in-place migration modified the source manifest")
 
         evidence_validator = DELIVERY / "scripts" / "validate_evidence_manifest.py"
         run([sys.executable, str(evidence_validator), str(write_json(root / "evidence-integration-ok.json", evidence_manifest("integration_done", "integration")))])
@@ -734,6 +840,27 @@ def main() -> int:
         run([sys.executable, str(KNOWLEDGE / "scripts" / "validate_learning_candidate.py"), str(learning_bad)], expect_ok=False)
 
         run([sys.executable, str(WORKFLOW / "scripts" / "validate_strategy_registry.py")])
+        forbidden_registry = root / "strategies-forbidden-method"
+        shutil.copytree(WORKFLOW / "references" / "strategies", forbidden_registry)
+        forbidden_complex_path = forbidden_registry / "complex-real-slice.json"
+        forbidden_complex = json.loads(forbidden_complex_path.read_text(encoding="utf-8"))
+        forbidden_complex["stage_skills"]["slice_execution"].append("superpowers:executing-plans")
+        write_json(forbidden_complex_path, forbidden_complex)
+        run([sys.executable, str(WORKFLOW / "scripts" / "validate_strategy_registry.py"), "--root", str(forbidden_registry)], expect_ok=False)
+        unbounded_registry = root / "strategies-unbounded-review"
+        shutil.copytree(WORKFLOW / "references" / "strategies", unbounded_registry)
+        unbounded_complex_path = unbounded_registry / "complex-real-slice.json"
+        unbounded_complex = json.loads(unbounded_complex_path.read_text(encoding="utf-8"))
+        unbounded_complex["execution_policy"]["max_review_passes"] = 3
+        write_json(unbounded_complex_path, unbounded_complex)
+        run([sys.executable, str(WORKFLOW / "scripts" / "validate_strategy_registry.py"), "--root", str(unbounded_registry)], expect_ok=False)
+        ungated_registry = root / "strategies-ungated-review"
+        shutil.copytree(WORKFLOW / "references" / "strategies", ungated_registry)
+        ungated_feature_path = ungated_registry / "spec-driven-feature.json"
+        ungated_feature = json.loads(ungated_feature_path.read_text(encoding="utf-8"))
+        ungated_feature["stage_gates"].pop("review")
+        write_json(ungated_feature_path, ungated_feature)
+        run([sys.executable, str(WORKFLOW / "scripts" / "validate_strategy_registry.py"), "--root", str(ungated_registry)], expect_ok=False)
         run([sys.executable, str(HANDOFF_FRESH_CONSUMER)])
 
     print("Workflow E2E eval passed")
@@ -745,6 +872,11 @@ def main() -> int:
     print("- route facts delta, capability-missing, stale/duplicate transition checks: pass")
     print("- workflow manifest + artifact graph positive/negative checks: pass")
     print("- version/stage/resume/verifier false-claim checks: pass")
+    print("- review producer/identity/evidence, severity, and bounded re-review runtime checks: pass")
+    print("- high-risk stage evidence gates: pass")
+    print("- atomic unsigned manifest migration + signed-claim refusal: pass")
+    print("- heavyweight default method + unbounded review registry negatives: pass")
+    print("- managed review gate coverage negative: pass")
     print("- JSON evidence manifest claim checks: pass")
     print("- context static/freshness/runtime/sufficiency checks: pass")
     print("- learning candidate path-safety checks: pass")

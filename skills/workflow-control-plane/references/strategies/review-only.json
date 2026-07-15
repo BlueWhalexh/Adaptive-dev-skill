@@ -1,11 +1,12 @@
 {
   "id": "review-only",
-  "version": "1.1",
+  "version": "2.0",
   "risk": ["L0", "L1", "L2", "L3"],
   "modes": ["review"],
   "process_depth": "direct",
   "manifest_policy": "none",
   "execution_engine": "none",
+  "execution_policy": {"unit": "none", "task_risk": "local", "task_exit": "none", "checkpoint": "change", "review": "independent", "commit": "none", "manifest_updates": "none", "max_review_passes": 1},
   "stages": ["identify_review_scope", "inspect_artifacts", "findings_first", "evidence_gap_check", "close"],
   "required_artifacts": [],
   "stage_skills": {},

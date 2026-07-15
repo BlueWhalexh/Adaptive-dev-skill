@@ -22,12 +22,12 @@ Recommended next action
 | Role | Trigger | Inputs | Output | Must Not |
 | --- | --- | --- | --- | --- |
 | `repo-grounder` | New area, stale docs, unclear architecture | Goal, paths, docs | Current truth map, docs drift, risks | Edit files |
-| `spec-reviewer` | Before Medium/Large implementation | Product spec, acceptance | Missing goals, non-goals, behavior, delivery verification | Rewrite product silently |
+| `spec-reviewer` | New or materially changed product contract | Product spec, acceptance | Missing goals, non-goals, behavior, delivery verification | Rewrite product silently |
 | `technical-design-writer` | Approved spec before planning | Spec, current truth, constraints | Technical design draft, contracts, risks, evidence mapping | Write implementation plan/code |
 | `technical-design-reviewer` | Standalone design required | Technical design, spec, context | Design findings, missing boundaries, review decision | Review own design |
-| `plan-reviewer` | Before plan execution | Plan, code map, constraints | Missing tasks, sequencing risk, missing gates | Implement |
+| `plan-reviewer` | New/changed high-impact plan or uncertain sequencing | Plan, code map, constraints | Missing tasks, sequencing risk, missing gates | Implement |
 | `test-strategy-reviewer` | Evidence matrix unclear | Spec, changed surfaces, test commands | Required validators and claim ceiling | Demand heavy tests for Tiny tasks |
-| `evidence-reviewer` | Before completion or handoff | Diff, evidence, final claim | Claim ceiling, gaps, mock/fake/real labels | Accept mock as real |
+| `evidence-reviewer` | Integration/handoff claim or material evidence gap | Diff, evidence, final claim | Claim ceiling, gaps, mock/fake/real labels | Accept mock as real |
 | `security-data-reviewer` | Auth, permission, PII, secrets, migrations | Spec, diff, data/security surfaces | Negative cases, data safety, rollback | Guess compliance |
 | `knowledge-curator` | After MVP or repeated lesson | Candidate, evidence, scope | Promote/reject destination | Write policy directly |
 
@@ -38,7 +38,7 @@ Recommended next action
 | Tiny | No reviewer by default |
 | Small | Reviewer only when cause or validation is unclear |
 | Medium | Use one focused reviewer for spec/design/plan/evidence when risk is meaningful |
-| Large | Use separate spec/design/plan/evidence review; add security/data review when relevant |
+| Large | Review new/changed high-impact artifacts and material boundaries; do not add a reviewer per implementation Task |
 | Handoff | Use evidence reviewer and fresh consumer when the claim requires it |
 
 ## Prompt Shape
@@ -55,6 +55,8 @@ Must not:
 ```
 
 Pass only the minimum complete context. Do not include private secrets or production data.
+
+For continuous low-risk batches, keep one implementer context and use one checkpoint. Critical/Major or contract-changing findings receive at most one delta re-review; Minor non-contract findings do not restart the full review chain.
 
 ## Maintenance
 

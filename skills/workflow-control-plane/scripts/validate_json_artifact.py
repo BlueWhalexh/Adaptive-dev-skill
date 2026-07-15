@@ -53,6 +53,12 @@ def validate_instance(value: Any, schema: dict[str, Any], path: str = "$") -> li
     if "enum" in schema and value not in schema["enum"]:
         return [f"{path}: invalid value {value!r}; expected one of {schema['enum']}"]
 
+    if isinstance(value, (int, float)) and not isinstance(value, bool):
+        if "minimum" in schema and value < schema["minimum"]:
+            errors.append(f"{path}: value {value!r} is below minimum {schema['minimum']}")
+        if "maximum" in schema and value > schema["maximum"]:
+            errors.append(f"{path}: value {value!r} exceeds maximum {schema['maximum']}")
+
     if expected_type == "object":
         required = schema.get("required", [])
         for key in required:
@@ -70,6 +76,8 @@ def validate_instance(value: Any, schema: dict[str, Any], path: str = "$") -> li
                 errors.extend(validate_instance(value[key], child_schema, f"{path}.{key}"))
 
     if expected_type == "array":
+        if "minItems" in schema and len(value) < schema["minItems"]:
+            errors.append(f"{path}: expected at least {schema['minItems']} items")
         item_schema = schema.get("items")
         if item_schema:
             for index, item in enumerate(value):

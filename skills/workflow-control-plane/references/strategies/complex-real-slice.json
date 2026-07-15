@@ -1,26 +1,37 @@
 {
   "id": "complex-real-slice",
-  "version": "1.3",
+  "version": "2.0",
   "risk": ["L2", "L3"],
   "modes": ["implement", "handoff"],
   "process_depth": "lifecycle",
   "manifest_policy": "required",
   "execution_engine": "local",
+  "execution_policy": {"unit": "continuous_batch", "task_risk": "local", "task_exit": "focused_signal", "checkpoint": "milestone", "review": "boundary_strict", "commit": "batch", "manifest_updates": "stage_only", "max_review_passes": 2},
   "stages": ["ground", "context_pack_review", "pack_backed_specflow", "spec_review", "technical_design", "design_review", "minimum_real_slice_plan", "slice_execution", "architecture_checkpoint", "remaining_slice_execution", "system_verification", "delivery_review", "learning_capture"],
   "required_artifacts": ["analysis_pack", "context_manifest", "spec", "technical_design", "plan", "task_packet", "evidence_manifest", "learning_candidate"],
   "stage_skills": {
     "context_pack_review": ["context-grounding"],
     "pack_backed_specflow": ["specflow"],
+    "spec_review": ["agent-orchestration"],
     "technical_design": ["technical-design"],
+    "design_review": ["agent-orchestration"],
     "minimum_real_slice_plan": ["superpowers:writing-plans"],
-    "slice_execution": ["superpowers:executing-plans", "change-aware-testing"],
-    "remaining_slice_execution": ["superpowers:executing-plans", "change-aware-testing"],
-    "system_verification": ["change-aware-testing", "superpowers:verification-before-completion", "delivery-verification"],
-    "delivery_review": ["superpowers:requesting-code-review"],
+    "slice_execution": ["change-aware-testing"],
+    "architecture_checkpoint": ["agent-orchestration"],
+    "remaining_slice_execution": ["change-aware-testing"],
+    "system_verification": ["change-aware-testing", "delivery-verification"],
+    "delivery_review": ["agent-orchestration"],
     "learning_capture": ["knowledge-promotion"]
   },
+  "stage_gates": {
+    "context_pack_review": {"allowed_producers": ["context-grounding"], "min_evidence_refs": 1, "review_mode": "self"},
+    "spec_review": {"allowed_producers": ["agent-orchestration", "human-reviewer"], "min_evidence_refs": 1, "review_mode": "independent"},
+    "design_review": {"allowed_producers": ["agent-orchestration", "human-reviewer"], "min_evidence_refs": 1, "review_mode": "independent"},
+    "architecture_checkpoint": {"allowed_producers": ["agent-orchestration", "human-reviewer"], "min_evidence_refs": 1, "review_mode": "independent"},
+    "system_verification": {"allowed_producers": ["delivery-verification"], "min_evidence_refs": 1, "review_mode": "none"},
+    "delivery_review": {"allowed_producers": ["agent-orchestration", "human-reviewer"], "min_evidence_refs": 1, "review_mode": "independent"}
+  },
   "conditional_skills": [
-    {"stages": ["slice_execution"], "change_types": ["bugfix", "feature", "api_contract"], "skills": ["superpowers:test-driven-development"]},
     {"stages": ["ground"], "delivery_shapes": ["mvp"], "project_harness_statuses": ["missing", "unknown"], "skills": ["project-harness-init"]}
   ],
   "design_policy": "standalone",

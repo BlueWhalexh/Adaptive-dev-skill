@@ -25,6 +25,8 @@ description: Owns workflow runtime state for adaptive AI coding tasks. Use when 
 - Do not accept a claim signer or claim level that violates `delivery-verification` verifier authority.
 - Do not initialize a manifest when the resolved strategy says `manifest_policy=none`.
 - Do not model or select full Superpowers execution. Superpowers is a method provider; only current-stage native skills may be activated.
+- Do not turn Plan tasks into manifest transitions. Only stage boundaries may update managed workflow state.
+- Do not infer per-task review, commit, report, or adjacent regression from parent L2/L3 risk; obey `execution_policy`.
 
 ## Inputs
 
@@ -70,6 +72,14 @@ Resume interrupted work:
 python3 skills/workflow-control-plane/scripts/resume_workflow.py workflow_manifest.json
 ```
 
+Migrate an unsigned in-flight v5 manifest after a Strategy major-version change:
+
+```sh
+python3 skills/workflow-control-plane/scripts/migrate_workflow_manifest_v5.py old_workflow_manifest.json --output workflow_manifest.json
+```
+
+Signed claims are never rewritten; archive or re-verify those workflows.
+
 Inspect status:
 
 ```sh
@@ -92,5 +102,6 @@ python3 skills/workflow-control-plane/scripts/validate_strategy_registry.py
 - `references/error-codes.md`: stable error codes.
 - `references/rule-ownership.md`: single owner for each MUST/NEVER rule.
 - `references/strategy-registry.md` and `references/strategies/*.json`: strategy authority.
+- `references/batch-execution.md`: task-local risk, continuous batches, checkpoint and review cadence.
 
 Only read the references needed for the current operation.

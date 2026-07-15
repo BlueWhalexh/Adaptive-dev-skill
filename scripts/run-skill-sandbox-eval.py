@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import os
+import json
 import re
 import subprocess
 import sys
@@ -33,6 +34,7 @@ CHANGE_AWARE_TESTING_EVAL = ROOT / "scripts" / "run-change-aware-testing-eval.py
 REQUIRED_SKILLS = [ADAPTIVE, WORKFLOW, CONTEXT, SPECFLOW, TECHNICAL_DESIGN, DELIVERY, KNOWLEDGE, PROJECT_HARNESS, SUPERPOWERS_ADAPTER, AGENT_ORCHESTRATION, CHANGE_AWARE_TESTING]
 REQUIRED_WORKFLOW_SCHEMAS = [
     "workflow-manifest.schema.json",
+    "execution-policy.schema.json",
     "strategy.schema.json",
     "route-decision.schema.json",
     "resolved-strategy.schema.json",
@@ -184,10 +186,46 @@ def main() -> int:
     for schema in REQUIRED_DELIVERY_SCHEMAS:
         read(DELIVERY / "schemas" / schema)
     read(DELIVERY / "references" / "verifier-registry.json")
-    for script in ["validate_json_artifact.py", "validate_workflow_manifest.py", "validate_artifact_graph.py", "validate_strategy_registry.py", "detect_capabilities.py", "apply_route_facts_delta.py", "resolve_strategy.py", "init_workflow.py", "transition_workflow.py", "resume_workflow.py", "inspect_workflow.py"]:
+    for script in ["validate_json_artifact.py", "validate_workflow_manifest.py", "validate_artifact_graph.py", "validate_strategy_registry.py", "detect_capabilities.py", "apply_route_facts_delta.py", "resolve_strategy.py", "init_workflow.py", "transition_workflow.py", "resume_workflow.py", "migrate_workflow_manifest_v5.py", "inspect_workflow.py"]:
         read(WORKFLOW / "scripts" / script)
-    for reference in ["state-machine.md", "error-codes.md", "rule-ownership.md", "strategy-registry.md"]:
+    for reference in ["state-machine.md", "error-codes.md", "rule-ownership.md", "strategy-registry.md", "batch-execution.md"]:
         read(WORKFLOW / "references" / reference)
+
+    forbidden_default_methods = {
+        "superpowers:subagent-driven-development",
+        "superpowers:executing-plans",
+        "superpowers:verification-before-completion",
+        "superpowers:requesting-code-review",
+    }
+    continuous_batches = 0
+    for strategy_path in sorted((WORKFLOW / "references" / "strategies").glob("*.json")):
+        strategy = json.loads(read(strategy_path))
+        policy = strategy["execution_policy"]
+        scheduled = {skill for skills in strategy["stage_skills"].values() for skill in skills}
+        scheduled.update(skill for rule in strategy.get("conditional_skills", []) for skill in rule["skills"])
+        forbidden = sorted(scheduled.intersection(forbidden_default_methods))
+        if forbidden:
+            fail(f"{strategy_path.name} schedules heavyweight default methods: {', '.join(forbidden)}")
+        if policy["unit"] == "continuous_batch":
+            continuous_batches += 1
+            if policy["task_risk"] != "local" or policy["task_exit"] != "focused_signal" or policy["commit"] != "batch":
+                fail(f"{strategy_path.name} violates continuous batch cadence")
+        if strategy["process_depth"] != "direct" and policy["manifest_updates"] != "stage_only":
+            fail(f"{strategy_path.name} permits non-stage manifest updates")
+        if policy["max_review_passes"] > 2:
+            fail(f"{strategy_path.name} permits unbounded review loops")
+    if continuous_batches < 4:
+        fail("expected L2/L3 execution strategies to use continuous batches")
+
+    for skill in REQUIRED_SKILLS:
+        if "allow_implicit_invocation: true" not in read(skill / "agents" / "openai.yaml"):
+            fail(f"skill must remain available to automatic stage dispatch: {skill.name}")
+
+    harness_source = read(PROJECT_HARNESS / "scripts" / "init_project_harness.py")
+    if "REQUIRED SUB-SKILL" in harness_source:
+        fail("project harness still forces a heavyweight task-by-task execution chain")
+    if "Continuous Batch Execution" not in harness_source:
+        fail("project harness does not generate the batch execution contract")
 
     read(CONTEXT / "scripts" / "validate_context_pack_static.py")
     read(CONTEXT / "scripts" / "validate_context_freshness.py")

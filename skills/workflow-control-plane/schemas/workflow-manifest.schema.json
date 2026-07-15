@@ -14,6 +14,7 @@
     "current_stage",
     "resume",
     "design_control",
+    "review_control",
     "artifacts",
     "claims"
   ],
@@ -49,12 +50,13 @@
     "routing": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["process_depth", "manifest_policy", "spec_system", "execution_engine", "strategy_id", "required_skills", "skill_plan", "capability_report_ref"],
+      "required": ["process_depth", "manifest_policy", "spec_system", "execution_engine", "execution_policy", "strategy_id", "required_skills", "skill_plan", "capability_report_ref"],
       "properties": {
         "process_depth": { "type": "string", "enum": ["direct", "selective", "lifecycle"] },
         "manifest_policy": { "type": "string", "enum": ["none", "required"] },
         "spec_system": { "type": "string", "enum": ["none", "openspec", "repo_native", "fallback"] },
         "execution_engine": { "type": "string", "enum": ["none", "local"] },
+        "execution_policy": { "type": "object" },
         "strategy_id": { "type": "string" },
         "required_skills": { "type": "array", "items": { "type": "string" } },
         "skill_plan": {
@@ -124,6 +126,17 @@
             "evidence_ids": { "type": "array", "items": { "type": "string" } }
           }
         }
+      }
+    },
+    "review_control": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["stage_id", "passes_completed", "last_severity", "decision"],
+      "properties": {
+        "stage_id": { "type": "string" },
+        "passes_completed": { "type": "integer", "minimum": 0, "maximum": 2 },
+        "last_severity": { "type": "string", "enum": ["none", "minor", "major", "critical"] },
+        "decision": { "type": "string", "enum": ["pending", "approved", "changes_requested", "human_required"] }
       }
     },
     "artifacts": {
@@ -203,7 +216,11 @@
         "properties": {
           "transition_id": { "type": "string" },
           "stage_id": { "type": "string" },
-          "status": { "type": "string" }
+          "status": { "type": "string" },
+          "producer_skill": { "type": "string" },
+          "producer_actor_id": { "type": "string" },
+          "evidence_refs": { "type": "array", "items": { "type": "string" } },
+          "review_decision": { "type": "string" }
         }
       }
     }

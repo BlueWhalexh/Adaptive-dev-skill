@@ -54,7 +54,7 @@ Product spec requirements:
 - `proposal.md`: motivation, scope, non-goals, rollout/rollback constraints.
 - `design.md`: technical decisions, alternatives, data/API/security/runtime impact.
 - `specs/`: delta specs with acceptance scenarios.
-- `tasks.md`: implementation task source for later Superpowers planning/execution.
+- `tasks.md`: implementation task source for adaptive batch execution; Superpowers planning remains optional and stage-scoped.
 
 The harness must still create `docs/evidence/<feature-id>.md` with `## Product Spec System`, validator types, claim ceiling, gaps, and stop/continue conditions. Evidence does not move into OpenSpec because completion claims need fresh validator results, not only approved requirements.
 
@@ -147,7 +147,7 @@ The technical design is the only fallback surface for architecture delta, contra
 ```md
 # <Feature> 实施计划
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **Execution policy:** Use Continuous Batch Execution. Plan checkboxes track progress; they are not mandatory subagent, Review, commit, report, artifact package, or workflow-state boundaries. Do not create an isolated execution ceremony for each checkbox.
 
 **Goal:** ...
 
@@ -166,6 +166,12 @@ Link to `docs/superpowers/designs/YYYY-MM-DD-<feature-id>-technical-design.md`.
 ## 任务表
 | Task | Scope | Gate | Evidence | Done |
 | --- | --- | --- | --- | --- |
+
+## 批次执行
+
+- Parent risk controls final gates; each Task uses task-local risk.
+- Run a focused signal per Task, then adjacent regression, Review, commit, and report once per batch/milestone.
+- Use strict independent Review only at material risk or claim boundaries. Critical/Major fixes get at most one delta re-review; Minor findings do not restart the full loop.
 
 ## Review 重点
 
@@ -237,7 +243,7 @@ Spec system chosen and recorded
 OpenSpec mode does not create fallback product specs/plans
 Fallback spec has delivery verification
 Fallback spec states acceptance and claim ceiling
-Fallback plan uses Superpowers implementation-plan shape and has per-task evidence
+Fallback plan uses the implementation-plan shape and has focused Task evidence plus batch checkpoints
 Evidence file distinguishes validator types
 Agent roles are read-only by default
 Project skill exists and does not duplicate generic TDD/debug/planning

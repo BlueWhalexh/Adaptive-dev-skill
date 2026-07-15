@@ -3,4 +3,4 @@ interface:
   short_description: "Invoke exact native Superpowers skills by active stage"
 
 policy:
-  allow_implicit_invocation: false
+  allow_implicit_invocation: true

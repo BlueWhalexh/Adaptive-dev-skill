@@ -82,6 +82,17 @@ def require_contains(errors: list[str], path: Path, needles: list[str]) -> None:
         errors.append(f"{path} missing: {', '.join(missing)}")
 
 
+def require_absent(errors: list[str], path: Path, needles: list[str]) -> None:
+    try:
+        text = read(path)
+    except FileNotFoundError:
+        errors.append(f"missing {path}")
+        return
+    present = [needle for needle in needles if needle in text]
+    if present:
+        errors.append(f"{path} contains forbidden text: {', '.join(present)}")
+
+
 def require_no_local_paths(errors: list[str], root: Path) -> None:
     scan_roots = [
         root / "AGENTS.md",
@@ -183,13 +194,15 @@ def main() -> int:
     if plan_path:
         require_contains(errors, plan_path, [
             "实施计划",
-            "REQUIRED SUB-SKILL",
+            "Continuous Batch Execution",
             "## 已批准 Spec",
             "## 已批准 Technical Design",
             "## 任务表",
+            "## 批次执行",
             "## Review 重点",
             "## 风险 / 缺口",
         ])
+        require_absent(errors, plan_path, ["REQUIRED SUB-SKILL", "task-by-task", "superpowers:subagent-driven-development"])
     if spec_system == "openspec":
         require_contains(errors, root / "docs" / "architecture.md", [
             "Product spec system: `openspec`",

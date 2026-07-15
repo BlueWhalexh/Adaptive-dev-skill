@@ -7,11 +7,13 @@ READ when deciding how often to test, whether an incremental result is sufficien
 | Cadence | Trigger | Default scope | What it proves |
 | --- | --- | --- | --- |
 | `inner-loop` | implementation edit | affected unit/regression tests | the current diff satisfies its focused signal |
-| `checkpoint` | task/slice ready for review | affected module, integration boundary, relevant static checks | the reviewable slice works with nearby dependencies |
+| `checkpoint` | batch, risk boundary, or milestone ready for review | affected module, integration boundary, relevant static checks | the reviewable batch works with nearby dependencies |
 | `completion` | request `dev_done`/`integration_done`/`handoff_done` | acceptance-driven evidence matrix | only the claim level authorized by delivery-verification |
 | CI/release | merge, release, scheduled regression, explicit project policy | project-defined broad/full suite | repository-wide regression signal for that pipeline |
 
 Full-suite frequency belongs to project policy and CI, not to every coding task.
+
+A Plan Task is not automatically a checkpoint. Consecutive low-risk Tasks with shared context should reuse one recorded base and checkpoint once. Break the batch when changed surfaces cross a material contract, security/data boundary, external side effect, architecture decision, or failure makes the original plan unreliable.
 
 ## Selection Rules
 
@@ -70,7 +72,7 @@ An inner-loop hit should return `checkpoint_required`. It should not automatical
 
 - L0 docs/mechanical: diff review and format/link/command check as applicable.
 - L1 local behavior: affected regression/unit tests plus nearby static/build check when relevant.
-- L2 feature/cross-module: affected tests during implementation; module/integration/acceptance chain at checkpoint/completion.
-- L3 migration/security/handoff: affected tests during slices; negative, rollback, system, fresh consumer, or real external evidence at their defined gates.
+- L2 feature/cross-module: focused signals during Tasks; module/integration/acceptance chain once per batch or completion.
+- L3 migration/security/handoff: focused signals during Tasks; negative, rollback, system, fresh consumer, or real external evidence at defined risk boundaries and completion.
 
 Do not use a broad unit suite as a substitute for the evidence type actually required by the acceptance criteria.

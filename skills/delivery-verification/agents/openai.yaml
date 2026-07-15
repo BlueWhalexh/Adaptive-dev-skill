@@ -1,2 +1,6 @@
-allow_implicit_invocation: true
-  description: Evidence manifest validation and verifier-issued delivery attestations.
+interface:
+  display_name: "Delivery Verification"
+  short_description: "Validate evidence and sign delivery claims"
+
+policy:
+  allow_implicit_invocation: true

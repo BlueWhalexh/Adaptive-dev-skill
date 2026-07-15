@@ -1,11 +1,12 @@
 {
   "id": "spec-driven-feature",
-  "version": "1.2",
+  "version": "2.0",
   "risk": ["L2"],
   "modes": ["implement", "design"],
   "process_depth": "lifecycle",
   "manifest_policy": "required",
   "execution_engine": "local",
+  "execution_policy": {"unit": "continuous_batch", "task_risk": "local", "task_exit": "focused_signal", "checkpoint": "batch", "review": "batch_risk", "commit": "batch", "manifest_updates": "stage_only", "max_review_passes": 2},
   "stages": ["ground", "context_pack_if_needed", "pack_backed_specflow", "spec_review", "embedded_design", "plan", "implementation", "focused_and_chain_verification", "review", "close"],
   "required_artifacts": ["spec", "plan", "evidence_manifest"],
   "stage_skills": {
@@ -15,6 +16,10 @@
     "plan": ["superpowers:writing-plans"],
     "implementation": ["change-aware-testing"],
     "focused_and_chain_verification": ["change-aware-testing", "delivery-verification"]
+  },
+  "stage_gates": {
+    "spec_review": {"allowed_producers": ["local-executor"], "min_evidence_refs": 1, "review_mode": "self"},
+    "review": {"allowed_producers": ["local-executor"], "min_evidence_refs": 1, "review_mode": "self"}
   },
   "design_policy": "embedded",
   "design_review": "self",

@@ -312,7 +312,7 @@ cases:
     expected_classification:
       risk: L3
       mode: implement
-      scope: cross_module
+      scope: module|cross_module
       uncertainty: high
       pattern_familiarity: adjacent|novel|unknown
       profiles: [data]

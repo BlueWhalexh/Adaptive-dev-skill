@@ -11,6 +11,7 @@ from validate_json_artifact import load_json, validate_instance
 
 
 SKILL_DIR = Path(__file__).resolve().parents[1]
+POLICY_SCHEMA = SKILL_DIR / "schemas" / "execution-policy.schema.json"
 SKILLS_DIR = SKILL_DIR.parent
 SCHEMA = SKILL_DIR / "schemas" / "workflow-manifest.schema.json"
 DELIVERY = SKILLS_DIR / "delivery-verification"
@@ -123,6 +124,7 @@ def validate(path: Path) -> list[str]:
         errors.append("classification.profiles must not contain routing/strategy tokens: " + ", ".join(mixed_profiles))
 
     routing = manifest["routing"]
+    errors.extend(validate_instance(routing["execution_policy"], load_json(POLICY_SCHEMA), "$.routing.execution_policy"))
     if routing["manifest_policy"] != "required":
         errors.append("workflow manifests are forbidden for direct routes; manifest_policy must be required")
     if routing["strategy_id"] != manifest["selected_strategy"]:
@@ -143,6 +145,8 @@ def validate(path: Path) -> list[str]:
             errors.append(f"routing.process_depth must match selected strategy: expected {strategy['process_depth']}")
         if routing["manifest_policy"] != strategy["manifest_policy"]:
             errors.append(f"routing.manifest_policy must match selected strategy: expected {strategy['manifest_policy']}")
+        if routing["execution_policy"] != strategy["execution_policy"]:
+            errors.append("routing.execution_policy must match the pinned strategy version")
         skill_plan = routing["skill_plan"]
         if set(skill_plan) != set(strategy["stages"]):
             errors.append("routing.skill_plan must contain exactly the selected strategy stages")

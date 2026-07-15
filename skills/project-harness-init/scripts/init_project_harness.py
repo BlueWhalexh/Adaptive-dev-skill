@@ -111,7 +111,8 @@ def agents_md() -> str:
 ## 默认流程
 
 - 先读取当前代码、`docs/architecture.md`、相关 spec/technical design/plan/evidence，再判断方案。
-- 非 L0/L1 任务必须先写清目标、范围、当前事实、证据和停止条件。
+- 非 L0/L1 任务必须先写清目标、范围、当前事实、证据和停止条件；已有 READY artifact 未发生实质变化时直接复用，不重复生成或复审。
+- Plan checkbox 只跟踪进度，不自动成为 subagent、Review、commit、report 或 workflow manifest 边界。
 - 不能没有 fresh verification 就声称完成。
 - 不能把 mock-only evidence 描述成真实链路。
 - 涉及 public API、data model、auth/permission/security、migration、external side effect 时必须暂停确认。
@@ -138,18 +139,20 @@ def agent_team_md() -> str:
 - Agents 必须返回 evidence、file paths、uncertainty 和 claim limits。
 - Main agent 负责最终 integration 和 completion claims。
 - 不要把缺失的 product requirements 交给 subagent 猜。
+- 连续低风险 Tasks 默认由同一 implementer 按 batch 执行；每 Task 只跑 focused signal，batch 再统一做 adjacent regression、Review、commit 和汇报。
+- 只有高风险边界、独立并行工作或上下文污染风险才创建 fresh subagent / separate session。
 
 ## 角色
 
 | Role | Trigger | Inputs | Output | Must Not |
 | --- | --- | --- | --- | --- |
 | repo-grounder | 新区域或 docs 可能过期 | Goal, paths, docs | Current truth map, docs drift, risks | Edit files |
-| spec-reviewer | Medium/Large product contract | Spec, acceptance | Gaps, ambiguity, missing delivery verification | Rewrite product silently |
+| spec-reviewer | New or materially changed product contract | Spec, acceptance | Gaps, ambiguity, missing delivery verification | Rewrite product silently |
 | technical-design-writer | Approved spec before planning | Spec, current truth, constraints | Technical design draft, contracts, risks, evidence mapping | Write implementation plan/code |
 | technical-design-reviewer | Standalone design required | Technical design, spec, context | Design findings, missing boundaries, review decision | Review own design |
-| plan-reviewer | Before plan execution | Plan, code map | Missing tasks, sequencing risk, missing gates | Implement |
+| plan-reviewer | New/changed high-impact plan or uncertain sequencing | Plan, code map | Missing tasks, sequencing risk, missing gates | Implement |
 | test-strategy-reviewer | Evidence choice unclear | Spec, changed surfaces | Required validators, claim ceiling | Demand heavy tests for Tiny tasks |
-| evidence-reviewer | Before completion | Diff, evidence, final claim | Claim ceiling, gaps, mock/fake/real labels | Accept mock as real |
+| evidence-reviewer | Integration/handoff claim or material evidence gap | Diff, evidence, final claim | Claim ceiling, gaps, mock/fake/real labels | Accept mock as real |
 | security-data-reviewer | Auth/data/secrets/migrations | Spec, diff, threat areas | Boundary risks, negative cases, rollback | Guess compliance |
 | knowledge-curator | After MVP or repeated lesson | Candidate, evidence, scope | Promote/reject destination | Write policy directly |
 """
@@ -184,15 +187,14 @@ Current Truth：
 
 Loop 规则：
 持续迭代直到所有 acceptance criteria 通过，或者遇到必须人工决策的 blocker。
-每轮执行：
-1. 选择下一个最小任务
-2. 说明预期 evidence
-3. 实现或修复
-4. 运行 focused validator
-5. 更新 evidence
-6. 做 diff/scope review
-7. 必要时调用 reviewer subagent
-8. 判断 continue / stop / ask human
+执行节奏：
+1. 复用已批准 spec/design/plan，按 Task 局部风险组建连续低风险 batch
+2. 每个 Task 只定义并运行 focused signal；文档/机械改动使用最小 validator
+3. batch 内更新 Plan checkbox 和简短失败记录，不重复创建 work order、artifact package、manifest transition、commit 或 report
+4. batch/milestone 统一运行 adjacent regression、diff/scope review、commit 和进度汇报
+5. 仅在 contract/auth/security/data/migration/concurrency/external side effect/architecture/claim 边界调用独立 reviewer
+6. Critical/Major 或契约变化修复后最多做一次 delta re-review；Minor 不重启完整 Review loop
+7. 判断 continue / stop / ask human
 
 必须暂停：
 - public API / data model / permission / security posture 需要改变
@@ -542,7 +544,7 @@ def technical_design_md(feature_label: str, spec_path: str, design_path: str, pl
 def plan_md(feature_label: str, spec_path: str, design_path: str) -> str:
     return f"""# {feature_label} 实施计划
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **Execution policy:** Use Continuous Batch Execution. Plan checkboxes track progress; they are not mandatory subagent, Review, commit, report, artifact package, or workflow-state boundaries. Do not create an isolated execution ceremony for each checkbox.
 
 **目标：** 建立 project harness，并为后续 first vertical slice implementation 做准备。
 
@@ -569,6 +571,12 @@ def plan_md(feature_label: str, spec_path: str, design_path: str) -> str:
 | 3 | 验证 harness 和 local-path hygiene | focused validator | project-harness validator; local path scan | pending |
 | 4 | 实现前完成 product-level spec/design/acceptance | spec-reviewer / technical-design-reviewer / plan-reviewer | reviewed product acceptance, technical design, and evidence plan | not started |
 | 5 | 后续 product implementation | adaptive route + Superpowers gates as needed | future tests/integration/e2e evidence | not started |
+
+## 批次执行
+
+- 每个 Task 按 changed surface 和 uncertainty 重新判断局部风险；父级风险只控制最终交付 gate。
+- 连续低风险 Tasks 合并为 batch：每 Task 跑 focused signal，batch 末统一跑 adjacent regression、Review、commit 和汇报。
+- 高风险边界或 completion claim 才启用独立严格 Review；Minor finding 不触发无限复审。
 
 ## Review 重点
 

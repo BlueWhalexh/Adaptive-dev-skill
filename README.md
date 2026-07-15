@@ -12,7 +12,7 @@ Admission Router + Workflow Control Plane + Narrow Skills + Verifier-signed Clai
 - 成熟项目复用 SOP：已知模式走 project skill 与固定 validator，只按需调用单个原生 Superpowers skill。
 - 高风险任务保持稳：权限、数据、API、迁移、handoff 不允许只靠 happy path 或口头完成。
 - 复杂任务先固定 current truth：用 Analysis Pack / Context Manifest 裁剪上下文，再写 spec、technical design 和 plan。
-- 开发循环跑增量测试：按 diff 选择受影响测试，task/slice checkpoint 再扩大；全量 suite 留给显式 CI/release/project policy 或 global-impact 变更。
+- 开发循环按 batch 跑增量测试：每个有行为含义的 Task 只跑 focused signal，连续低风险 Tasks 在 batch/milestone 才统一跑 adjacent regression、Review、commit 和汇报；全量 suite 留给显式 CI/release/project policy 或 global-impact 变更。
 - 交付声明由证据签发：实现者只能 request claim，不能 self-sign validated claim。
 - 中文团队的人读项目文档默认中文；文件名、路径、schema keys、命令、validator types、skill names 和工具报错保留英文。
 
@@ -32,7 +32,7 @@ Admission Router + Workflow Control Plane + Narrow Skills + Verifier-signed Clai
 | `knowledge-promotion` | 把重复 SOP、踩坑、用户反馈沉淀为 learning candidate，再进入项目 skill / AGENTS.md |
 | `project-harness-init` | 初始化项目级 harness：AGENTS.md、agent team、Goal Loop Mode、spec/technical design/plan/evidence 结构、项目 skill |
 
-Superpowers 仍然是执行纪律，不被重写。普通 `direct/selective` 默认不加载 Superpowers，Debug 只调用 `systematic-debugging`；L2/L3 lifecycle 也只在当前 stage 调用一个明确的原生 skill，不存在完整 Superpowers 执行链路。
+Superpowers 仍然是可选方法提供者，不被重写。普通 `direct/selective` 默认不加载 Superpowers，Debug 可调用 `systematic-debugging`，规划可调用 `writing-plans`。Plan 执行、Review cadence 和 completion claim 默认由 Strategy execution policy、change-aware testing 与 delivery verification 管理，不自动进入 `executing-plans` 或 `subagent-driven-development`。
 
 ## Control Plane Model
 
@@ -70,13 +70,23 @@ Resolved strategy:
 
 ```json
 {
-  "schema_version": 3,
+  "schema_version": 4,
   "strategy_id": "spec-driven-feature",
-  "strategy_version": "1.0",
+  "strategy_version": "2.0",
   "process_depth": "lifecycle",
   "manifest_policy": "required",
   "spec_system": "fallback",
   "execution_engine": "local",
+  "execution_policy": {
+    "unit": "continuous_batch",
+    "task_risk": "local",
+    "task_exit": "focused_signal",
+    "checkpoint": "batch",
+    "review": "batch_risk",
+    "commit": "batch",
+    "manifest_updates": "stage_only",
+    "max_review_passes": 2
+  },
   "required_skills": [],
   "skill_plan": {
     "ground": [],
@@ -84,7 +94,7 @@ Resolved strategy:
     "pack_backed_specflow": ["specflow"],
     "embedded_design": ["technical-design"],
     "plan": ["superpowers:writing-plans"],
-    "focused_and_chain_verification": ["delivery-verification"]
+    "focused_and_chain_verification": ["change-aware-testing", "delivery-verification"]
   },
   "design_control": {
     "policy": "embedded",
@@ -154,6 +164,10 @@ Strategy manifests live in `skills/workflow-control-plane/references/strategies/
 | `review-only` | direct | review without edits |
 
 The strategy owns stages. `direct` 不创建 manifest；`selective/lifecycle` 由 `workflow-control-plane` 记录 `selected_strategy` 和 `current_stage`。检测到 Superpowers 已安装本身不会改变 process depth。实现阶段由 `change-aware-testing` 运行受影响测试，`delivery-verification` 只负责根据 evidence 签发 claim，两者职责不混合。
+
+父级 L2/L3 风险只决定最终设计、集成、handoff 和 claim gate。每个 Plan Task 按自己的 changed surface 和 uncertainty 重新判断风险；Plan checkbox 不自动产生 subagent、Review、commit、report、artifact package 或 manifest transition。`continuous_batch` 才是复杂实现阶段的默认执行单位。
+
+Managed review 与 high-risk milestone 使用 Strategy-owned `stage_gates`：transition 必须匹配 allowed producer、minimum evidence 和 review mode。Independent review 还校验 reviewer actor 与 reviewed producer 分离；第二次仍有 Major/Critical 时 workflow 进入 `blocked`。
 
 Project harness initialization is a local scaffold operation. Later stages may call one exact Superpowers native skill when scheduled, but project implementation remains owned by the workflow runtime.
 
@@ -335,7 +349,7 @@ examples/
 
 - OpenAI Codex skills: concise skills with progressive disclosure.
 - OpenAI Codex AGENTS.md: durable project rules should live near the project.
-- Superpowers: execution discipline such as TDD, systematic debugging, writing plans, and review.
+- Superpowers: optional stage-scoped methods such as systematic debugging, writing plans, and explicit strict TDD/review.
 - OpenSpec: preferred product behavior spec lifecycle when the repo already uses it.
 
 ## Contributing

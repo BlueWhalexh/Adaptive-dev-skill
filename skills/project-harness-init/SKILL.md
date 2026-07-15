@@ -130,7 +130,7 @@ Use this skill with the broader method:
 adaptive-dev-workflow = decide route and whether harness init is needed
 project-harness-init = create project docs/agent/evidence/goal-loop scaffolding and choose spec-system routing
 OpenSpec = own product change specs when available
-Superpowers = execute TDD/debug/planning/verification discipline; provide fallback specs/plans when OpenSpec is absent
+Superpowers = provide optional stage-scoped debugging/planning/TDD/review methods and fallback spec/plan shapes when OpenSpec is absent
 project-local skill = capture project-specific SOP and lessons
 evidence/reviewer loop = keep completion claims honest
 ```

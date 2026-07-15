@@ -1,2 +1,6 @@
-allow_implicit_invocation: true
-description: Capture and validate learning candidates for AGENTS.md, project skills, templates, fixtures, or general skill updates.
+interface:
+  display_name: "Knowledge Promotion"
+  short_description: "Promote validated project learning"
+
+policy:
+  allow_implicit_invocation: true

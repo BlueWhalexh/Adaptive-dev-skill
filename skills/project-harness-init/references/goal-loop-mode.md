@@ -32,15 +32,13 @@ Current Truth：
 
 Loop 规则：
 持续迭代直到所有 acceptance criteria 通过，或者遇到必须人工决策的 blocker。
-每轮执行：
-1. 选择下一个最小任务
-2. 说明预期 evidence
-3. 实现或修复
-4. 运行 focused validator
-5. 更新 evidence
-6. 做 diff/scope review
-7. 必要时调用 reviewer subagent
-8. 判断 continue / stop / ask human
+执行节奏：
+1. 复用 approved artifacts，按 Task 局部风险组建连续低风险 batch
+2. 每 Task 运行 focused signal；文档/机械改动使用最小 validator
+3. batch 内只更新 Plan checkbox 和必要失败记录
+4. batch/milestone 统一运行 adjacent regression、diff/scope review、commit 和汇报
+5. 只在高风险边界调用独立 reviewer；Critical/Major 修复后最多一次 delta re-review
+6. 判断 continue / stop / ask human
 
 必须暂停：
 - public API / data model / permission / security posture 需要改变
@@ -71,8 +69,9 @@ Do not let the final claim exceed the weakest evidence that actually ran.
 ## Good Loop Behavior
 
 - Keep tasks small enough to review.
-- Update evidence after each task, not only at the end.
-- Use reviewer agents for design/plan/evidence/security when risk justifies it.
+- Capture each Task's focused signal, then update the durable evidence summary once per batch/milestone.
+- Use reviewer agents for new or materially changed design/plan/evidence/security boundaries when risk justifies it.
+- Reuse approved artifacts; do not re-review them merely because the next Task started.
 - Promote project lessons only after evidence and scope are clear.
 - Prefer scripts/hooks/CI for repeated mechanical checks.
 

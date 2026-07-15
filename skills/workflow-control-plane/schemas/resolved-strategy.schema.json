@@ -1,15 +1,16 @@
 {
   "type": "object",
   "additionalProperties": false,
-  "required": ["schema_version", "strategy_id", "strategy_version", "process_depth", "manifest_policy", "spec_system", "execution_engine", "required_skills", "skill_plan", "design_control", "reason"],
+  "required": ["schema_version", "strategy_id", "strategy_version", "process_depth", "manifest_policy", "spec_system", "execution_engine", "execution_policy", "required_skills", "skill_plan", "design_control", "reason"],
   "properties": {
-    "schema_version": { "type": "integer", "enum": [3] },
+    "schema_version": { "type": "integer", "enum": [4] },
     "strategy_id": { "type": "string" },
     "strategy_version": { "type": "string" },
     "process_depth": { "type": "string", "enum": ["direct", "selective", "lifecycle"] },
     "manifest_policy": { "type": "string", "enum": ["none", "required"] },
     "spec_system": { "type": "string", "enum": ["none", "openspec", "repo_native", "fallback"] },
     "execution_engine": { "type": "string", "enum": ["none", "local"] },
+    "execution_policy": { "type": "object" },
     "required_skills": { "type": "array", "items": { "type": "string" } },
     "skill_plan": {
       "type": "object",

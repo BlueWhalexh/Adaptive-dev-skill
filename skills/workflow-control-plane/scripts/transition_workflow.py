@@ -81,6 +81,35 @@ def apply_transition(manifest: dict[str, Any], request: dict[str, Any]) -> tuple
     if strategy_error:
         return manifest, result(request["workflow_id"], "rejected", manifest["current_stage"], manifest["workflow_state"], [strategy_error], [])
 
+    review = request.get("review_result")
+    review_control = dict(manifest["review_control"])
+    stage_gate = strategy.get("stage_gates", {}).get(manifest["current_stage"])
+    review_mode = (stage_gate or {}).get("review_mode", "none")
+    if request["status"] == "completed" and stage_gate:
+        if request["producer"]["skill"] not in stage_gate["allowed_producers"]:
+            return manifest, result(request["workflow_id"], "rejected", manifest["current_stage"], manifest["workflow_state"], ["STAGE_PRODUCER_UNAUTHORIZED: producer is not allowed by strategy stage gate"], [])
+        if len(request["evidence_refs"]) < stage_gate["min_evidence_refs"]:
+            return manifest, result(request["workflow_id"], "rejected", manifest["current_stage"], manifest["workflow_state"], ["STAGE_EVIDENCE_REQUIRED: stage gate evidence is missing"], [])
+    if review_mode != "none" and request["status"] == "completed":
+        if review is None:
+            return manifest, result(request["workflow_id"], "rejected", manifest["current_stage"], manifest["workflow_state"], ["REVIEW_RESULT_REQUIRED: review stage completion requires review_result"], [])
+        actor_id = request["producer"].get("actor_id", "")
+        if not actor_id or actor_id != review["reviewer_id"]:
+            return manifest, result(request["workflow_id"], "rejected", manifest["current_stage"], manifest["workflow_state"], ["REVIEWER_IDENTITY_INVALID: producer actor_id must match reviewer_id"], [])
+        artifact_producers = {item["producer"] for item in manifest["artifacts"]}
+        if not artifact_producers.intersection(review["reviewed_producer_ids"]):
+            return manifest, result(request["workflow_id"], "rejected", manifest["current_stage"], manifest["workflow_state"], ["REVIEW_SCOPE_INVALID: reviewed producer is not present in artifact graph"], [])
+        if review_mode in {"independent", "human"} and actor_id in review["reviewed_producer_ids"]:
+            return manifest, result(request["workflow_id"], "rejected", manifest["current_stage"], manifest["workflow_state"], ["REVIEW_INDEPENDENCE_REQUIRED: reviewer also produced the reviewed work"], [])
+        prior_passes = review_control["passes_completed"] if review_control["stage_id"] == manifest["current_stage"] else 0
+        expected_pass = prior_passes + 1
+        if review["pass_number"] != expected_pass:
+            return manifest, result(request["workflow_id"], "rejected", manifest["current_stage"], manifest["workflow_state"], [f"REVIEW_PASS_CONFLICT: expected pass {expected_pass}"], [])
+        if review["decision"] == "approved" and review["max_severity"] in {"major", "critical"}:
+            return manifest, result(request["workflow_id"], "rejected", manifest["current_stage"], manifest["workflow_state"], ["REVIEW_APPROVAL_INVALID: unresolved Major/Critical finding"], [])
+    elif review is not None:
+        return manifest, result(request["workflow_id"], "rejected", manifest["current_stage"], manifest["workflow_state"], ["REVIEW_RESULT_UNEXPECTED: strategy stage gate does not require review"], [])
+
     updated = dict(manifest)
     artifacts = [dict(item) for item in manifest["artifacts"]]
     by_id = {item["id"]: item for item in artifacts}
@@ -110,6 +139,25 @@ def apply_transition(manifest: dict[str, Any], request: dict[str, Any]) -> tuple
     blocked_reason = ""
     transition_status = "applied"
     target_stage = next_stage(strategy, manifest["current_stage"]) if request["status"] == "completed" else manifest["current_stage"]
+    if review is not None:
+        review_control = {
+            "stage_id": manifest["current_stage"],
+            "passes_completed": review["pass_number"],
+            "last_severity": review["max_severity"],
+            "decision": review["decision"],
+        }
+        if review["decision"] == "changes_requested":
+            target_stage = manifest["current_stage"]
+            if review["pass_number"] >= strategy["execution_policy"]["max_review_passes"]:
+                state = "blocked"
+                blocked_reason = "REVIEW_LIMIT_REACHED"
+                transition_status = "blocked"
+                review_control["decision"] = "human_required"
+        elif review["decision"] == "human_required":
+            target_stage = manifest["current_stage"]
+            state = "blocked"
+            blocked_reason = "REVIEW_HUMAN_REQUIRED"
+            transition_status = "blocked"
     if request["status"] in {"blocked", "failed", "human_required"}:
         state = "blocked"
         blocked_reason = (request["error"] or {}).get("code") or request["status"]
@@ -130,7 +178,16 @@ def apply_transition(manifest: dict[str, Any], request: dict[str, Any]) -> tuple
         "blocked_reason": blocked_reason,
     }
     updated["claims"] = {**manifest["claims"], "requested": requested}
-    updated["transition_log"] = manifest.get("transition_log", []) + [{"transition_id": request["transition_id"], "stage_id": request["stage_id"], "status": request["status"]}]
+    updated["review_control"] = review_control
+    updated["transition_log"] = manifest.get("transition_log", []) + [{
+        "transition_id": request["transition_id"],
+        "stage_id": request["stage_id"],
+        "status": request["status"],
+        "producer_skill": request["producer"]["skill"],
+        "producer_actor_id": request["producer"].get("actor_id", ""),
+        "evidence_refs": request["evidence_refs"],
+        "review_decision": (review or {}).get("decision", ""),
+    }]
     return updated, result(request["workflow_id"], transition_status, target_stage, state, [], [])
 
 

@@ -15,6 +15,7 @@ from validate_workflow_manifest import validate as validate_workflow_manifest
 
 SKILL_DIR = Path(__file__).resolve().parents[1]
 RESOLVED_SCHEMA = SKILL_DIR / "schemas" / "resolved-strategy.schema.json"
+POLICY_SCHEMA = SKILL_DIR / "schemas" / "execution-policy.schema.json"
 
 
 def approval_record(review: str) -> dict[str, Any]:
@@ -56,6 +57,7 @@ def build_manifest(route: dict[str, Any], resolved: dict[str, Any], workflow_id:
             "manifest_policy": resolved["manifest_policy"],
             "spec_system": resolved["spec_system"],
             "execution_engine": resolved["execution_engine"],
+            "execution_policy": resolved["execution_policy"],
             "strategy_id": resolved["strategy_id"],
             "required_skills": resolved["required_skills"],
             "skill_plan": resolved["skill_plan"],
@@ -76,6 +78,7 @@ def build_manifest(route: dict[str, Any], resolved: dict[str, Any], workflow_id:
             "triggers": design["triggers"],
             "approval": approval_record(design["review"]),
         },
+        "review_control": {"stage_id": "", "passes_completed": 0, "last_severity": "none", "decision": "pending"},
         "artifacts": [],
         "claims": {"requested": "none", "validated": []},
         "transition_log": [],
@@ -93,6 +96,8 @@ def main() -> int:
     route = load_json(Path(args.route_decision))
     resolved = load_json(Path(args.resolved_strategy)) if args.resolved_strategy else resolve(route, Path(args.route_decision).parent)
     resolved_errors = validate_instance(resolved, load_json(RESOLVED_SCHEMA))
+    if "execution_policy" in resolved:
+        resolved_errors.extend(validate_instance(resolved["execution_policy"], load_json(POLICY_SCHEMA), "$.execution_policy"))
     if resolved_errors:
         for error in resolved_errors:
             print(f"FAIL: {error}")

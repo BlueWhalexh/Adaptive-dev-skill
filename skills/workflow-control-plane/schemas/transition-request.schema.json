@@ -14,7 +14,8 @@
       "required": ["skill", "version"],
       "properties": {
         "skill": { "type": "string" },
-        "version": { "type": "string" }
+        "version": { "type": "string" },
+        "actor_id": { "type": "string" }
       }
     },
     "status": { "type": "string", "enum": ["completed", "blocked", "failed", "human_required"] },
@@ -51,6 +52,19 @@
     "evidence_refs": { "type": "array", "items": { "type": "string" } },
     "claim_requests": { "type": "array", "items": { "type": "string", "enum": ["dev_done", "integration_done", "handoff_done"] } },
     "discovered_facts": { "type": "object" },
+    "review_result": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "required": ["pass_number", "max_severity", "decision", "reviewer_id", "reviewed_producer_ids", "finding_refs"],
+      "properties": {
+        "pass_number": { "type": "integer", "minimum": 1, "maximum": 2 },
+        "max_severity": { "type": "string", "enum": ["none", "minor", "major", "critical"] },
+        "decision": { "type": "string", "enum": ["approved", "changes_requested", "human_required"] },
+        "reviewer_id": { "type": "string" },
+        "reviewed_producer_ids": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+        "finding_refs": { "type": "array", "items": { "type": "string" } }
+      }
+    },
     "error": {
       "type": ["object", "null"],
       "additionalProperties": false,

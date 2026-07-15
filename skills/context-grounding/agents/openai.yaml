@@ -1,2 +1,6 @@
-allow_implicit_invocation: true
-description: Context grounding, Analysis Pack, Context Manifest, freshness, runtime audit, and sufficiency eval.
+interface:
+  display_name: "Context Grounding"
+  short_description: "Build and validate scoped context packs"
+
+policy:
+  allow_implicit_invocation: true

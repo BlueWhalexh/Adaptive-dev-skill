@@ -1,11 +1,12 @@
 {
   "id": "sop-guided-change",
-  "version": "1.1",
+  "version": "2.0",
   "risk": ["L1"],
   "modes": ["implement"],
   "process_depth": "direct",
   "manifest_policy": "none",
   "execution_engine": "local",
+  "execution_policy": {"unit": "single_change", "task_risk": "local", "task_exit": "focused_signal", "checkpoint": "change", "review": "self", "commit": "change", "manifest_updates": "none", "max_review_passes": 1},
   "stages": ["read_project_sop", "focused_edit", "project_validator", "diff_review", "close"],
   "required_artifacts": [],
   "stage_skills": {},

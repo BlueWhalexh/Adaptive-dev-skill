@@ -24,6 +24,8 @@ This skill is an orchestration contract, not an agent runtime. It prepares role 
 - Do not let a producer approve its own spec/design/review output.
 - Do not treat role output as a delivery claim; `delivery-verification` owns claim attestations.
 - Do not spawn agents merely because a role exists; use roles only when isolation, maker/checker, or parallelism adds value.
+- Do not create per-Task implementer/reviewer/fixer work orders for a continuous low-risk batch.
+- Do not generate a fresh context packet, artifact package, or progress report unless ownership, risk boundary, or carrier changes.
 - Do not claim fresh-context isolation when `execution_carrier=main_session`.
 - Do not let non-main execution carriers write in the shared workspace; use `workspace_policy=isolated_worktree`.
 
@@ -53,6 +55,8 @@ python3 skills/agent-orchestration/scripts/summarize_progress.py --work-orders .
 4. Create one work order with one objective, one output contract, an `execution_carrier`, a `context_isolation`, and a `workspace_policy`.
 5. Give the role agent only the work order and context packet, not the whole chat.
 6. Validate the work result. Convert accepted outputs into a `transition_request.json` for `workflow-control-plane`.
+
+For implementation stages, apply the selected Strategy's `execution_policy` first. A batch can stay in the main session with one scoped context packet. Add a role carrier only for independent high-risk review, parallel work without shared state, or material context contamination.
 
 ## References
 
