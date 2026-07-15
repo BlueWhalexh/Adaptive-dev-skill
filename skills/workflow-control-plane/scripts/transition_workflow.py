@@ -4,7 +4,10 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
+import subprocess
+import sys
 from collections import defaultdict, deque
 from pathlib import Path
 from typing import Any
@@ -14,8 +17,13 @@ from validate_workflow_manifest import load_strategy, validate as validate_workf
 
 
 SKILL_DIR = Path(__file__).resolve().parents[1]
+DELIVERY_DIR = SKILL_DIR.parent / "delivery-verification"
+sys.path.insert(0, str(DELIVERY_DIR / "scripts"))
+from validate_evidence_manifest import CLAIM_REQUIRED_TYPES, validate as validate_evidence_manifest  # noqa: E402
+
 REQUEST_SCHEMA = SKILL_DIR / "schemas" / "transition-request.schema.json"
 RESULT_SCHEMA = SKILL_DIR / "schemas" / "transition-result.schema.json"
+VERIFIER_REGISTRY = DELIVERY_DIR / "references" / "verifier-registry.json"
 CLAIM_RANK = {"none": 0, "dev_done": 1, "integration_done": 2, "handoff_done": 3}
 
 
@@ -63,7 +71,117 @@ def propagate_stale(artifacts: list[dict[str, Any]], changed_ids: set[str]) -> N
             queue.append(downstream_id)
 
 
-def apply_transition(manifest: dict[str, Any], request: dict[str, Any]) -> tuple[dict[str, Any], dict[str, Any]]:
+def sha256(path: Path) -> str:
+    return "sha256:" + hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def validate_claim_attestation(signed: dict[str, Any], manifest: dict[str, Any], repo_root: Path) -> list[str]:
+    errors: list[str] = []
+    attestation = signed["attestation"]
+    evidence_path = (repo_root / attestation["evidence_manifest_path"]).resolve()
+    try:
+        evidence_path.relative_to(repo_root.resolve())
+    except ValueError:
+        return ["CLAIM_ATTESTATION_INVALID: evidence path escapes repo root"]
+    if not evidence_path.is_file():
+        return ["CLAIM_ATTESTATION_INVALID: evidence manifest file is missing"]
+    if sha256(evidence_path) != attestation["evidence_manifest_digest"]:
+        errors.append("CLAIM_ATTESTATION_INVALID: evidence manifest digest mismatch")
+    errors.extend(f"CLAIM_ATTESTATION_INVALID: {item}" for item in validate_evidence_manifest(evidence_path, repo_root))
+    evidence = load_json(evidence_path)
+    if evidence.get("claim_requested") != signed["claim"]:
+        errors.append("CLAIM_ATTESTATION_INVALID: evidence claim mismatch")
+    if evidence.get("spec_digest") != attestation["spec_digest"]:
+        errors.append("CLAIM_ATTESTATION_INVALID: evidence Spec digest mismatch")
+
+    passing_ids = {
+        item["id"] for item in evidence.get("validators", []) if item.get("result") == "pass"
+    }
+    covered_ids = {
+        validator_id
+        for coverage in evidence.get("acceptance_coverage", [])
+        for validator_id in coverage.get("validator_ids", [])
+    }
+    if not set(signed["evidence_ids"]).issubset(passing_ids & covered_ids):
+        errors.append("CLAIM_ATTESTATION_INVALID: signed evidence ids are not covered passing validators")
+
+    if sha256(VERIFIER_REGISTRY) != attestation["registry_digest"]:
+        errors.append("CLAIM_ATTESTATION_INVALID: verifier registry digest mismatch")
+    registry = load_json(VERIFIER_REGISTRY)
+    verifier = next((item for item in registry["verifiers"] if item["id"] == signed["verifier"]), None)
+    if not verifier or signed["claim"] not in verifier["allowed_claims"] or verifier["trust_level"] == "blocked":
+        errors.append("CLAIM_ATTESTATION_INVALID: verifier is not authorized for claim")
+    else:
+        validators_by_id = {item["id"]: item for item in evidence.get("validators", [])}
+        signed_types = {validators_by_id[item]["type"] for item in signed["evidence_ids"] if item in validators_by_id}
+        if not signed_types or not signed_types.issubset(set(verifier["allowed_evidence_types"])):
+            errors.append("CLAIM_ATTESTATION_INVALID: verifier is not authorized for signed evidence types")
+        if not signed_types.intersection(CLAIM_REQUIRED_TYPES[signed["claim"]]):
+            errors.append("CLAIM_ATTESTATION_INVALID: signed evidence types do not satisfy the claim level")
+
+    spec_artifacts = [item for item in manifest["artifacts"] if item["type"] == "spec" and item["status"] in {"ready", "approved"}]
+    if len(spec_artifacts) != 1:
+        errors.append("CLAIM_ATTESTATION_INVALID: exactly one active Spec artifact is required")
+    else:
+        spec_path = (repo_root / spec_artifacts[0]["path"]).resolve()
+        try:
+            spec_path.relative_to(repo_root.resolve())
+            actual_spec_digest = sha256(spec_path)
+        except (ValueError, OSError):
+            actual_spec_digest = ""
+        if not actual_spec_digest or actual_spec_digest != attestation["spec_digest"] or spec_artifacts[0].get("digest") != actual_spec_digest:
+            errors.append("CLAIM_ATTESTATION_INVALID: approved Spec file digest mismatch")
+
+    contract_artifacts = [
+        item for item in manifest["artifacts"]
+        if item["type"] == "acceptance_contract" and item["status"] == "approved"
+    ]
+    if len(contract_artifacts) != 1:
+        errors.append("CLAIM_ATTESTATION_INVALID: exactly one approved acceptance contract artifact is required")
+    else:
+        contract_artifact = contract_artifacts[0]
+        contract_path = (repo_root / contract_artifact["path"]).resolve()
+        try:
+            contract_path.relative_to(repo_root.resolve())
+            actual_contract_digest = sha256(contract_path)
+            contract = load_json(contract_path)
+        except (ValueError, OSError):
+            actual_contract_digest = ""
+            contract = {}
+        if (
+            contract_artifact.get("producer") != "specflow"
+            or contract_artifact.get("semantic_owner") != "spec-review"
+            or contract_artifact.get("digest") != actual_contract_digest
+            or evidence.get("acceptance_contract_path") != contract_artifact.get("path")
+            or evidence.get("acceptance_contract_digest") != actual_contract_digest
+            or attestation.get("acceptance_contract_path") != contract_artifact.get("path")
+            or attestation.get("acceptance_contract_digest") != actual_contract_digest
+            or set(contract_artifact.get("covers_acceptance", [])) != set(contract.get("required_acceptance_ids", []))
+        ):
+            errors.append("CLAIM_ATTESTATION_INVALID: acceptance contract is not the canonical Spec-review artifact")
+
+    head = subprocess.run(["git", "rev-parse", "HEAD"], cwd=repo_root, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False)
+    if head.returncode or head.stdout.strip() != attestation["commit_sha"]:
+        errors.append("CLAIM_ATTESTATION_INVALID: commit SHA does not match repo HEAD")
+    status = subprocess.run(["git", "status", "--porcelain"], cwd=repo_root, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False)
+    if status.returncode:
+        errors.append("CLAIM_ATTESTATION_INVALID: cannot inspect worktree state")
+    else:
+        allowed_control_paths = {
+            attestation["evidence_manifest_path"],
+            evidence.get("acceptance_contract_path", ""),
+        }
+        dirty_product_paths = []
+        for line in status.stdout.splitlines():
+            relative = line[3:].split(" -> ")[-1]
+            if not relative.startswith(".agent/") and relative not in allowed_control_paths:
+                dirty_product_paths.append(relative)
+        if dirty_product_paths:
+            errors.append(f"CLAIM_ATTESTATION_INVALID: product worktree changed after attestation: {sorted(dirty_product_paths)}")
+    return errors
+
+
+def apply_transition(manifest: dict[str, Any], request: dict[str, Any], repo_root: Path | None = None) -> tuple[dict[str, Any], dict[str, Any]]:
     errors = validate_instance(request, load_json(REQUEST_SCHEMA))
     if errors:
         return manifest, result(request.get("workflow_id", ""), "rejected", manifest.get("current_stage", ""), manifest.get("workflow_state", "blocked"), errors, [])
@@ -145,10 +263,41 @@ def apply_transition(manifest: dict[str, Any], request: dict[str, Any]) -> tuple
     if repair_pending and request["status"] == "completed" and not changed_ids:
         return manifest, result(request["workflow_id"], "rejected", manifest["current_stage"], manifest["workflow_state"], ["REPAIR_PROGRESS_REQUIRED: repair stage must submit a content_changed artifact with a new digest"], [])
 
-    requested = manifest["claims"]["requested"]
+    claim_invalidated = any(
+        by_id[item]["type"] in {"spec", "acceptance_contract", "technical_design", "plan", "implementation", "evidence_manifest"}
+        for item in changed_ids
+    )
+    requested = "none" if claim_invalidated else manifest["claims"]["requested"]
     for claim in request["claim_requests"]:
         if CLAIM_RANK[claim] > CLAIM_RANK[requested]:
             requested = claim
+
+    validated = [] if claim_invalidated else list(manifest["claims"]["validated"])
+    attestations = request.get("claim_attestations", [])
+    if attestations and request["producer"]["skill"] != "delivery-verification":
+        return manifest, result(request["workflow_id"], "rejected", manifest["current_stage"], manifest["workflow_state"], ["CLAIM_ATTESTATION_UNAUTHORIZED: only delivery-verification may submit attestations"], [])
+    for signed in attestations:
+        attestation = signed["attestation"]
+        claim = signed["claim"]
+        if (
+            signed["status"] != "validated"
+            or attestation["result"] != "pass"
+            or attestation["workflow_id"] != manifest["run_id"]
+            or attestation["claim_type"] != claim
+            or attestation["strategy_id"] != manifest["selected_strategy"]
+            or attestation["strategy_version"] != manifest["strategy_version"]
+            or attestation["verifier_id"] != signed["verifier"]
+        ):
+            return manifest, result(request["workflow_id"], "rejected", manifest["current_stage"], manifest["workflow_state"], ["CLAIM_ATTESTATION_INVALID: attestation does not match the active workflow"], [])
+        if repo_root is None:
+            return manifest, result(request["workflow_id"], "rejected", manifest["current_stage"], manifest["workflow_state"], ["CLAIM_ATTESTATION_INVALID: --repo-root is required"], [])
+        attestation_errors = validate_claim_attestation(signed, manifest, repo_root)
+        if attestation_errors:
+            return manifest, result(request["workflow_id"], "rejected", manifest["current_stage"], manifest["workflow_state"], attestation_errors, [])
+        if CLAIM_RANK[claim] > CLAIM_RANK[requested]:
+            return manifest, result(request["workflow_id"], "rejected", manifest["current_stage"], manifest["workflow_state"], ["CLAIM_ATTESTATION_UNREQUESTED: attestation exceeds the requested claim"], [])
+        validated = [item for item in validated if item["claim"] != claim]
+        validated.append(signed)
 
     state = "active"
     blocked_reason = ""
@@ -183,6 +332,31 @@ def apply_transition(manifest: dict[str, Any], request: dict[str, Any]) -> tuple
         blocked_reason = (request["error"] or {}).get("code") or request["status"]
         transition_status = "blocked"
 
+    is_final_completion = (
+        request["status"] == "completed"
+        and transition_status == "applied"
+        and manifest["current_stage"] == strategy["stages"][-1]
+    )
+    if is_final_completion and state != "blocked":
+        minimum_claim = strategy.get("minimum_close_claim", "none")
+        if manifest["classification"]["mode"] == "handoff" and CLAIM_RANK[strategy["max_claim_request"]] >= CLAIM_RANK["handoff_done"]:
+            minimum_claim = "handoff_done"
+        required_claim = requested if CLAIM_RANK[requested] >= CLAIM_RANK[minimum_claim] else minimum_claim
+        if required_claim != "none" and repo_root is None:
+            return manifest, result(request["workflow_id"], "rejected", manifest["current_stage"], manifest["workflow_state"], ["CLAIM_ATTESTATION_REQUIRED: final claim validation requires --repo-root"], [])
+        for signed in validated:
+            if signed["status"] == "validated" and repo_root is not None:
+                final_errors = validate_claim_attestation(signed, manifest, repo_root)
+                if final_errors:
+                    return manifest, result(request["workflow_id"], "rejected", manifest["current_stage"], manifest["workflow_state"], final_errors, [])
+        claim_satisfied = required_claim == "none" or any(
+            item["status"] == "validated" and CLAIM_RANK[item["claim"]] >= CLAIM_RANK[required_claim]
+            for item in validated
+        )
+        if not claim_satisfied:
+            return manifest, result(request["workflow_id"], "rejected", manifest["current_stage"], manifest["workflow_state"], ["CLAIM_ATTESTATION_REQUIRED: final stage cannot close without the requested validated claim"], [])
+        state = "closed"
+
     updated["artifacts"] = artifacts
     updated["current_stage"] = target_stage
     updated["routing"] = {
@@ -197,7 +371,7 @@ def apply_transition(manifest: dict[str, Any], request: dict[str, Any]) -> tuple
         "last_validated_artifact_ids": [item["id"] for item in artifacts if item["status"] in {"ready", "approved"}],
         "blocked_reason": blocked_reason,
     }
-    updated["claims"] = {**manifest["claims"], "requested": requested}
+    updated["claims"] = {"requested": requested, "validated": validated}
     updated["review_control"] = review_control
     updated["transition_log"] = manifest.get("transition_log", []) + [{
         "transition_id": request["transition_id"],
@@ -220,23 +394,28 @@ def main() -> int:
     parser.add_argument("transition_request", help="transition_request.json path")
     parser.add_argument("--output", help="output manifest path; defaults to in-place")
     parser.add_argument("--result", help="optional transition_result.json path")
+    parser.add_argument("--repo-root", help="Git worktree root; required when submitting claim attestations")
     args = parser.parse_args()
 
     manifest_path = Path(args.manifest)
     manifest = load_json(manifest_path)
     request = load_json(Path(args.transition_request))
-    updated, transition_result = apply_transition(manifest, request)
+    repo_root = Path(args.repo_root).resolve() if args.repo_root else None
+    updated, transition_result = apply_transition(manifest, request, repo_root)
     if transition_result["status"] == "rejected":
         print(json.dumps(transition_result, ensure_ascii=False, indent=2))
         return 1
 
     output = Path(args.output) if args.output else manifest_path
-    output.write_text(json.dumps(updated, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-    errors = validate_workflow_manifest(output)
+    pending = output.with_name(output.name + ".pending")
+    pending.write_text(json.dumps(updated, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    errors = validate_workflow_manifest(pending)
     if errors:
+        pending.unlink(missing_ok=True)
         for error in errors:
             print(f"FAIL: {error}")
         return 1
+    pending.replace(output)
     if args.result:
         Path(args.result).write_text(json.dumps(transition_result, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     print(json.dumps(transition_result, ensure_ascii=False, indent=2))

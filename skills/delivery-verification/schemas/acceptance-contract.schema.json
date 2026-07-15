@@ -1,0 +1,11 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "spec_path", "spec_digest", "required_acceptance_ids"],
+  "properties": {
+    "schema_version": { "type": "integer", "enum": [1] },
+    "spec_path": { "type": "string" },
+    "spec_digest": { "type": "string" },
+    "required_acceptance_ids": { "type": "array", "items": { "type": "string" }, "minItems": 1 }
+  }
+}

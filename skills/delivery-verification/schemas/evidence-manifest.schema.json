@@ -1,9 +1,13 @@
 {
   "type": "object",
   "additionalProperties": false,
-  "required": ["evidence_manifest_id", "claim_requested", "acceptance_coverage", "validators", "deferred", "review_focus"],
+  "required": ["evidence_manifest_id", "acceptance_contract_path", "acceptance_contract_digest", "spec_digest", "required_acceptance_ids", "claim_requested", "acceptance_coverage", "validators", "deferred", "review_focus"],
   "properties": {
     "evidence_manifest_id": { "type": "string" },
+    "acceptance_contract_path": { "type": "string" },
+    "acceptance_contract_digest": { "type": "string" },
+    "spec_digest": { "type": "string" },
+    "required_acceptance_ids": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
     "claim_requested": { "type": "string", "enum": ["none", "dev_done", "integration_done", "handoff_done"] },
     "acceptance_coverage": {
       "type": "array",

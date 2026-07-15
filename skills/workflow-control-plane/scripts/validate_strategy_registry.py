@@ -37,7 +37,9 @@ KNOWN_ARTIFACTS = {
     "learning_candidate",
     "implementation",
     "decision_record",
+    "acceptance_contract",
 }
+CLAIM_RANK = {"none": 0, "dev_done": 1, "integration_done": 2, "handoff_done": 3}
 SAFE_ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,80}$")
 VERSION = re.compile(r"^\d+\.\d+(?:\.\d+)?$")
 FORBIDDEN_DEFAULT_SKILLS = {
@@ -94,6 +96,17 @@ def validate(root: Path = STRATEGIES) -> list[str]:
                 errors.append(f"{strategy_id}: continuous batch checkpoint must be batch or milestone")
             if policy.get("commit") != "batch":
                 errors.append(f"{strategy_id}: continuous batch must commit at batch boundaries")
+        minimum_claim = strategy.get("minimum_close_claim")
+        maximum_claim = strategy.get("max_claim_request")
+        if minimum_claim in CLAIM_RANK and maximum_claim in CLAIM_RANK:
+            if CLAIM_RANK[minimum_claim] > CLAIM_RANK[maximum_claim]:
+                errors.append(f"{strategy_id}: minimum_close_claim cannot exceed max_claim_request")
+        if (
+            strategy.get("process_depth") != "direct"
+            and "implement" in strategy.get("modes", [])
+            and minimum_claim == "none"
+        ):
+            errors.append(f"{strategy_id}: managed implementation strategy requires a non-none minimum_close_claim")
         stages = set(strategy.get("stages", []))
         stage_gates = strategy.get("stage_gates", {})
         unknown_stage_gate_keys = sorted(set(stage_gates) - stages)

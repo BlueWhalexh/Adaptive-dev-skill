@@ -8,7 +8,7 @@
   "execution_engine": "local",
   "execution_policy": {"unit": "continuous_batch", "task_risk": "local", "task_exit": "focused_signal", "checkpoint": "batch", "review": "batch_risk", "commit": "batch", "manifest_updates": "stage_only", "max_review_passes": 2},
   "stages": ["ground", "context_pack_if_needed", "pack_backed_specflow", "spec_review", "embedded_design", "plan", "implementation", "focused_and_chain_verification", "review", "close"],
-  "required_artifacts": ["spec", "plan", "evidence_manifest"],
+  "required_artifacts": ["spec", "acceptance_contract", "plan", "evidence_manifest"],
   "stage_skills": {
     "context_pack_if_needed": ["context-grounding"],
     "pack_backed_specflow": ["specflow"],
@@ -23,5 +23,6 @@
   },
   "design_policy": "embedded",
   "design_review": "self",
+  "minimum_close_claim": "integration_done",
   "max_claim_request": "integration_done"
 }

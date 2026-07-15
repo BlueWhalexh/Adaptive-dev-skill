@@ -19,5 +19,6 @@
   },
   "design_policy": "embedded",
   "design_review": "independent",
+  "minimum_close_claim": "dev_done",
   "max_claim_request": "integration_done"
 }

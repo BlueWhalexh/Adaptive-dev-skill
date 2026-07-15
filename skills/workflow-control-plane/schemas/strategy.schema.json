@@ -1,7 +1,7 @@
 {
   "type": "object",
   "additionalProperties": false,
-  "required": ["id", "version", "risk", "modes", "process_depth", "manifest_policy", "execution_engine", "execution_policy", "stages", "required_artifacts", "stage_skills", "design_policy", "design_review", "max_claim_request"],
+  "required": ["id", "version", "risk", "modes", "process_depth", "manifest_policy", "execution_engine", "execution_policy", "stages", "required_artifacts", "stage_skills", "design_policy", "design_review", "minimum_close_claim", "max_claim_request"],
   "properties": {
     "id": { "type": "string" },
     "version": { "type": "string" },
@@ -48,6 +48,7 @@
     },
     "design_policy": { "type": "string", "enum": ["none", "embedded", "standalone"] },
     "design_review": { "type": "string", "enum": ["none", "self", "independent", "human"] },
+    "minimum_close_claim": { "type": "string", "enum": ["none", "dev_done", "integration_done", "handoff_done"] },
     "max_claim_request": { "type": "string", "enum": ["none", "dev_done", "integration_done", "handoff_done"] }
   }
 }

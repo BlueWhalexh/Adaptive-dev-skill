@@ -18,5 +18,6 @@
   },
   "design_policy": "embedded",
   "design_review": "self",
+  "minimum_close_claim": "dev_done",
   "max_claim_request": "dev_done"
 }

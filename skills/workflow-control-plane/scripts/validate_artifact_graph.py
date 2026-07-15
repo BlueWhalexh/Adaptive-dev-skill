@@ -122,6 +122,15 @@ def validate(path: Path) -> list[str]:
                     errors.append(f"standalone technical_design {artifact['id']} requires approved analysis_pack dependency")
                 if not has_dep(artifact, by_id, "context_manifest", READY):
                     errors.append(f"standalone technical_design {artifact['id']} requires ready/approved context_manifest dependency")
+        if kind == "acceptance_contract":
+            if artifact["status"] != "approved":
+                errors.append(f"acceptance_contract {artifact['id']} must be approved by Spec review")
+            if artifact.get("producer") != "specflow" or artifact.get("semantic_owner") != "spec-review":
+                errors.append(f"acceptance_contract {artifact['id']} must be owned by spec-review and produced by specflow")
+            if not has_dep(artifact, by_id, "spec", {"approved"}):
+                errors.append(f"acceptance_contract {artifact['id']} requires approved spec dependency")
+            if not artifact.get("covers_acceptance"):
+                errors.append(f"acceptance_contract {artifact['id']} must enumerate approved acceptance ids")
         if kind == "plan":
             if policy == "standalone":
                 if not design_id or not has_dep(artifact, by_id, "technical_design", {"approved"}):
@@ -146,6 +155,8 @@ def validate(path: Path) -> list[str]:
             errors.append(f"implementation {artifact['id']} requires ready/approved task_packet dependency")
         if kind == "evidence_manifest" and not has_dep(artifact, by_id, "implementation", {"approved", "ready"}):
             errors.append(f"evidence_manifest {artifact['id']} requires ready/approved implementation dependency")
+        if kind == "evidence_manifest" and not has_dep(artifact, by_id, "acceptance_contract", {"approved"}):
+            errors.append(f"evidence_manifest {artifact['id']} requires approved acceptance_contract dependency")
 
     if policy == "standalone":
         design_artifacts = [item for item in artifacts if item["type"] == "technical_design" and item["status"] not in {"missing", "rejected", "stale"}]

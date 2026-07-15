@@ -16,13 +16,13 @@
     {
       "id": "fresh-consumer-verifier",
       "trust_level": "trusted",
-      "allowed_claims": ["handoff_done"],
+      "allowed_claims": ["integration_done", "handoff_done"],
       "allowed_evidence_types": ["fresh_consumer"]
     },
     {
       "id": "real-external-verifier",
       "trust_level": "trusted",
-      "allowed_claims": ["handoff_done"],
+      "allowed_claims": ["integration_done", "handoff_done"],
       "allowed_evidence_types": ["real_external"]
     },
     {

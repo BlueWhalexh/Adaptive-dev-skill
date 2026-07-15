@@ -12,5 +12,6 @@
   "stage_skills": {},
   "design_policy": "none",
   "design_review": "self",
+  "minimum_close_claim": "none",
   "max_claim_request": "dev_done"
 }

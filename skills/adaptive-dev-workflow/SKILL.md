@@ -1,6 +1,6 @@
 ---
 name: adaptive-dev-workflow
-description: Classify software development tasks and submit route decisions to workflow-control-plane. Use when software implementation, fixes, refactors, design, planning, verification, review, incremental testing, OpenSpec/Superpowers selection, SpecFlow, context pack, delivery handoff, project harness, or AI coding workflow routing is needed. 当用户要开发、修复、重构、规划、验证、增量测试、交付验收、目标模式、上下文包、spec 生成、项目 skill 沉淀或选择 AI coding 工作流时使用。
+description: Classify a new or materially changed software-development goal and submit its route decision to workflow-control-plane. Use at task intake when risk, strategy, SpecFlow/OpenSpec, context grounding, handoff, harness, or downstream skill selection must be decided; do not use for ordinary continuation when an active workflow manifest already selects the current stage skill. 当新开发目标进入、范围或风险实质变化、需要选择开发策略/Spec/上下文/交付流程时使用；已有 active workflow 的普通续作直接恢复当前 stage，不重复触发本 skill。
 ---
 
 # Adaptive Dev Workflow
@@ -89,16 +89,24 @@ Router 只引用 `capability_report_ref`，不复制 OpenSpec/Superpowers/harnes
 
 ## Procedure
 
-1. Inspect only enough context to classify.
-2. Emit `route_decision.json` or equivalent JSON object.
-3. If classification itself is ambiguous, set `ambiguity.status=ambiguous` with reasons and stop. Missing implementation details, acceptance details, migration design, or rollout plan are not route ambiguity; record `uncertainty=high` and let downstream skills handle them.
-4. Ensure capability report exists, then call strategy resolver:
+1. Resume first for continuation work. Inspect the canonical single-run path `.agent/runtime/workflow_manifest.json` and multi-run path `.agent/runs/*/workflow_manifest.json` only when the request or repository indicates an interrupted/ongoing run. Resume without re-routing only when exactly one candidate matches the same goal/scope, is `active` or `review_ready`, and passes both workflow and artifact-graph validation:
+
+```sh
+python3 skills/workflow-control-plane/scripts/resume_workflow.py <workflow_manifest.json>
+python3 skills/workflow-control-plane/scripts/validate_artifact_graph.py <workflow_manifest.json>
+```
+
+   Continue from `resume.resume_from_stage`; do not regenerate approved, fresh Spec/Design/Plan artifacts. Multiple candidates, stale artifacts, a changed goal, incompatible strategy version, `blocked`, or `closed` means do not auto-resume.
+2. If no compatible run exists, inspect only enough context to classify.
+3. Emit `route_decision.json` or equivalent JSON object.
+4. If classification itself is ambiguous, set `ambiguity.status=ambiguous` with reasons and stop. Missing implementation details, acceptance details, migration design, or rollout plan are not route ambiguity; record `uncertainty=high` and let downstream skills handle them.
+5. Ensure capability report exists, then call strategy resolver:
 
 ```sh
 python3 skills/workflow-control-plane/scripts/resolve_strategy.py route_decision.json --output resolved_strategy.json
 ```
 
-5. Inspect `process_depth` and `manifest_policy` from the resolver:
+6. Inspect `process_depth` and `manifest_policy` from the resolver:
 
    - `direct`: execute the focused change with repo instructions/project SOP and the smallest validator. For behavior changes, use `change-aware-testing` in inner-loop mode instead of repeatedly running the full unit suite. Do not initialize a workflow manifest or load Superpowers.
    - `selective`: initialize workflow state, then load only the exact `required_skills` needed by the active stage.
@@ -106,13 +114,13 @@ python3 skills/workflow-control-plane/scripts/resolve_strategy.py route_decision
 
    For implementation, obey `execution_policy`: parent risk controls final gates; Tasks use local risk. `continuous_batch` runs one focused signal per Task, then adjacent regression, Review, commit, report, and any manifest transition once per batch/milestone.
 
-6. For `manifest_policy=required`, let `workflow-control-plane` initialize or update workflow state:
+7. For `manifest_policy=required`, let `workflow-control-plane` initialize workflow state only when step 1 did not resume an existing run:
 
 ```sh
 python3 skills/workflow-control-plane/scripts/init_workflow.py route_decision.json --resolved-strategy resolved_strategy.json --workflow-id workflow-001 --output workflow_manifest.json
 ```
 
-7. Report selected strategy, process depth, required skills, resolver-derived gates, and remaining ambiguity. Do not claim implementation completion from routing work.
+8. Report whether the run was resumed or newly routed, selected strategy, process depth, required skills, resolver-derived gates, and remaining ambiguity. Do not claim implementation completion from routing work.
 
 If `context-grounding` or another narrow skill discovers stronger facts, create a route facts delta and let control plane produce the next route revision:
 

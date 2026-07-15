@@ -1,6 +1,6 @@
 interface:
   display_name: "Delivery Verification"
-  short_description: "Validate evidence and sign delivery claims"
+  short_description: "Validate evidence and attest delivery claims"
 
 policy:
   allow_implicit_invocation: true

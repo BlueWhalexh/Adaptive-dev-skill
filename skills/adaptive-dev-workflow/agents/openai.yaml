@@ -1,7 +1,7 @@
 interface:
   display_name: "Adaptive Dev Workflow"
   short_description: "Route work to direct, selective, or lifecycle execution"
-  default_prompt: "Use $adaptive-dev-workflow to classify software work, detect project SOP maturity, and resolve direct, selective, or lifecycle execution without loading unnecessary skills. 用 $adaptive-dev-workflow 为开发、修复、重构、规划、验证和交付任务选择最小充分流程。"
+  default_prompt: "Use $adaptive-dev-workflow at new-goal intake or material reroute to select the minimum sufficient strategy. Resume an active workflow directly and load only its current-stage skills. 用 $adaptive-dev-workflow 处理新目标或实质变更；已有 active workflow 时直接恢复当前 stage。"
 
 policy:
   allow_implicit_invocation: true

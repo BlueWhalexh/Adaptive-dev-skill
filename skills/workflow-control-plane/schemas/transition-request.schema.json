@@ -33,7 +33,7 @@
             "required": ["id", "type", "status", "version", "producer", "depends_on", "covers_acceptance", "path"],
             "properties": {
               "id": { "type": "string" },
-              "type": { "type": "string" },
+              "type": { "type": "string", "enum": ["analysis_pack", "context_manifest", "spec", "acceptance_contract", "technical_design", "plan", "task_packet", "evidence_manifest", "learning_candidate", "implementation", "decision_record"] },
               "status": { "type": "string" },
               "version": { "type": "integer" },
               "producer": { "type": "string" },
@@ -51,6 +51,42 @@
     },
     "evidence_refs": { "type": "array", "items": { "type": "string" } },
     "claim_requests": { "type": "array", "items": { "type": "string", "enum": ["dev_done", "integration_done", "handoff_done"] } },
+    "claim_attestations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["claim", "status", "verifier", "evidence_ids", "attested_at", "attestation"],
+        "properties": {
+          "claim": { "type": "string", "enum": ["dev_done", "integration_done", "handoff_done"] },
+          "status": { "type": "string", "enum": ["validated", "rejected", "blocked"] },
+          "verifier": { "type": "string" },
+          "evidence_ids": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+          "attested_at": { "type": "string" },
+          "attestation": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["workflow_id", "claim_type", "commit_sha", "strategy_id", "strategy_version", "registry_digest", "evidence_manifest_path", "evidence_manifest_digest", "spec_digest", "acceptance_contract_path", "acceptance_contract_digest", "verifier_id", "verifier_version", "result"],
+            "properties": {
+              "workflow_id": { "type": "string" },
+              "claim_type": { "type": "string", "enum": ["dev_done", "integration_done", "handoff_done"] },
+              "commit_sha": { "type": "string" },
+              "strategy_id": { "type": "string" },
+              "strategy_version": { "type": "string" },
+              "registry_digest": { "type": "string" },
+              "evidence_manifest_path": { "type": "string" },
+              "evidence_manifest_digest": { "type": "string" },
+              "spec_digest": { "type": "string" },
+              "acceptance_contract_path": { "type": "string" },
+              "acceptance_contract_digest": { "type": "string" },
+              "verifier_id": { "type": "string" },
+              "verifier_version": { "type": "string" },
+              "result": { "type": "string", "enum": ["pass", "fail", "blocked"] }
+            }
+          }
+        }
+      }
+    },
     "discovered_facts": { "type": "object" },
     "review_result": {
       "type": ["object", "null"],

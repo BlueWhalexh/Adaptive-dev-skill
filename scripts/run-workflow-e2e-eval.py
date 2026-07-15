@@ -21,6 +21,7 @@ KNOWLEDGE = ROOT / "skills" / "knowledge-promotion"
 HARNESS_INIT = ROOT / "skills" / "project-harness-init" / "scripts" / "init_project_harness.py"
 HARNESS_VALIDATE = ROOT / "skills" / "project-harness-init" / "scripts" / "validate_project_harness.py"
 HANDOFF_FRESH_CONSUMER = ROOT / "scripts" / "run-handoff-fresh-consumer-eval.py"
+EVIDENCE_BINDING = {"spec_digest": "", "contract_path": "acceptance-contract.json", "contract_digest": ""}
 
 
 def run(args: list[str], *, expect_ok: bool = True, cwd: Path | None = None) -> subprocess.CompletedProcess[str]:
@@ -125,7 +126,6 @@ def complex_skill_plan() -> dict[str, list[str]]:
         "remaining_slice_execution": ["change-aware-testing"],
         "system_verification": ["change-aware-testing", "delivery-verification"],
         "delivery_review": ["agent-orchestration"],
-        "learning_capture": ["knowledge-promotion"],
     }
 
 
@@ -150,7 +150,7 @@ def workflow_manifest(*, requested: str = "integration_done", validated_claim: s
         "skill_suite_version": "2026-06-24",
         "run_id": "run-control-plane-e2e",
         "manifest_revision": 1,
-        "strategy_version": "2.1",
+        "strategy_version": "2.2",
         "workflow_state": "review_ready",
         "classification": {
             "risk": "L3",
@@ -233,6 +233,17 @@ def workflow_manifest(*, requested: str = "integration_done", validated_claim: s
                 "path": "docs/superpowers/specs/2026-06-23-feature-spec.md",
             },
             {
+                "id": "acceptance-001",
+                "type": "acceptance_contract",
+                "status": "approved",
+                "version": 1,
+                "producer": "specflow",
+                "semantic_owner": "spec-review",
+                "depends_on": ["spec-001"],
+                "covers_acceptance": ["AC-1"],
+                "path": "acceptance-contract.json",
+            },
+            {
                 "id": "td-001",
                 "type": "technical_design",
                 "status": "approved",
@@ -278,7 +289,7 @@ def workflow_manifest(*, requested: str = "integration_done", validated_claim: s
                 "status": "ready",
                 "version": 1,
                 "producer": "delivery-verification",
-                "depends_on": ["impl-001"],
+                "depends_on": ["impl-001", "acceptance-001"],
                 "covers_acceptance": ["AC-1"],
                 "path": "docs/evidence/ev-001.json",
             },
@@ -297,9 +308,13 @@ def workflow_manifest(*, requested: str = "integration_done", validated_claim: s
                         "claim_type": validated_claim,
                         "commit_sha": "abc123",
                         "strategy_id": "complex-real-slice",
-                        "strategy_version": "2.1",
+                        "strategy_version": "2.2",
                         "registry_digest": "sha256:registry",
+                        "evidence_manifest_path": "evidence-manifest.json",
                         "evidence_manifest_digest": "sha256:evidence",
+                        "spec_digest": "sha256:spec-e2e",
+                        "acceptance_contract_path": "acceptance-contract.json",
+                        "acceptance_contract_digest": "sha256:acceptance-contract",
                         "verifier_id": "evidence-manifest-validator",
                         "verifier_version": "1.0.0",
                         "result": "pass",
@@ -314,6 +329,10 @@ def workflow_manifest(*, requested: str = "integration_done", validated_claim: s
 def evidence_manifest(claim: str, evidence_type: str, result: str = "pass") -> dict[str, Any]:
     return {
         "evidence_manifest_id": "ev-001",
+        "acceptance_contract_path": EVIDENCE_BINDING["contract_path"],
+        "acceptance_contract_digest": EVIDENCE_BINDING["contract_digest"],
+        "spec_digest": EVIDENCE_BINDING["spec_digest"],
+        "required_acceptance_ids": ["AC-1"],
         "claim_requested": claim,
         "acceptance_coverage": [{"acceptance_id": "AC-1", "validator_ids": ["V-001"]}],
         "validators": [
@@ -361,6 +380,18 @@ def assert_harness_paths(target: Path, feature_slug: str) -> None:
 def main() -> int:
     with tempfile.TemporaryDirectory(prefix="adaptive-workflow-e2e-") as tmp:
         root = Path(tmp)
+        evidence_spec_path = write_text(root / "approved-evidence-spec.md", "# Approved Evidence Spec\n")
+        evidence_spec_digest = "sha256:" + sha256(evidence_spec_path)
+        evidence_contract_path = write_json(root / "acceptance-contract.json", {
+            "schema_version": 1,
+            "spec_path": "approved-evidence-spec.md",
+            "spec_digest": evidence_spec_digest,
+            "required_acceptance_ids": ["AC-1"],
+        })
+        EVIDENCE_BINDING.update({
+            "spec_digest": evidence_spec_digest,
+            "contract_digest": "sha256:" + sha256(evidence_contract_path),
+        })
         repo = root / "repo"
         feature = "Billing MVP"
         run([sys.executable, str(HARNESS_INIT), "--root", str(repo), "--feature-id", feature, "--project-skill", "billing"])
@@ -881,7 +912,7 @@ def main() -> int:
         run([sys.executable, str(migrate_script), str(old_unsigned_path), "--output", str(migrated_manifest_path)])
         migrated_manifest = json.loads(migrated_manifest_path.read_text(encoding="utf-8"))
         migrated_methods = {skill for skills in migrated_manifest["routing"]["skill_plan"].values() for skill in skills}
-        if migrated_manifest["strategy_version"] != "2.1" or "superpowers:executing-plans" in migrated_methods:
+        if migrated_manifest["strategy_version"] != "2.2" or "superpowers:executing-plans" in migrated_methods:
             raise SystemExit("manifest migration retained legacy execution ceremony")
         if migrated_manifest["schema_version"] != 6:
             raise SystemExit("v5 manifest migration did not upgrade schema_version to 6")
@@ -902,11 +933,205 @@ def main() -> int:
             raise SystemExit("failed in-place migration modified the source manifest")
 
         evidence_validator = DELIVERY / "scripts" / "validate_evidence_manifest.py"
-        run([sys.executable, str(evidence_validator), str(write_json(root / "evidence-integration-ok.json", evidence_manifest("integration_done", "integration")))])
-        run([sys.executable, str(evidence_validator), str(write_json(root / "evidence-broken-bad.json", evidence_manifest("dev_done", "manual", "broken")))], expect_ok=False)
-        run([sys.executable, str(evidence_validator), str(write_json(root / "evidence-integration-mock-bad.json", evidence_manifest("integration_done", "mock")))], expect_ok=False)
-        run([sys.executable, str(evidence_validator), str(write_json(root / "evidence-handoff-integration-bad.json", evidence_manifest("handoff_done", "integration")))], expect_ok=False)
-        run([sys.executable, str(evidence_validator), str(write_json(root / "evidence-handoff-ok.json", evidence_manifest("handoff_done", "fresh_consumer")))])
+        evidence_root_args = ["--repo-root", str(root)]
+        run([sys.executable, str(evidence_validator), str(write_json(root / "evidence-integration-ok.json", evidence_manifest("integration_done", "integration"))), *evidence_root_args])
+        run([sys.executable, str(evidence_validator), str(write_json(root / "evidence-broken-bad.json", evidence_manifest("dev_done", "manual", "broken"))), *evidence_root_args], expect_ok=False)
+        run([sys.executable, str(evidence_validator), str(write_json(root / "evidence-integration-mock-bad.json", evidence_manifest("integration_done", "mock"))), *evidence_root_args], expect_ok=False)
+        run([sys.executable, str(evidence_validator), str(write_json(root / "evidence-handoff-integration-bad.json", evidence_manifest("handoff_done", "integration"))), *evidence_root_args], expect_ok=False)
+        run([sys.executable, str(evidence_validator), str(write_json(root / "evidence-handoff-ok.json", evidence_manifest("handoff_done", "fresh_consumer"))), *evidence_root_args])
+        false_claim = evidence_manifest("handoff_done", "system", "fail")
+        false_claim["validators"].append({
+            "id": "V-002",
+            "type": "fresh_consumer",
+            "result": "pass",
+            "command_or_method": "unrelated fresh consumer probe",
+            "proves": "a different path works",
+            "gaps": "does not cover AC-1",
+        })
+        run([sys.executable, str(evidence_validator), str(write_json(root / "evidence-unrelated-pass-false-claim-bad.json", false_claim)), *evidence_root_args], expect_ok=False)
+        incomplete_acceptance = evidence_manifest("integration_done", "integration")
+        incomplete_acceptance["required_acceptance_ids"] = ["AC-1", "AC-2"]
+        run([sys.executable, str(evidence_validator), str(write_json(root / "evidence-incomplete-acceptance-bad.json", incomplete_acceptance)), *evidence_root_args], expect_ok=False)
+        full_contract_path = write_json(root / "acceptance-contract-full.json", {
+            "schema_version": 1,
+            "spec_path": "approved-evidence-spec.md",
+            "spec_digest": evidence_spec_digest,
+            "required_acceptance_ids": ["AC-1", "AC-2"],
+        })
+        jointly_reduced = evidence_manifest("integration_done", "integration")
+        jointly_reduced["acceptance_contract_path"] = "acceptance-contract-full.json"
+        jointly_reduced["acceptance_contract_digest"] = "sha256:" + sha256(full_contract_path)
+        run([sys.executable, str(evidence_validator), str(write_json(root / "evidence-jointly-reduced-acceptance-bad.json", jointly_reduced)), *evidence_root_args], expect_ok=False)
+
+        close_without_claim = workflow_manifest()
+        close_without_claim["claims"]["validated"] = []
+        close_without_claim_path = write_json(root / "workflow-close-without-claim-bad.json", close_without_claim)
+        close_review = json.loads(json.dumps(review_request_base))
+        close_review["transition_id"] = "tr-close-without-claim"
+        close_review["review_result"] = {"pass_number": 1, "max_severity": "none", "decision": "approved", "reviewer_id": "reviewer-1", "reviewed_producer_ids": ["coding-agent"], "finding_refs": []}
+        close_review_path = write_json(root / "close-without-claim-request.json", close_review)
+        run([sys.executable, str(transition_script), str(close_without_claim_path), str(close_review_path)], expect_ok=False)
+
+        for strategy_id, version, final_stage in [
+            ("migration-critical", "2.1", "close"),
+            ("spec-driven-feature", "2.1", "close"),
+        ]:
+            managed_no_claim = workflow_manifest()
+            managed_no_claim["selected_strategy"] = strategy_id
+            managed_no_claim["strategy_version"] = version
+            managed_no_claim["current_stage"] = final_stage
+            managed_no_claim["claims"] = {"requested": "none", "validated": []}
+            managed_no_claim_path = write_json(root / f"{strategy_id}-close-without-claim-bad.json", managed_no_claim)
+            managed_close_request = json.loads(json.dumps(close_review))
+            managed_close_request["transition_id"] = f"tr-{strategy_id}-close-without-claim"
+            managed_close_request["stage_id"] = final_stage
+            managed_close_request["producer"] = {"skill": "local-executor", "version": "1.0.0"}
+            managed_close_request["review_result"] = None
+            managed_close_path = write_json(root / f"{strategy_id}-close-without-claim-request.json", managed_close_request)
+            run([sys.executable, str(transition_script), str(managed_no_claim_path), str(managed_close_path)], expect_ok=False)
+
+        claim_repo = root / "claim-repo"
+        claim_repo.mkdir()
+        close_runtime = workflow_manifest()
+        close_runtime["claims"]["validated"] = []
+        close_runtime["current_stage"] = "system_verification"
+        close_runtime["workflow_state"] = "active"
+        close_runtime["routing"]["required_skills"] = ["change-aware-testing", "delivery-verification"]
+        close_runtime["resume"]["checkpoint_id"] = "cp-system-verification"
+        close_runtime["resume"]["resume_from_stage"] = "system_verification"
+        approved_spec_path = write_text(claim_repo / "docs/superpowers/specs/2026-06-23-feature-spec.md", "# Approved Spec\n")
+        approved_spec_digest = "sha256:" + sha256(approved_spec_path)
+        for artifact in close_runtime["artifacts"]:
+            if artifact["type"] == "spec":
+                artifact["digest"] = approved_spec_digest
+        close_runtime_path = write_json(claim_repo / ".agent/runtime/workflow-close-runtime.json", close_runtime)
+        close_evidence = evidence_manifest("integration_done", "integration")
+        close_evidence["spec_digest"] = approved_spec_digest
+        close_contract_path = write_json(claim_repo / ".agent/runtime/acceptance-contract.json", {
+            "schema_version": 1,
+            "spec_path": "docs/superpowers/specs/2026-06-23-feature-spec.md",
+            "spec_digest": approved_spec_digest,
+            "required_acceptance_ids": ["AC-1", "AC-2"],
+        })
+        close_evidence["acceptance_contract_path"] = ".agent/runtime/acceptance-contract.json"
+        close_evidence["acceptance_contract_digest"] = "sha256:" + sha256(close_contract_path)
+        close_evidence["required_acceptance_ids"] = ["AC-1", "AC-2"]
+        close_evidence["acceptance_coverage"].append({"acceptance_id": "AC-2", "validator_ids": ["V-001"]})
+        for artifact in close_runtime["artifacts"]:
+            if artifact["type"] == "acceptance_contract":
+                artifact["path"] = ".agent/runtime/acceptance-contract.json"
+                artifact["digest"] = close_evidence["acceptance_contract_digest"]
+                artifact["covers_acceptance"] = ["AC-1", "AC-2"]
+        write_json(close_runtime_path, close_runtime)
+        close_evidence_path = write_json(claim_repo / ".agent/runtime/evidence-close-integration.json", close_evidence)
+        disallowed_type_evidence = json.loads(json.dumps(close_evidence))
+        disallowed_type_evidence["validators"][0]["type"] = "real_external"
+        disallowed_type_evidence_path = write_json(claim_repo / ".agent/runtime/evidence-disallowed-type.json", disallowed_type_evidence)
+        mixed_evidence = json.loads(json.dumps(close_evidence))
+        mixed_evidence["validators"].append({
+            "id": "V-UNIT",
+            "type": "unit",
+            "result": "pass",
+            "command_or_method": "unit-only evidence",
+            "proves": "focused behavior",
+            "gaps": "does not prove integration",
+        })
+        mixed_evidence["acceptance_coverage"][0]["validator_ids"].append("V-UNIT")
+        mixed_evidence_path = write_json(claim_repo / ".agent/runtime/evidence-mixed-types.json", mixed_evidence)
+        reduced_contract_path = write_json(claim_repo / ".agent/runtime/acceptance-contract-reduced.json", {
+            "schema_version": 1,
+            "spec_path": "docs/superpowers/specs/2026-06-23-feature-spec.md",
+            "spec_digest": approved_spec_digest,
+            "required_acceptance_ids": ["AC-1"],
+        })
+        reduced_evidence = json.loads(json.dumps(close_evidence))
+        reduced_evidence["acceptance_contract_path"] = ".agent/runtime/acceptance-contract-reduced.json"
+        reduced_evidence["acceptance_contract_digest"] = "sha256:" + sha256(reduced_contract_path)
+        reduced_evidence["required_acceptance_ids"] = ["AC-1"]
+        reduced_evidence["acceptance_coverage"] = [reduced_evidence["acceptance_coverage"][0]]
+        reduced_evidence_path = write_json(claim_repo / ".agent/runtime/evidence-reduced-contract.json", reduced_evidence)
+        run(["git", "init", "-q"], cwd=claim_repo)
+        run(["git", "add", "--all"], cwd=claim_repo)
+        run(["git", "-c", "user.name=Workflow E2E", "-c", "user.email=e2e@example.invalid", "commit", "-q", "-m", "claim fixture"], cwd=claim_repo)
+        attestation_path = claim_repo / ".agent/runtime/claim-attestation.json"
+        issue_attestation = DELIVERY / "scripts" / "issue_claim_attestation.py"
+        run([
+            sys.executable,
+            str(issue_attestation),
+            str(reduced_evidence_path),
+            str(close_runtime_path),
+            "--verifier",
+            "evidence-manifest-validator",
+            "--repo-root",
+            str(claim_repo),
+            "--output",
+            str(root / "reduced-contract-attestation-bad.json"),
+        ], expect_ok=False)
+        run([sys.executable, str(issue_attestation), str(close_evidence_path), str(close_runtime_path), "--verifier", "evidence-manifest-validator", "--repo-root", str(claim_repo), "--output", str(attestation_path)])
+        system_close_request = {
+            "schema_version": 1,
+            "workflow_id": "run-control-plane-e2e",
+            "transition_id": "tr-close-system",
+            "expected_manifest_revision": 1,
+            "stage_id": "system_verification",
+            "producer": {"skill": "delivery-verification", "version": "1.0.0", "actor_id": "verifier-1"},
+            "status": "completed",
+            "artifact_changes": [],
+            "evidence_refs": ["V-001"],
+            "claim_requests": ["integration_done"],
+            "claim_attestations": [json.loads(attestation_path.read_text(encoding="utf-8"))],
+            "discovered_facts": {},
+            "error": None,
+        }
+        dirty_product_path = write_text(claim_repo / "src/uncommitted-change.py", "changed = True\n")
+        dirty_product_request_path = write_json(root / "dirty-product-attestation-request.json", system_close_request)
+        run([sys.executable, str(transition_script), str(close_runtime_path), str(dirty_product_request_path), "--repo-root", str(claim_repo)], expect_ok=False)
+        dirty_product_path.unlink()
+        disallowed_type_request = json.loads(json.dumps(system_close_request))
+        disallowed_type_request["transition_id"] = "tr-disallowed-evidence-type"
+        disallowed_signed = disallowed_type_request["claim_attestations"][0]
+        disallowed_signed["attestation"]["evidence_manifest_path"] = ".agent/runtime/evidence-disallowed-type.json"
+        disallowed_signed["attestation"]["evidence_manifest_digest"] = "sha256:" + sha256(disallowed_type_evidence_path)
+        disallowed_type_path = write_json(root / "disallowed-evidence-type-request.json", disallowed_type_request)
+        run([sys.executable, str(transition_script), str(close_runtime_path), str(disallowed_type_path), "--repo-root", str(claim_repo)], expect_ok=False)
+        insufficient_type_request = json.loads(json.dumps(system_close_request))
+        insufficient_type_request["transition_id"] = "tr-allowed-but-insufficient-signed-type"
+        insufficient_signed = insufficient_type_request["claim_attestations"][0]
+        insufficient_signed["evidence_ids"] = ["V-UNIT"]
+        insufficient_signed["attestation"]["evidence_manifest_path"] = ".agent/runtime/evidence-mixed-types.json"
+        insufficient_signed["attestation"]["evidence_manifest_digest"] = "sha256:" + sha256(mixed_evidence_path)
+        insufficient_type_path = write_json(root / "allowed-but-insufficient-signed-type-request.json", insufficient_type_request)
+        run([sys.executable, str(transition_script), str(close_runtime_path), str(insufficient_type_path), "--repo-root", str(claim_repo)], expect_ok=False)
+        write_text(claim_repo / "head-change.txt", "new committed state\n")
+        run(["git", "add", "--all"], cwd=claim_repo)
+        run(["git", "-c", "user.name=Workflow E2E", "-c", "user.email=e2e@example.invalid", "commit", "-q", "-m", "advance head"], cwd=claim_repo)
+        stale_head_request_path = write_json(root / "stale-head-attestation-request.json", system_close_request)
+        run([sys.executable, str(transition_script), str(close_runtime_path), str(stale_head_request_path), "--repo-root", str(claim_repo)], expect_ok=False)
+        run([sys.executable, str(issue_attestation), str(close_evidence_path), str(close_runtime_path), "--verifier", "evidence-manifest-validator", "--repo-root", str(claim_repo), "--output", str(attestation_path)])
+        system_close_request["claim_attestations"] = [json.loads(attestation_path.read_text(encoding="utf-8"))]
+        system_close_request_path = write_json(claim_repo / ".agent/runtime/close-system-request.json", system_close_request)
+        for label, mutate in {
+            "commit": lambda value: value["attestation"].__setitem__("commit_sha", "not-a-commit"),
+            "registry": lambda value: value["attestation"].__setitem__("registry_digest", "sha256:fake"),
+            "evidence": lambda value: value["attestation"].__setitem__("evidence_manifest_digest", "sha256:fake"),
+            "evidence-id": lambda value: value.__setitem__("evidence_ids", ["V-NOT-FOUND"]),
+        }.items():
+            forged_request = json.loads(json.dumps(system_close_request))
+            forged_request["transition_id"] = "tr-forged-" + label
+            mutate(forged_request["claim_attestations"][0])
+            forged_path = write_json(claim_repo / ".agent/runtime" / ("forged-" + label + "-request.json"), forged_request)
+            run([sys.executable, str(transition_script), str(close_runtime_path), str(forged_path), "--repo-root", str(claim_repo)], expect_ok=False)
+        if json.loads(close_runtime_path.read_text(encoding="utf-8"))["manifest_revision"] != 1:
+            raise SystemExit("rejected forged attestation mutated workflow manifest")
+        run([sys.executable, str(transition_script), str(close_runtime_path), str(system_close_request_path), "--repo-root", str(claim_repo)])
+        final_close_review = json.loads(json.dumps(close_review))
+        final_close_review["transition_id"] = "tr-close-final-review"
+        final_close_review["expected_manifest_revision"] = 2
+        final_close_review_path = write_json(claim_repo / ".agent/runtime/close-final-review-request.json", final_close_review)
+        run([sys.executable, str(transition_script), str(close_runtime_path), str(final_close_review_path), "--repo-root", str(claim_repo)])
+        closed_runtime = json.loads(close_runtime_path.read_text(encoding="utf-8"))
+        if closed_runtime["workflow_state"] != "closed" or closed_runtime["current_stage"] != "delivery_review":
+            raise SystemExit("validated L3 workflow did not close at its final delivery review")
 
         ctx_ok = write_json(root / "context-ok.json", context_manifest(repo, source_file))
         ctx_broad = context_manifest(repo, source_file)
@@ -971,6 +1196,20 @@ def main() -> int:
         invalid_repair["stage_gates"]["review"]["repair_stage"] = "close"
         write_json(invalid_repair_path, invalid_repair)
         run([sys.executable, str(WORKFLOW / "scripts" / "validate_strategy_registry.py"), "--root", str(invalid_repair_registry)], expect_ok=False)
+        missing_close_claim_registry = root / "strategies-missing-close-claim"
+        shutil.copytree(WORKFLOW / "references" / "strategies", missing_close_claim_registry)
+        missing_close_claim_path = missing_close_claim_registry / "migration-critical.json"
+        missing_close_claim = json.loads(missing_close_claim_path.read_text(encoding="utf-8"))
+        missing_close_claim.pop("minimum_close_claim")
+        write_json(missing_close_claim_path, missing_close_claim)
+        run([sys.executable, str(WORKFLOW / "scripts" / "validate_strategy_registry.py"), "--root", str(missing_close_claim_registry)], expect_ok=False)
+        excessive_close_claim_registry = root / "strategies-excessive-close-claim"
+        shutil.copytree(WORKFLOW / "references" / "strategies", excessive_close_claim_registry)
+        excessive_close_claim_path = excessive_close_claim_registry / "focused-change.json"
+        excessive_close_claim = json.loads(excessive_close_claim_path.read_text(encoding="utf-8"))
+        excessive_close_claim["minimum_close_claim"] = "integration_done"
+        write_json(excessive_close_claim_path, excessive_close_claim)
+        run([sys.executable, str(WORKFLOW / "scripts" / "validate_strategy_registry.py"), "--root", str(excessive_close_claim_registry)], expect_ok=False)
         run([sys.executable, str(HANDOFF_FRESH_CONSUMER)])
 
     print("Workflow E2E eval passed")
@@ -987,6 +1226,7 @@ def main() -> int:
     print("- atomic unsigned manifest migration + signed-claim refusal: pass")
     print("- heavyweight default method + unbounded review registry negatives: pass")
     print("- managed review gate coverage + repair-stage negatives: pass")
+    print("- managed close claims + canonical acceptance contract negatives: pass")
     print("- JSON evidence manifest claim checks: pass")
     print("- context static/freshness/runtime/sufficiency checks: pass")
     print("- learning candidate path-safety checks: pass")

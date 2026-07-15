@@ -1,14 +1,14 @@
 {
   "id": "complex-real-slice",
-  "version": "2.1",
+  "version": "2.2",
   "risk": ["L2", "L3"],
   "modes": ["implement", "handoff"],
   "process_depth": "lifecycle",
   "manifest_policy": "required",
   "execution_engine": "local",
   "execution_policy": {"unit": "continuous_batch", "task_risk": "local", "task_exit": "focused_signal", "checkpoint": "milestone", "review": "boundary_strict", "commit": "batch", "manifest_updates": "stage_only", "max_review_passes": 2},
-  "stages": ["ground", "context_pack_review", "pack_backed_specflow", "spec_review", "technical_design", "design_review", "minimum_real_slice_plan", "slice_execution", "architecture_checkpoint", "remaining_slice_execution", "system_verification", "delivery_review", "learning_capture"],
-  "required_artifacts": ["analysis_pack", "context_manifest", "spec", "technical_design", "plan", "task_packet", "evidence_manifest", "learning_candidate"],
+  "stages": ["ground", "context_pack_review", "pack_backed_specflow", "spec_review", "technical_design", "design_review", "minimum_real_slice_plan", "slice_execution", "architecture_checkpoint", "remaining_slice_execution", "system_verification", "delivery_review"],
+  "required_artifacts": ["analysis_pack", "context_manifest", "spec", "acceptance_contract", "technical_design", "plan", "task_packet", "evidence_manifest"],
   "stage_skills": {
     "context_pack_review": ["context-grounding"],
     "pack_backed_specflow": ["specflow"],
@@ -20,8 +20,7 @@
     "architecture_checkpoint": ["agent-orchestration"],
     "remaining_slice_execution": ["change-aware-testing"],
     "system_verification": ["change-aware-testing", "delivery-verification"],
-    "delivery_review": ["agent-orchestration"],
-    "learning_capture": ["knowledge-promotion"]
+    "delivery_review": ["agent-orchestration"]
   },
   "stage_gates": {
     "context_pack_review": {"allowed_producers": ["context-grounding"], "min_evidence_refs": 1, "review_mode": "self", "repair_stage": "ground"},
@@ -36,5 +35,6 @@
   ],
   "design_policy": "standalone",
   "design_review": "independent",
+  "minimum_close_claim": "integration_done",
   "max_claim_request": "handoff_done"
 }

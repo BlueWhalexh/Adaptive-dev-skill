@@ -32,6 +32,8 @@ skills/change-aware-testing/schemas/test-impact-map.schema.json
 
 没有可信映射时不要猜测“增量测试已覆盖”。先使用项目原生命令做一次保守验证，再补齐映射。
 
+先用 `test -f .agent/test-impact-map.json` 检测映射。文件不存在时不要读取它、不要运行选择器，也不要把缺失本身制造成一次失败命令；直接按项目 testing contract / 原生命令降级，并记录 `mapping=missing`。
+
 ## Procedure
 
 1. 修改前记录 batch 起点（单改动策略则是 change 起点）：

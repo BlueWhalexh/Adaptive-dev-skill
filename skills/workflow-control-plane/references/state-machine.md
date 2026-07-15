@@ -32,6 +32,7 @@ Specialist skills must not edit `workflow_manifest.json` directly. They return a
   "artifact_changes": [],
   "evidence_refs": [],
   "claim_requests": [],
+  "claim_attestations": [],
   "discovered_facts": {},
   "error": null
 }
@@ -41,6 +42,12 @@ Then run `scripts/transition_workflow.py`.
 
 Only workflow-control-plane computes downstream stale propagation and advances the strategy stage.
 
+需要 delivery claim 的 lifecycle strategy 将 Spec review 批准的 `acceptance_contract` 登记为 canonical artifact：`producer=specflow`、`semantic_owner=spec-review`、依赖 approved `spec`。Evidence 和 attestation 必须引用该 artifact 的固定 path/digest；替代 companion 或删减 acceptance 集合均拒绝。
+
+`delivery-verification` 可在 transition request 中提交由证据清单生成的 `claim_attestations`。最终 stage 只有在 requested claim 已被有效 attestation 覆盖时才能进入 `closed`；实现者或其他 specialist 不能提交签发结果。
+
+Knowledge Promotion 是关闭后的条件动作：仅在重复纠偏、稳定 SOP 或明确学习信号出现时运行，不属于 L3 交付链的强制 stage。
+
 ## Review Repair Rule
 
 `max_review_passes` limits repeated Review inside one review cycle; it is not a Goal Mode stop condition. `changes_requested` returns an `active` workflow to the Strategy gate's explicit `repair_stage`, preserves `finding_refs`, and emits `repair_required`. When the bounded pass count is reached, the pass counter resets for the next repaired diff/evidence cycle.
@@ -48,6 +55,8 @@ Only workflow-control-plane computes downstream stale propagation and advances t
 Use `blocked` only when autonomous repair cannot proceed: `human_required`, missing capability or external state, irreversible-risk decision, unresolved permission/security ambiguity, or no executable repair path. Do not block merely because two Review passes found issues.
 
 ## Resume Rule
+
+Single-run projects use `.agent/runtime/workflow_manifest.json`; concurrent or historical runs use `.agent/runs/<run-id>/workflow_manifest.json`. A caller must inspect both locations and auto-resume only one compatible active candidate. Multiple compatible candidates require explicit selection.
 
 Before resuming interrupted work, run:
 

@@ -152,7 +152,7 @@
           "id": { "type": "string" },
           "type": {
             "type": "string",
-            "enum": ["analysis_pack", "context_manifest", "spec", "technical_design", "plan", "task_packet", "evidence_manifest", "learning_candidate", "implementation", "decision_record"]
+            "enum": ["analysis_pack", "context_manifest", "spec", "acceptance_contract", "technical_design", "plan", "task_packet", "evidence_manifest", "learning_candidate", "implementation", "decision_record"]
           },
           "status": {
             "type": "string",
@@ -191,7 +191,7 @@
               "attestation": {
                 "type": "object",
                 "additionalProperties": false,
-                "required": ["workflow_id", "claim_type", "commit_sha", "strategy_id", "strategy_version", "registry_digest", "evidence_manifest_digest", "verifier_id", "verifier_version", "result"],
+                "required": ["workflow_id", "claim_type", "commit_sha", "strategy_id", "strategy_version", "registry_digest", "evidence_manifest_path", "evidence_manifest_digest", "spec_digest", "acceptance_contract_path", "acceptance_contract_digest", "verifier_id", "verifier_version", "result"],
                 "properties": {
                   "workflow_id": { "type": "string" },
                   "claim_type": { "type": "string", "enum": ["dev_done", "integration_done", "handoff_done"] },
@@ -199,7 +199,11 @@
                   "strategy_id": { "type": "string" },
                   "strategy_version": { "type": "string" },
                   "registry_digest": { "type": "string" },
+                  "evidence_manifest_path": { "type": "string" },
                   "evidence_manifest_digest": { "type": "string" },
+                  "spec_digest": { "type": "string" },
+                  "acceptance_contract_path": { "type": "string" },
+                  "acceptance_contract_digest": { "type": "string" },
                   "verifier_id": { "type": "string" },
                   "verifier_version": { "type": "string" },
                   "result": { "type": "string", "enum": ["pass", "fail", "blocked"] }
