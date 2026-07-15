@@ -13,6 +13,7 @@ from typing import Any
 
 ROOT = Path(__file__).resolve().parents[1]
 RUNNER = ROOT / "skills" / "change-aware-testing" / "scripts" / "run_changed_tests.py"
+GENERATOR = ROOT / "skills" / "change-aware-testing" / "scripts" / "generate_test_impact_map.py"
 
 
 def run(args: list[str], *, cwd: Path, expect: int = 0) -> subprocess.CompletedProcess[str]:
@@ -141,6 +142,49 @@ def main() -> int:
         if read_json(plan_path)["status"] != "no_changes":
             raise SystemExit("clean task boundary did not report no_changes")
 
+    with tempfile.TemporaryDirectory(prefix="change-aware-testing-generated-") as temp:
+        repo = Path(temp)
+        init_repo(repo)
+        (repo / ".agent/test-impact-map.json").unlink()
+        run(["git", "add", "-u"], cwd=repo)
+        run(["git", "commit", "-qm", "remove manual map"], cwd=repo)
+        run([sys.executable, str(GENERATOR), "--root", str(repo), "--promote"], cwd=repo)
+        generated = read_json(repo / ".agent/test-impact-map.json")
+        if {item["id"] for item in generated["rules"]} != {"python-orders", "python-users"}:
+            raise SystemExit(f"generated Python impact domains are wrong: {generated['rules']}")
+        run(["git", "add", ".agent/test-impact-map.json"], cwd=repo)
+        run(["git", "commit", "-qm", "add generated map"], cwd=repo)
+        write(repo / "src/orders/service.py", "VALUE = 3\n")
+        generated_plan = repo / "generated-plan.json"
+        run([sys.executable, str(RUNNER), "--root", str(repo), "--mode", "inner-loop", "--output", str(generated_plan)], cwd=repo)
+        if read_json(generated_plan)["selected_tests"] != ["tests/orders/test_service.py"]:
+            raise SystemExit("generated map did not select the mirrored orders tests")
+
+    with tempfile.TemporaryDirectory(prefix="change-aware-testing-update-") as temp:
+        repo = Path(temp)
+        init_repo(repo)
+        existing_map = read_json(repo / ".agent/test-impact-map.json")
+        existing_map["global_triggers"].append({"id": "generated-shared-tooling", "globs": ["pytest.ini"]})
+        write(repo / ".agent/test-impact-map.json", json.dumps(existing_map, indent=2) + "\n")
+        candidate_path = repo / ".agent/test-impact-map.candidate.json"
+        run([sys.executable, str(GENERATOR), "--root", str(repo), "--promote"], cwd=repo, expect=2)
+        run([sys.executable, str(GENERATOR), "--root", str(repo), "--update", "--output", str(candidate_path)], cwd=repo)
+        updated = read_json(candidate_path)
+        orders_rule = next(item for item in updated["rules"] if item["id"] == "orders")
+        if orders_rule != config()["rules"][0]:
+            raise SystemExit("generated update overwrote a reviewed project rule")
+        if "python-users" not in {item["id"] for item in updated["rules"]}:
+            raise SystemExit("generated update did not add a newly detected impact domain")
+        generated_trigger = next(item for item in updated["global_triggers"] if item["id"] == "generated-shared-tooling")
+        if not {"pytest.ini", "pyproject.toml"}.issubset(generated_trigger["globs"]):
+            raise SystemExit("generated update did not merge newly detected globs into an existing trigger")
+
+    with tempfile.TemporaryDirectory(prefix="change-aware-testing-unsupported-") as temp:
+        repo = Path(temp)
+        run(["git", "init", "-q"], cwd=repo)
+        write(repo / "README.md", "no supported test structure\n")
+        run([sys.executable, str(GENERATOR), "--root", str(repo)], cwd=repo, expect=2)
+
     print("Change-aware testing eval passed")
     print("- affected test selection: pass")
     print("- unrelated test exclusion: pass")
@@ -148,6 +192,9 @@ def main() -> int:
     print("- checkpoint fallback: pass")
     print("- unmapped diff guard: pass")
     print("- clean task boundary: pass")
+    print("- conservative map generation: pass")
+    print("- reviewed-rule-preserving update: pass")
+    print("- unsupported-project safe failure: pass")
     return 0
 
 

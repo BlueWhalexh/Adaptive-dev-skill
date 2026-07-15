@@ -51,7 +51,10 @@ python3 skills/workflow-control-plane/scripts/resolve_strategy.py route_decision
 Initialize workflow:
 
 ```sh
-python3 skills/workflow-control-plane/scripts/init_workflow.py route_decision.json --resolved-strategy resolved_strategy.json --workflow-id workflow-001 --output workflow_manifest.json
+python3 skills/workflow-control-plane/scripts/init_workflow.py route_decision.json \
+  --resolved-strategy resolved_strategy.json --workflow-id workflow-001 \
+  --goal-id <stable-issue-or-goal-id> --goal-summary "<approved goal and scope>" \
+  --output workflow_manifest.json
 ```
 
 Apply stage result:
@@ -69,13 +72,16 @@ python3 skills/workflow-control-plane/scripts/apply_route_facts_delta.py route_d
 Resume interrupted work:
 
 ```sh
-python3 skills/workflow-control-plane/scripts/resume_workflow.py workflow_manifest.json
+python3 skills/workflow-control-plane/scripts/resume_workflow.py workflow_manifest.json \
+  --goal-id <stable-issue-or-goal-id> --goal-summary "<current goal and scope>"
 ```
 
 Migrate an unsigned in-flight v5 manifest after a Strategy major-version change:
 
 ```sh
-python3 skills/workflow-control-plane/scripts/migrate_workflow_manifest_v5.py old_workflow_manifest.json --output workflow_manifest.json
+python3 skills/workflow-control-plane/scripts/migrate_workflow_manifest_v5.py old_workflow_manifest.json \
+  --goal-id <stable-issue-or-goal-id> --goal-summary "<approved goal and scope>" \
+  --output workflow_manifest.json
 ```
 
 Signed claims are never rewritten; archive or re-verify those workflows.

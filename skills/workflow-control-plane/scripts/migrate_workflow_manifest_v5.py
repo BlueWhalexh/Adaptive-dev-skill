@@ -11,6 +11,7 @@ from pathlib import Path
 
 from validate_json_artifact import load_json
 from validate_workflow_manifest import load_strategy, validate
+from goal_identity import build_goal_identity
 
 
 FORBIDDEN_LEGACY_METHODS = {
@@ -22,7 +23,7 @@ FORBIDDEN_LEGACY_METHODS = {
 }
 
 
-def migrate(manifest: dict) -> dict:
+def migrate(manifest: dict, goal_id: str, goal_summary: str) -> dict:
     if manifest.get("schema_version") != 5:
         raise ValueError("only workflow manifest schema_version=5 is supported")
     if manifest.get("claims", {}).get("validated"):
@@ -45,6 +46,7 @@ def migrate(manifest: dict) -> dict:
 
     migrated = dict(manifest)
     migrated["schema_version"] = 6
+    migrated["goal_identity"] = build_goal_identity(goal_id, goal_summary)
     migrated["strategy_version"] = strategy["version"]
     migrated["skill_suite_version"] = "2026-07-15"
     migrated["routing"] = {
@@ -84,11 +86,13 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("manifest")
     parser.add_argument("--output", required=True)
+    parser.add_argument("--goal-id", required=True, help="stable goal id for exact resume matching")
+    parser.add_argument("--goal-summary", required=True, help="approved goal and scope for exact resume matching")
     args = parser.parse_args()
     try:
         source = load_json(Path(args.manifest))
         recovered_review_limit = source.get("workflow_state") == "blocked" and source.get("resume", {}).get("blocked_reason") == "REVIEW_LIMIT_REACHED"
-        migrated = migrate(source)
+        migrated = migrate(source, args.goal_id, args.goal_summary)
     except ValueError as exc:
         print(f"FAIL: {exc}")
         return 1

@@ -8,6 +8,7 @@ import re
 from pathlib import Path
 
 from validate_json_artifact import load_json, validate_instance
+from goal_identity import build_goal_identity
 
 
 SKILL_DIR = Path(__file__).resolve().parents[1]
@@ -111,6 +112,14 @@ def validate(path: Path) -> list[str]:
 
     if not SAFE_ID.match(manifest["run_id"]):
         errors.append(f"run_id is unsafe: {manifest['run_id']}")
+    if "goal_identity" in manifest:
+        identity = manifest["goal_identity"]
+        try:
+            expected_identity = build_goal_identity(identity["goal_id"], identity["summary"])
+            if identity["fingerprint"] != expected_identity["fingerprint"]:
+                errors.append("goal_identity fingerprint does not match goal_id and summary")
+        except ValueError as exc:
+            errors.append(f"invalid goal_identity: {exc}")
     if manifest["manifest_revision"] < 1:
         errors.append("manifest_revision must be >= 1")
     if not VERSION.match(manifest["strategy_version"]):
@@ -192,12 +201,15 @@ def validate(path: Path) -> list[str]:
     if design["policy"] == "embedded":
         if topology != "compact":
             errors.append("embedded design requires documentation_topology=compact")
-        if not design.get("embedded_in"):
-            errors.append("embedded design requires design_control.embedded_in")
-        elif design["embedded_in"] not in artifact_ids:
+        if require_ready_gates:
+            if not design.get("embedded_in"):
+                errors.append("embedded design requires design_control.embedded_in before downstream work")
+            elif design["embedded_in"] not in artifact_ids:
+                errors.append(f"embedded design references missing plan artifact: {design['embedded_in']}")
+            if not design.get("section_ref"):
+                errors.append("embedded design requires non-empty design_control.section_ref before downstream work")
+        elif design.get("embedded_in") and design["embedded_in"] not in artifact_ids:
             errors.append(f"embedded design references missing plan artifact: {design['embedded_in']}")
-        if not design.get("section_ref"):
-            errors.append("embedded design requires non-empty design_control.section_ref")
     if design["policy"] == "standalone":
         if topology == "compact":
             errors.append("standalone design requires single_file_design or split_design_workspace topology")

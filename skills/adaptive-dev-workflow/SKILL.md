@@ -92,7 +92,8 @@ Router 只引用 `capability_report_ref`，不复制 OpenSpec/Superpowers/harnes
 1. Resume first for continuation work. Inspect the canonical single-run path `.agent/runtime/workflow_manifest.json` and multi-run path `.agent/runs/*/workflow_manifest.json` only when the request or repository indicates an interrupted/ongoing run. Resume without re-routing only when exactly one candidate matches the same goal/scope, is `active` or `review_ready`, and passes both workflow and artifact-graph validation:
 
 ```sh
-python3 skills/workflow-control-plane/scripts/resume_workflow.py <workflow_manifest.json>
+python3 skills/workflow-control-plane/scripts/resume_workflow.py <workflow_manifest.json> \
+  --goal-id <stable-issue-or-goal-id> --goal-summary "<current goal and scope>"
 python3 skills/workflow-control-plane/scripts/validate_artifact_graph.py <workflow_manifest.json>
 ```
 
@@ -117,7 +118,10 @@ python3 skills/workflow-control-plane/scripts/resolve_strategy.py route_decision
 7. For `manifest_policy=required`, let `workflow-control-plane` initialize workflow state only when step 1 did not resume an existing run:
 
 ```sh
-python3 skills/workflow-control-plane/scripts/init_workflow.py route_decision.json --resolved-strategy resolved_strategy.json --workflow-id workflow-001 --output workflow_manifest.json
+python3 skills/workflow-control-plane/scripts/init_workflow.py route_decision.json \
+  --resolved-strategy resolved_strategy.json --workflow-id workflow-001 \
+  --goal-id <stable-issue-or-goal-id> --goal-summary "<approved goal and scope>" \
+  --output workflow_manifest.json
 ```
 
 8. Report whether the run was resumed or newly routed, selected strategy, process depth, required skills, resolver-derived gates, and remaining ambiguity. Do not claim implementation completion from routing work.

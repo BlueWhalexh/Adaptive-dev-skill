@@ -164,8 +164,11 @@ def validate(path: Path) -> list[str]:
             errors.append("standalone design requires exactly one active technical_design artifact")
         if design_id and design_id not in by_id:
             errors.append(f"standalone design artifact is missing: {design_id}")
-    if policy == "embedded" and design.get("embedded_in") not in plan_ids:
-        errors.append(f"embedded design must point to a plan artifact: {design.get('embedded_in')}")
+    if policy == "embedded":
+        if plan_ids and not design.get("embedded_in"):
+            errors.append("embedded design must bind design_control.embedded_in when a plan exists")
+        elif design.get("embedded_in") and design.get("embedded_in") not in plan_ids:
+            errors.append(f"embedded design must point to a plan artifact: {design.get('embedded_in')}")
 
     evidence_ready = any(item["type"] == "evidence_manifest" and item["status"] in READY for item in artifacts)
     implementation_ready = any(item["type"] == "implementation" and item["status"] in READY for item in artifacts)

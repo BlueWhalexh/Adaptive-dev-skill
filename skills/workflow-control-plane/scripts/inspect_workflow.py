@@ -15,6 +15,7 @@ def summarize(manifest: dict) -> dict:
     artifacts = manifest["artifacts"]
     return {
         "run_id": manifest["run_id"],
+        "goal_identity": manifest.get("goal_identity"),
         "workflow_state": manifest["workflow_state"],
         "strategy": f"{manifest['selected_strategy']}@{manifest['strategy_version']}",
         "current_stage": manifest["current_stage"],

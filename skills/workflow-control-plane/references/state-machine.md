@@ -54,6 +54,10 @@ Knowledge Promotion 是关闭后的条件动作：仅在重复纠偏、稳定 SO
 
 Use `blocked` only when autonomous repair cannot proceed: `human_required`, missing capability or external state, irreversible-risk decision, unresolved permission/security ambiguity, or no executable repair path. Do not block merely because two Review passes found issues.
 
+## Goal Identity Rule
+
+新建 managed workflow 时必须提供稳定的 `goal_id` 和包含批准 scope 的 `goal_summary`。Control plane 规范化后保存 SHA-256 fingerprint。自动 resume 必须重新提供相同 identity；缺失 identity、复用 goal id 但 scope 已变、多个匹配 run 都不能自动恢复。`--allow-unbound` 只用于人工检查旧 manifest，不是自动执行入口。
+
 ## Resume Rule
 
 Single-run projects use `.agent/runtime/workflow_manifest.json`; concurrent or historical runs use `.agent/runs/<run-id>/workflow_manifest.json`. A caller must inspect both locations and auto-resume only one compatible active candidate. Multiple compatible candidates require explicit selection.
@@ -61,7 +65,8 @@ Single-run projects use `.agent/runtime/workflow_manifest.json`; concurrent or h
 Before resuming interrupted work, run:
 
 ```sh
-python3 skills/workflow-control-plane/scripts/resume_workflow.py workflow_manifest.json
+python3 skills/workflow-control-plane/scripts/resume_workflow.py workflow_manifest.json \
+  --goal-id <stable-issue-or-goal-id> --goal-summary "<current goal and scope>"
 ```
 
 Continue from `resume.resume_from_stage` only after validation passes.

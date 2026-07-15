@@ -568,6 +568,24 @@ def main() -> int:
         partial_iteration_resolved = json.loads(partial_iteration_resolved_path.read_text(encoding="utf-8"))
         if partial_iteration_resolved["strategy_id"] != "spec-driven-feature" or partial_iteration_resolved["execution_engine"] != "local":
             raise SystemExit("partial project SOP incorrectly triggered SOP-guided routing")
+        spec_feature_manifest_path = root / "spec-driven-feature-initial-manifest.json"
+        run([
+            sys.executable,
+            str(WORKFLOW / "scripts" / "init_workflow.py"),
+            str(partial_iteration_path),
+            "--resolved-strategy",
+            str(partial_iteration_resolved_path),
+            "--workflow-id",
+            "workflow-e2e-spec-feature",
+            "--goal-id",
+            "feature-orders-filter",
+            "--goal-summary",
+            "Add the approved orders filter feature",
+            "--output",
+            str(spec_feature_manifest_path),
+        ])
+        run([sys.executable, str(WORKFLOW / "scripts" / "validate_workflow_manifest.py"), str(spec_feature_manifest_path)])
+        run([sys.executable, str(WORKFLOW / "scripts" / "validate_artifact_graph.py"), str(spec_feature_manifest_path)])
 
         run([sys.executable, str(WORKFLOW / "scripts" / "resolve_strategy.py"), str(debug_route_path), "--output", str(debug_resolved_path)])
         debug_resolved = json.loads(debug_resolved_path.read_text(encoding="utf-8"))
@@ -582,7 +600,7 @@ def main() -> int:
         rerouted = json.loads(rerouted_path.read_text(encoding="utf-8"))
         if rerouted["classification"]["risk"] != "L3" or rerouted["classification"]["scope"] != "cross_service":
             raise SystemExit("route facts delta did not upgrade risk/scope")
-        run([sys.executable, str(WORKFLOW / "scripts" / "init_workflow.py"), str(route_path), "--resolved-strategy", str(resolved_path), "--workflow-id", "workflow-e2e-migration", "--output", str(initialized_manifest)])
+        run([sys.executable, str(WORKFLOW / "scripts" / "init_workflow.py"), str(route_path), "--resolved-strategy", str(resolved_path), "--workflow-id", "workflow-e2e-migration", "--goal-id", "migration-orders-v2", "--goal-summary", "Migrate orders to the approved v2 model", "--output", str(initialized_manifest)])
         run([sys.executable, str(WORKFLOW / "scripts" / "inspect_workflow.py"), str(initialized_manifest), "--validate"])
         run([sys.executable, str(WORKFLOW / "scripts" / "transition_workflow.py"), str(initialized_manifest), str(old_transition_path)], expect_ok=False)
         run([sys.executable, str(WORKFLOW / "scripts" / "transition_workflow.py"), str(initialized_manifest), str(stale_transition_path)], expect_ok=False)
@@ -591,6 +609,15 @@ def main() -> int:
         advanced_manifest = json.loads(initialized_manifest.read_text(encoding="utf-8"))
         if advanced_manifest["current_stage"] != "data_and_rollback_spec" or advanced_manifest["routing"]["required_skills"] != ["specflow"]:
             raise SystemExit("stage transition did not activate only the next stage skills")
+        resume_script = WORKFLOW / "scripts" / "resume_workflow.py"
+        run([sys.executable, str(resume_script), str(initialized_manifest), "--goal-id", "migration-orders-v2", "--goal-summary", "Migrate orders to the approved v2 model"])
+        run([sys.executable, str(resume_script), str(initialized_manifest), "--goal-id", "migration-orders-v2", "--goal-summary", "  MIGRATE   orders to the approved V2 model  "])
+        run([sys.executable, str(resume_script), str(initialized_manifest), "--goal-id", "migration-orders-v2", "--goal-summary", "Migrate orders to a materially changed v3 model"], expect_ok=False)
+        run([sys.executable, str(resume_script), str(initialized_manifest)], expect_ok=False)
+        tampered_goal_manifest = json.loads(initialized_manifest.read_text(encoding="utf-8"))
+        tampered_goal_manifest["goal_identity"]["summary"] = "A different goal with a reused fingerprint"
+        tampered_goal_path = write_json(root / "workflow-tampered-goal-bad.json", tampered_goal_manifest)
+        run([sys.executable, str(WORKFLOW / "scripts" / "validate_workflow_manifest.py"), str(tampered_goal_path)], expect_ok=False)
 
         wf_ok = write_json(root / "workflow-ok.json", workflow_manifest())
         wf_handoff_ok = workflow_manifest(requested="handoff_done", validated_claim="handoff_done")
@@ -867,6 +894,7 @@ def main() -> int:
         run([sys.executable, str(graph_validator), str(wf_plan_missing_spec_bad_path)], expect_ok=False)
         run([sys.executable, str(graph_validator), str(wf_design_missing_spec_bad_path)], expect_ok=False)
         run([sys.executable, str(manifest_validator), str(wf_embedded_bad_path)], expect_ok=False)
+        run([sys.executable, str(graph_validator), str(wf_embedded_bad_path)], expect_ok=False)
         run([sys.executable, str(manifest_validator), str(wf_compact_standalone_bad_path)], expect_ok=False)
         run([sys.executable, str(manifest_validator), str(wf_split_embedded_bad_path)], expect_ok=False)
         run([sys.executable, str(graph_validator), str(wf_stale_bad_path)], expect_ok=False)
@@ -909,26 +937,29 @@ def main() -> int:
         if review_human_blocked["workflow_state"] != "blocked" or review_human_blocked["resume"]["blocked_reason"] != "REVIEW_HUMAN_REQUIRED":
             raise SystemExit("human-required review did not retain the true blocking boundary")
         migrate_script = WORKFLOW / "scripts" / "migrate_workflow_manifest_v5.py"
-        run([sys.executable, str(migrate_script), str(old_unsigned_path), "--output", str(migrated_manifest_path)])
+        migration_identity_args = ["--goal-id", "legacy-orders-migration", "--goal-summary", "Complete the approved legacy orders migration"]
+        run([sys.executable, str(migrate_script), str(old_unsigned_path), *migration_identity_args, "--output", str(migrated_manifest_path)])
         migrated_manifest = json.loads(migrated_manifest_path.read_text(encoding="utf-8"))
         migrated_methods = {skill for skills in migrated_manifest["routing"]["skill_plan"].values() for skill in skills}
         if migrated_manifest["strategy_version"] != "2.2" or "superpowers:executing-plans" in migrated_methods:
             raise SystemExit("manifest migration retained legacy execution ceremony")
         if migrated_manifest["schema_version"] != 6:
             raise SystemExit("v5 manifest migration did not upgrade schema_version to 6")
-        recovered_review = run([sys.executable, str(migrate_script), str(old_review_blocked_path), "--output", str(recovered_review_path)])
+        if migrated_manifest.get("goal_identity", {}).get("goal_id") != "legacy-orders-migration":
+            raise SystemExit("v5 manifest migration did not bind the supplied goal identity")
+        recovered_review = run([sys.executable, str(migrate_script), str(old_review_blocked_path), *migration_identity_args, "--output", str(recovered_review_path)])
         recovered_manifest = json.loads(recovered_review_path.read_text(encoding="utf-8"))
         if recovered_manifest["workflow_state"] != "active" or recovered_manifest["current_stage"] != "delivery_review" or recovered_manifest["resume"]["blocked_reason"]:
             raise SystemExit("legacy REVIEW_LIMIT_REACHED workflow was not reactivated at its review stage")
         if "regenerate findings" not in recovered_review.stdout:
             raise SystemExit("legacy review recovery did not disclose missing historical findings")
-        run([sys.executable, str(migrate_script), str(old_external_blocked_path), "--output", str(preserved_external_path)])
+        run([sys.executable, str(migrate_script), str(old_external_blocked_path), *migration_identity_args, "--output", str(preserved_external_path)])
         preserved_external = json.loads(preserved_external_path.read_text(encoding="utf-8"))
         if preserved_external["workflow_state"] != "blocked" or preserved_external["resume"]["blocked_reason"] != "CAPABILITY_MISSING":
             raise SystemExit("v5 migration cleared a genuine external blocker")
-        run([sys.executable, str(migrate_script), str(old_signed_path), "--output", str(root / "signed-migration-bad.json")], expect_ok=False)
+        run([sys.executable, str(migrate_script), str(old_signed_path), *migration_identity_args, "--output", str(root / "signed-migration-bad.json")], expect_ok=False)
         signed_digest = sha256(old_signed_path)
-        run([sys.executable, str(migrate_script), str(old_signed_path), "--output", str(old_signed_path)], expect_ok=False)
+        run([sys.executable, str(migrate_script), str(old_signed_path), *migration_identity_args, "--output", str(old_signed_path)], expect_ok=False)
         if sha256(old_signed_path) != signed_digest:
             raise SystemExit("failed in-place migration modified the source manifest")
 

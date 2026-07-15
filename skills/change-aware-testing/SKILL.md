@@ -32,6 +32,14 @@ skills/change-aware-testing/schemas/test-impact-map.schema.json
 
 没有可信映射时不要猜测“增量测试已覆盖”。先使用项目原生命令做一次保守验证，再补齐映射。
 
+常见 Python、Go、Jest/Vitest 项目可先生成保守 candidate；默认不会覆盖 canonical map：
+
+```sh
+python3 skills/change-aware-testing/scripts/generate_test_impact_map.py --root .
+```
+
+Review candidate 后使用 `--promote`。已有人工维护的 map 使用 `--update --promote`：现有规则优先，脚本只补充新的规则和 fallback。无法可靠识别项目结构时脚本必须失败，不生成“看起来可用”的空映射。
+
 先用 `test -f .agent/test-impact-map.json` 检测映射。文件不存在时不要读取它、不要运行选择器，也不要把缺失本身制造成一次失败命令；直接按项目 testing contract / 原生命令降级，并记录 `mapping=missing`。
 
 ## Procedure

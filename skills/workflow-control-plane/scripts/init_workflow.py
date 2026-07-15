@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any
 
 from resolve_strategy import resolve
+from goal_identity import build_goal_identity
 from validate_json_artifact import load_json, validate_instance
 from validate_workflow_manifest import validate as validate_workflow_manifest
 
@@ -26,7 +27,7 @@ def approval_record(review: str) -> dict[str, Any]:
     return {"status": "pending", "reviewer": f"{review}-reviewer", "reviewer_kind": "agent", "evidence_ids": []}
 
 
-def build_manifest(route: dict[str, Any], resolved: dict[str, Any], workflow_id: str) -> dict[str, Any]:
+def build_manifest(route: dict[str, Any], resolved: dict[str, Any], workflow_id: str, goal_id: str, goal_summary: str) -> dict[str, Any]:
     if resolved["manifest_policy"] == "none":
         raise ValueError("DIRECT_ROUTE_NO_MANIFEST: execute the direct route without workflow_manifest.json")
     classification = route["classification"]
@@ -41,6 +42,7 @@ def build_manifest(route: dict[str, Any], resolved: dict[str, Any], workflow_id:
         "schema_version": 6,
         "skill_suite_version": "2026-07-15",
         "run_id": workflow_id,
+        "goal_identity": build_goal_identity(goal_id, goal_summary),
         "manifest_revision": 1,
         "strategy_version": resolved["strategy_version"],
         "workflow_state": "routed",
@@ -98,6 +100,8 @@ def main() -> int:
     parser.add_argument("route_decision", help="route_decision.json path")
     parser.add_argument("--resolved-strategy", help="optional resolved_strategy.json path")
     parser.add_argument("--workflow-id", default="workflow-001", help="safe workflow/run id")
+    parser.add_argument("--goal-id", help="stable issue/goal id required for managed workflows")
+    parser.add_argument("--goal-summary", help="stable goal statement used for exact resume matching")
     parser.add_argument("--output", required=True, help="workflow_manifest.json path")
     args = parser.parse_args()
 
@@ -112,7 +116,9 @@ def main() -> int:
         return 1
 
     try:
-        manifest = build_manifest(route, resolved, args.workflow_id)
+        if resolved["manifest_policy"] != "none" and (not args.goal_id or not args.goal_summary):
+            raise ValueError("GOAL_IDENTITY_REQUIRED: managed workflows require --goal-id and --goal-summary")
+        manifest = build_manifest(route, resolved, args.workflow_id, args.goal_id or args.workflow_id, args.goal_summary or "direct route")
     except ValueError as exc:
         print(f"FAIL: {exc}")
         return 1
