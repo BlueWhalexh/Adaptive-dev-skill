@@ -4,4 +4,4 @@ interface:
   default_prompt: "Use $project-harness-init to create AGENTS.md, spec-system routing, evidence, agent roles, project skill, and Goal Loop Mode."
 
 policy:
-  allow_implicit_invocation: true
+  allow_implicit_invocation: false

@@ -3,4 +3,4 @@ interface:
   short_description: "Resolve process depth, strategy, and workflow state"
 
 policy:
-  allow_implicit_invocation: true
+  allow_implicit_invocation: false

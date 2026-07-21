@@ -3,4 +3,4 @@ interface:
   short_description: "Turn intent and context into a reviewed spec"
 
 policy:
-  allow_implicit_invocation: true
+  allow_implicit_invocation: false

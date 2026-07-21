@@ -1,169 +1,143 @@
 ---
 name: adaptive-dev-workflow
-description: Classify a new or materially changed software-development goal and submit its route decision to workflow-control-plane. Use at task intake when risk, strategy, SpecFlow/OpenSpec, context grounding, handoff, harness, or downstream skill selection must be decided; do not use for ordinary continuation when an active workflow manifest already selects the current stage skill. 当新开发目标进入、范围或风险实质变化、需要选择开发策略/Spec/上下文/交付流程时使用；已有 active workflow 的普通续作直接恢复当前 stage，不重复触发本 skill。
+description: Keep a long-running or outcome-uncertain development goal focused on a minimum real slice and Basic Usable evidence. Use for goal mode, MVP, PoC/prototype/vertical slice, feasibility or product-direction validation, iterative AI/LLM behavior improvement, transition of an active goal into hardening, or when reviews/infrastructure displace product progress. Do not use for ordinary fixes/features/docs/review, a clear hardening or handoff task, or an already approved implementation. 当长期目标、MVP/基本可用、PoC/原型/最小真实链路、AI 效果迭代或流程跑偏需要重新确定优先级时使用；普通明确任务不触发。
 ---
 
 # Adaptive Dev Workflow
 
-你是 admission router。你的职责是判断“这是什么任务”，输出 `route_decision.json`，然后交给 `workflow-control-plane` 解析策略和维护状态。
+你是 Outcome Guard，不是通用开发总控，也不是 lifecycle engine。
 
-不要执行 specialist methodology。不要写 `workflow_manifest.json`。不要复制 SpecFlow、technical-design、context-grounding、delivery-verification 或 Superpowers 的规则。
+模型已经会读代码、规划、实现和测试。本 Skill 只补充一个它容易忽略的判断：长期或高不确定任务必须先证明用户关心的能力值得继续投资，不能让 Spec、Review、测试基础设施、Worktree 或流程 artifact 抢占主目标。
 
-## Output
+## Activation Gate
 
-输出必须符合：
+仅在以下任一情况成立时加载：
 
-```sh
-skills/workflow-control-plane/schemas/route-decision.schema.json
-```
+- 用户明确说目标模式、MVP、PoC、prototype、vertical slice、基本可用、方向验证或先跑通。
+- 任务是新的 AI/LLM/检索/Agent 行为链，真实效果尚未证明。
+- 同一目标跨多个回合或会话，需要保存当前优先级和下一步。
+- 用户询问为什么开发太久，或 Review、测试、观测、编排已经压过产品进展。
+- 一个已由本 Skill 管理的长期目标达到 Basic Usable，需要决定是否转入稳定性或发布阶段。
 
-核心结构：
+以下任务直接绕过本 Skill，由模型按仓库规则完成：普通 bugfix、明确的小功能、文档、样式、纯 Review、局部重构、已有方案下的清晰实现。
 
-```json
-{
-  "schema_version": 3,
-  "status": "provisional | confirmed",
-  "classification": {
-    "risk": "L0 | L1 | L2 | L3",
-    "work_intent": "implement | debug | review | design | verify | research | handoff",
-    "delivery_shape": "none | doc_only | local_change | feature | mvp | spike",
-    "scope": "local | module | cross_module | cross_service",
-    "uncertainty": "low | medium | high",
-    "pattern_familiarity": "known | adjacent | novel | unknown",
-    "profiles": ["frontend | api | data | auth | security | release | docs | infra"],
-    "change_types": ["docs | visual | bugfix | feature | api_contract | migration | refactor"]
-  },
-  "capability_report_ref": ".agent/runtime/capability-report.json",
-  "user_constraints": {
-    "network_access": "allowed | forbidden | unknown",
-    "production_changes": "allowed | forbidden | unknown",
-    "required_spec_system": "none | openspec | repo_native | fallback | null",
-    "required_execution_engine": "none | local | null"
-  },
-  "user_overrides": [],
-  "ambiguity": { "status": "clear | ambiguous", "reasons": [] }
-}
-```
+冲突时负条件优先：任务若已有清晰验收和下一步，即使叫 hardening、release 或 handoff，也直接执行或调用对应 Specialist。只有结果仍不确定、阶段取舍未决，或过程已经压过 capability progress 时才激活。
 
-## Classification
+## Four Laws
 
-只描述任务事实，不夹带 strategy、skill、spec system 或 execution engine。
+### 1. Outcome Before Process
 
-- `L0`: 文档、拼写、机械编辑、纯局部视觉/样式，且无状态/数据/API 影响。
-- `L1`: 窄范围行为修复或局部实现，影响面清楚。
-- `L2`: 新行为、API、UI workflow、1-3 个模块、有边界条件或可见链路。
-- `L3`: 跨模块/跨服务、权限/安全/数据/迁移、关键 user workflow、handoff/release、长期 harness。
+每轮先问：完成哪个用户可见能力或真实链路证据，才能减少当前最大不确定性？
 
-`pattern_familiarity` 只描述仓库内是否已有可复用模式：
+Spec、Design、测试、Review、观测、Skill、manifest 和 Worktree 只是手段。它们没有产生 capability delta 时，不得被描述为主进展。
 
-- `known`: 同类实现和项目 SOP 都明确。
-- `adjacent`: 有接近模式，但需要小幅设计判断。
-- `novel`: 仓库没有对应模式或正在建立新边界。
-- `unknown`: 尚未读到足够上下文；不要用它代替 `uncertainty`。
+### 2. Current Slice, Not Parent Risk
 
-若任务已明确声明 ready project SOP、known pattern、影响点和验收边界，通常使用 `uncertainty=low|medium`；不要仅因尚未打开实现文件就标成 `high`。只有产品边界、兼容契约、安全/数据影响或完成标准仍不清楚时才使用 `high`。
+项目整体风险不能自动传递给每个小步骤。按当前 slice 的真实 changed surface 判断：
 
-Intent rules:
+- 局部可逆改动保持局部流程。
+- public API、数据、权限、安全、并发、迁移和不可逆外部副作用才升级。
+- 文件数量、Plan checkbox、父任务是 L3，不是升级理由。
 
-- CI/test/runtime failure => `work_intent=debug`。
-- 用户只要求 review 且不修改 => `work_intent=review`。
-- 开放式调研、不承诺实现 => `work_intent=research` 且通常 `delivery_shape=spike`。
-- 数据/权限/状态迁移 => `change_types` 包含 `migration`，不要把 migration 写成 work intent。
-- 新项目/first MVP/project harness => `delivery_shape=mvp`。
-- SDK/package/runtime image/artifact/onboarding 交给新消费者使用，或用户要求“新项目可安装/可 import/可接入” => `work_intent=handoff`。
-- 只要求把 raw intent 生成 draft spec/design、明确禁止实现，且尚未发现不可降级事实时，按当前 artifact 交付风险通常为 `L2 + delivery_shape=doc_only`。不要因为需求名含“workflow/审核流/平台”就提前继承未来实现的 L3 风险；后续 grounding 发现 auth/security/data/cross-service/handoff 再升级。
+### 3. Evidence Proportional to the Claim
 
-Non-downgradable facts: `auth`、`security`、`data`、`migration`、`release`、`handoff`。这些事实不允许为了省流程降级为 L0/L1。
+只证明本轮声明：
 
-`user_constraints.required_spec_system` 和 `required_execution_engine` 只记录用户显式要求。Superpowers 不是 execution engine，不要写入 execution engine；adaptive 只执行 Strategy 当前 stage 已调度的原生 method。能力与默认选择属于 capability report 和 resolver。
+- 局部修复：复现/RED 或替代证据 + focused regression + 必要的 1-3 个真实 smoke。
+- Basic Usable：最小真实链路 + 代表场景矩阵 + 关键安全失败。
+- Harden：相邻回归、恢复/并发/观测等当前可靠性目标。
+- Release/Handoff：完整 acceptance、integration/E2E、real external/fresh consumer 和 rollback。
 
-## Capability Detection
+不要在中间小步提前摊销最终 Release Gate。
 
-不要把 capability 判断写进 route decision。由 control plane 脚本生成：
+### 4. Budget the Process
 
-```sh
-python3 skills/workflow-control-plane/scripts/detect_capabilities.py --root . --output .agent/runtime/capability-report.json
-```
+默认预算：主会话执行、零 Subagent、零新文档、零 workflow manifest。
 
-Router 只引用 `capability_report_ref`，不复制 OpenSpec/Superpowers/harness 探测结果。`project_sop=ready` 必须由 capability report 证明存在 instructions、project skill 和 testing contract；只有一个 `AGENTS.md` 不足以降级流程。current truth 不清时，用 `uncertainty=high` 和 `pattern_familiarity=unknown`。
+只有当前 slice 需要独立高风险 Review、并行任务互不共享写状态，或上下文污染会影响结论时才增加 Agent。一个边界默认最多一个 Reviewer 和一次 delta re-review，避免 reviewer 往返成为新的主任务；多个独立安全/数据边界或项目强制政策可以提高预算。非阻塞 finding 进入 deferred backlog。
+
+## Outcome Modes
+
+选择当前模式，不生成复杂分类或策略状态机：
+
+| Mode | Use when | Immediate behavior |
+| --- | --- | --- |
+| `bypass` | 普通明确任务 | 不使用本 Skill；直接实现和最小验证 |
+| `prove` | 新方向、MVP、模型行为尚未证明 | 先做 Minimum Real Slice 和 3-8 个代表场景 |
+| `improve` | 链路已通但未达 Basic Usable | 聚类失败，每轮只改一个最高价值 behavioral lever |
+| `harden` | Basic Usable 已成立 | 补可靠性、恢复、并发、可观测和回归保护 |
+
+不要因为任务最终要上线，就从第一步直接进入 `harden`。发布决定明确后停止应用本 Skill，直接调用项目交付流程或 `delivery-verification`。
 
 ## Procedure
 
-1. Resume first for continuation work. Inspect the canonical single-run path `.agent/runtime/workflow_manifest.json` and multi-run path `.agent/runs/*/workflow_manifest.json` only when the request or repository indicates an interrupted/ongoing run. Resume without re-routing only when exactly one candidate matches the same goal/scope, is `active` or `review_ready`, and passes both workflow and artifact-graph validation:
+1. 从用户请求和当前证据写出一句 `Current outcome`。
+2. 选择 Outcome Mode；若是 `bypass`，停止应用本 Skill，返回普通开发路径。
+3. 若尚无有效 acceptance，定义 Basic Usable：通常为 3-8 个代表场景、必须通过的真实链路和不可违反边界；已有标准时直接复用。
+4. 写出当前唯一 operational `Top blocker`。其他问题放入 `Deferred`；安全、数据损坏和不可逆风险不得延后。
+5. 执行能最快产生 capability delta 的动作。
+6. 验证同一信号；结果不好时按 failure cluster 修共性原因，不按单个 badcase 堆补丁。
+7. 达到 Basic Usable 后，明确询问或依据用户已给决策进入 `harden`；批准发布后退出本 Skill，不要自动扩展。
 
-```sh
-python3 skills/workflow-control-plane/scripts/resume_workflow.py <workflow_manifest.json> \
-  --goal-id <stable-issue-or-goal-id> --goal-summary "<current goal and scope>"
-python3 skills/workflow-control-plane/scripts/validate_artifact_graph.py <workflow_manifest.json>
+只有长期目标需要跨会话恢复时才读取 `references/goal-card.md` 并维护 Goal Card；同一会话或单一小步不要读取或创建。
+
+首次进入 `prove`/`improve`，或无法判断优先级和 Specialist 边界时，读取 `references/scenario-routing.md`；已有有效模式和下一步时不要读取。
+
+真实链路因凭证、外部环境、数据或服务不可用时，记录缺失条件和最近似的代理证据。代理证据只用于诊断，不得签发 Basic Usable；如果真实证据是当前决策所必需，向用户请求访问或外部决策。
+
+## Specialist Boundary
+
+Specialist Skill 只在当前动作真的需要时调用：
+
+- 已复现 bug 且根因未知：`systematic-debugging`。
+- 行为可自动化且回归价值高：`test-driven-development` 或项目测试方式。
+- 存在真正架构决策：`technical-design`。
+- 2 个以上独立并行工作流且收益明确：`agent-orchestration`。
+- 正在申请 integration/release/handoff 声明：`delivery-verification`。
+
+不要自动调用完整 Superpowers、workflow-control-plane、SpecFlow、context-grounding、project-harness-init 或 knowledge-promotion。已有 approved Spec/Design/Plan 时直接消费，不重新生成。
+
+## Human Judgment Boundary
+
+仅在以下情况需要人决定：
+
+- 产品目标、取舍或 Basic Usable 标准存在多种合理答案。
+- public contract、数据、权限、安全或不可逆生产操作需要授权。
+- 两条技术路线证据接近，但时间/质量/成本偏好不同。
+- 继续投入的预期收益已经低于成本。
+
+实现细节、测试命令、文件拆分、普通 Review finding 和可恢复失败由 Agent 自主处理。
+
+## Progress Contract
+
+阶段汇报只包含：
+
+```text
+Current outcome:
+Latest capability delta:
+Evidence:
+Top blocker:
+Next action:
+Deferred:
 ```
 
-   Continue from `resume.resume_from_stage`; do not regenerate approved, fresh Spec/Design/Plan artifacts. Multiple candidates, stale artifacts, a changed goal, incompatible strategy version, `blocked`, or `closed` means do not auto-resume.
-2. If no compatible run exists, inspect only enough context to classify.
-3. Emit `route_decision.json` or equivalent JSON object.
-4. If classification itself is ambiguous, set `ambiguity.status=ambiguous` with reasons and stop. Missing implementation details, acceptance details, migration design, or rollout plan are not route ambiguity; record `uncertainty=high` and let downstream skills handle them.
-5. Ensure capability report exists, then call strategy resolver:
-
-```sh
-python3 skills/workflow-control-plane/scripts/resolve_strategy.py route_decision.json --output resolved_strategy.json
-```
-
-6. Inspect `process_depth` and `manifest_policy` from the resolver:
-
-   - `direct`: execute the focused change with repo instructions/project SOP and the smallest validator. For behavior changes, use `change-aware-testing` in inner-loop mode instead of repeatedly running the full unit suite. Do not initialize a workflow manifest or load Superpowers.
-   - `selective`: initialize workflow state, then load only the exact `required_skills` needed by the active stage.
-   - `lifecycle`: initialize workflow state and follow the versioned strategy stages. Load only `skill_plan[current_stage]`; lifecycle depth never implies a full Superpowers workflow or L3 ceremony for every Task.
-
-   For implementation, obey `execution_policy`: parent risk controls final gates; Tasks use local risk. `continuous_batch` runs one focused signal per Task, then adjacent regression, Review, commit, report, and any manifest transition once per batch/milestone.
-
-7. For `manifest_policy=required`, let `workflow-control-plane` initialize workflow state only when step 1 did not resume an existing run:
-
-```sh
-python3 skills/workflow-control-plane/scripts/init_workflow.py route_decision.json \
-  --resolved-strategy resolved_strategy.json --workflow-id workflow-001 \
-  --goal-id <stable-issue-or-goal-id> --goal-summary "<approved goal and scope>" \
-  --output workflow_manifest.json
-```
-
-8. Report whether the run was resumed or newly routed, selected strategy, process depth, required skills, resolver-derived gates, and remaining ambiguity. Do not claim implementation completion from routing work.
-
-If `context-grounding` or another narrow skill discovers stronger facts, create a route facts delta and let control plane produce the next route revision:
-
-```sh
-python3 skills/workflow-control-plane/scripts/apply_route_facts_delta.py route_decision.json route_facts_delta.json --output route_decision.rev2.json
-```
-
-## Delegation Map
-
-- `workflow-control-plane`: strategy resolver, manifest, state transition, artifact graph, resume.
-- `context-grounding`: Analysis Pack, Context Manifest, freshness/runtime/sufficiency checks.
-- `specflow`: Product spec and OpenSpec adapter.
-- `technical-design`: architecture/design topology/design review.
-- `agent-orchestration`: role roster, work orders, context packets, structured role results.
-- `change-aware-testing`: diff-based test selection, inner-loop/checkpoint/completion cadence, broad-test escalation.
-- `superpowers-adapter`: contract bridge to native Superpowers skills.
-- `delivery-verification`: evidence manifest, verifier authority, claim issuance.
-- `project-harness-init`: AGENTS/project skill/spec evidence scaffold.
-- `knowledge-promotion`: reusable SOP and project skill learning candidates.
+不要逐条播报每个命令、Reviewer 往返、manifest 转换或 Worktree 操作。
 
 ## Never
 
-- Do not write or mutate `workflow_manifest.json`; only `workflow-control-plane` writes it.
-- Do not duplicate strategy matching policy; use the resolver.
-- Do not self-sign or validate claims.
-- Do not invent a parallel spec/design system when OpenSpec or repo-native surfaces exist.
-- Do not force L0/L1 tasks through full spec/design/E2E flow.
-- Do not model Superpowers as an execution engine or full workflow. It is only a provider of explicitly scheduled native method skills.
-- Do not create `workflow_manifest.json` for `manifest_policy=none`.
-- Do not start a new subagent merely because a different skill is used; isolate only for review, sufficiency eval, security, parallel tasks, or context-contamination control.
-- Do not treat Plan checkboxes as mandatory subagent, Review, commit, report, artifact package, or workflow-state boundaries.
+- 不用流程完成度替代产品能力完成度。
+- 不因 Reviewer 提出新问题自动改变当前优先级。
+- 不在 Basic Usable 前建设非必要 dashboard、Skill、全量 eval 或 release harness。
+- 不为每个 Task 创建 implementer/reviewer/fixer/re-review 链。
+- 不因验证失败两轮就阻塞；只在缺少可执行路径或需要外部决策时暂停。
+- 不把“用户没有反对”当作进入 harden/release 的批准。
 
 ## Validation
 
-After modifying this skill, run:
+修改本 Skill 后运行：
 
 ```sh
-python3 scripts/run-skill-sandbox-eval.py
-python3 /Users/didi/.codex/skills/.system/skill-creator/scripts/quick_validate.py skills/adaptive-dev-workflow
+python3 scripts/run-outcome-first-eval.py
+python3 scripts/run-fresh-agent-route-eval.py --repeat 1
+python3 "${CODEX_HOME:-$HOME/.codex}/skills/.system/skill-creator/scripts/quick_validate.py" skills/adaptive-dev-workflow
 ```
-
-`run-skill-sandbox-eval.py` 已聚合 workflow、change-aware testing 和 orchestration E2E；不要再重复运行这些 child eval。High-risk changes also require fresh-agent route eval and old/new comparison.

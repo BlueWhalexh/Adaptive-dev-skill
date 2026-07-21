@@ -1,135 +1,55 @@
 # Agent MD 写法指南
 
-`AGENTS.md`、`CLAUDE.md`、`GEMINI.md` 这类文件，本质上是 agent 的项目级操作系统。它们不应该只写一堆“请保持代码质量”的抽象口号，也不应该把所有规则堆成一个不可执行 checklist。
+`AGENTS.md` 是项目地图和不可违反边界，不是通用开发 SOP，也不是 Skill 调度器。
 
-更有效的写法是：把项目事实、任务路由、验证策略、停止条件写清楚，让 agent 能在运行时判断下一步该走什么流程。
+## 应该写什么
 
-## 一个好的 Agent MD 应该回答什么
+1. 项目是什么，入口和 current truth 在哪里。
+2. 架构、权限、数据、安全和生产边界。
+3. 可执行的构建、测试、启动和验证命令。
+4. 哪些不可逆决策需要人批准。
+5. 项目独有、反复验证过的开发约束。
 
-1. **这个项目是什么**
-   agent 需要快速知道产品、模块边界、主要用户流程和不可破坏的行为。
+## 不应该写什么
 
-2. **什么任务走什么流程**
-   docs-only、配置、小 bug、新功能、跨模块改动、安全/权限/数据迁移，应该分别使用什么 workflow level。
+- 所有开发任务默认加载某个 workflow Skill。
+- Tiny/Small/Medium/Large 的通用教程。
+- 每个 Task 强制 Spec、TDD、Reviewer、Worktree、commit 或全量测试。
+- “超过 N 个文件必须暂停”这类与语义风险无关的代理指标。
+- 可以由 lint、test、typecheck 或脚本机械执行的规则。
 
-3. **怎么验证**
-   每类改动对应哪些命令、测试、UI 检查或人工 review 标准。
+## 与 Adaptive 的关系
 
-4. **什么时候必须停下来**
-   当目标、scope、API、数据模型、安全姿态、用户可见行为或依赖发生变化时，agent 不能继续猜。
+Adaptive 只在长期目标、MVP/Basic Usable、AI 行为效果迭代或流程明显跑偏时使用。普通任务依赖模型原生工程判断和项目事实，不经过全局 Router。
 
-5. **什么不要做**
-   不做无关重构，不伪造验证，不写 secret，不绕过测试，不把临时文件提交进仓库。
-
-## 推荐结构
-
-```md
-# AGENTS.md
-
-## Project Context
-
-用 3-6 句话说明项目是什么、主要模块和关键约束。
-
-## Default Workflow
-
-所有实现、修复、重构、设计、规划类任务优先使用 `adaptive-dev-workflow`。
-根据风险选择 Tiny / Small / Medium / Large / OpenSpec。
-
-## Workflow Routing
-
-- Tiny: 文档、拼写、简单配置、单个明显改动。
-- Small: 单文件或窄范围 bugfix，行为清楚。
-- Medium: 1-3 个模块、新行为、有边界条件。
-- Large: 跨模块、迁移、权限、安全、数据模型、用户可见流程。
-- OpenSpec: 已有 OpenSpec，或需要长期演进的复杂能力。
-
-## Verification
-
-- docs-only: `git diff --check`，并检查链接/示例命令。
-- frontend: 相关 unit/component test，必要时 browser check。
-- backend: 相关 test，必要时 integration check。
-- security/auth/data: 增加 regression test，并标注 review 风险。
-
-## Stop Conditions
-
-如果需要改变 public API、data model、security posture、user-facing behavior、依赖或 scope，先暂停并向用户确认。
-
-## Boundaries
-
-- 不做无关重构。
-- 不提交 secret、token、账号信息。
-- 不声称完成，除非刚运行过能证明完成的验证。
-```
-
-## 写法原则
-
-### 1. 少写愿望，多写路由
-
-弱：
+可选规则：
 
 ```md
-请写高质量代码，注意测试。
+- 仅在长期目标、MVP/Basic Usable、AI 行为迭代或流程跑偏时使用 `adaptive-dev-workflow`；普通开发直接执行。
 ```
 
-强：
+如果项目已经有稳定的领域 Skill，直接按领域 Skill 执行，不要先经过 Adaptive 再转发。
+
+## 风险表达
+
+描述真实语义边界：
 
 ```md
-行为变更必须先定义验证方式。Small 任务至少运行相关 targeted test；Medium/Large 任务需要计划和验收证据。
+- 修改 session token 结构、授权判定或权限继承前必须人工确认。
+- migration 必须提供 rollback 和数据校验。
+- 生产发布只能使用项目 release command，不得手工改线上数据。
 ```
 
-### 2. 少写抽象标准，多写项目事实
+不要使用文件数、目录数或预计天数代替风险。
 
-弱：
+## 验证表达
+
+写项目命令，不写“请充分测试”：
 
 ```md
-遵守项目最佳实践。
+- 前端组件改动：`npm run test:web -- <target>`。
+- API contract 改动：运行 contract test 和一个真实 HTTP smoke。
+- Release：运行 `./scripts/release-verify.sh`。
 ```
 
-强：
-
-```md
-后端入口在 `backend/`，前端入口在 `frontend/`。认证逻辑只能在 `auth/` 边界内修改；如需改变 session 语义，必须暂停确认。
-```
-
-### 3. 少写“尽量”，多写停止条件
-
-弱：
-
-```md
-尽量不要扩大 scope。
-```
-
-强：
-
-```md
-如果实现需要修改请求/响应结构、数据库 schema、权限语义或用户可见流程，停止编码并说明原因。
-```
-
-### 4. 验证命令要可执行
-
-弱：
-
-```md
-运行测试。
-```
-
-强：
-
-```md
-后端改动运行 `npm run test:backend`；前端组件改动运行相关 component test；无法运行时说明原因和剩余风险。
-```
-
-## 和 Adaptive Dev Workflow 的关系
-
-Agent MD 提供项目事实和边界，Adaptive Dev Workflow 负责运行时路由。
-
-```text
-AGENTS.md / CLAUDE.md
-  -> 项目事实、禁区、验证命令、停止条件
-
-adaptive-dev-workflow
-  -> 根据任务风险选择 Tiny / Small / Medium / Large / OpenSpec
-  -> 动态调用 goal、planning、TDD、debugging、verification、review
-```
-
-这两者组合后，agent 才不会只“知道规则”，而是能把规则用于当前任务。
+验证强度与当前声明匹配。局部修复不提前承担最终 Release Gate。

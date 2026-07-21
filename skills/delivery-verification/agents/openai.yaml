@@ -3,4 +3,4 @@ interface:
   short_description: "Validate evidence and attest delivery claims"
 
 policy:
-  allow_implicit_invocation: true
+  allow_implicit_invocation: false

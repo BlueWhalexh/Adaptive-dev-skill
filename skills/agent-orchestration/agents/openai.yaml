@@ -4,4 +4,4 @@ interface:
   default_prompt: "Use $agent-orchestration to create role-based work orders, context packets, and structured result contracts so multiple agents can collaborate through artifacts instead of copied chat history."
 
 policy:
-  allow_implicit_invocation: true
+  allow_implicit_invocation: false

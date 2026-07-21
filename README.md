@@ -1,357 +1,128 @@
 # Adaptive Dev Skill
 
-Adaptive Dev Skill 是一组面向 Codex / Claude Code / Gemini CLI 的 AI coding workflow skills。它的目标不是把所有流程写进一个大 prompt，而是提供一个小型 workflow runtime：
+Adaptive Dev Skill 不是所有软件任务的总控工作流。它只解决一种前沿模型仍容易犯的错误：长期或高不确定目标被 Spec、Review、测试基础设施、Subagent 和 Worktree 吞没，真实能力迟迟没有跑通。
+
+当前默认产品只有一个轻量 Outcome Guard：
 
 ```text
-Admission Router + Workflow Control Plane + Narrow Skills + Verifier-signed Claims + Eval Harness
+Goal
+  -> Minimum Real Slice
+  -> Basic Usable evidence
+  -> outcome iteration
+  -> hardening
+  -> release / handoff
 ```
 
-核心判断：
+普通 bugfix、明确功能、文档、样式和纯 Review 不需要调用它。
 
-- 轻任务保持快：`direct` 路由不创建 workflow manifest，也不加载 Superpowers。
-- 成熟项目复用 SOP：已知模式走 project skill 与固定 validator，只按需调用单个原生 Superpowers skill。
-- 高风险任务保持稳：权限、数据、API、迁移、handoff 不允许只靠 happy path 或口头完成。
-- 复杂任务先固定 current truth：用 Analysis Pack / Context Manifest 裁剪上下文，再写 spec、technical design 和 plan。
-- 开发循环按 batch 跑增量测试：每个有行为含义的 Task 只跑 focused signal，连续低风险 Tasks 在 batch/milestone 才统一跑 adjacent regression、Review、commit 和汇报；全量 suite 留给显式 CI/release/project policy 或 global-impact 变更。
-- 交付声明由证据签发：实现者只能 request claim，不能 self-sign validated claim。
-- 中文团队的人读项目文档默认中文；文件名、路径、schema keys、命令、validator types、skill names 和工具报错保留英文。
+## Four Laws
 
-## Skill Suite
+1. **Outcome Before Process**：流程 artifact 不是 capability delta。
+2. **Current Slice, Not Parent Risk**：项目是 L3，不代表每个局部修改都走 L3。
+3. **Evidence Proportional to the Claim**：中间小步不提前承担 Release Gate。
+4. **Budget the Process**：默认零 Subagent、零新文档、零 manifest；只在真实边界增加。
 
-| Skill | Responsibility |
+## When To Use
+
+使用 `$adaptive-dev-workflow`：
+
+- 新 AI/LLM/Agent/检索链路尚未证明方向可行。
+- 用户要求目标模式、MVP、Basic Usable、先跑通或持续迭代。
+- 长任务已经被 Review、观测、测试或编排带偏。
+- Basic Usable 已成立，准备进入 hardening 或 release。
+
+不要使用：
+
+- 普通明确任务。
+- 已知 bug 的局部修复。
+- 文档、视觉调整、纯代码 Review。
+- 只需直接调用 `technical-design`、`systematic-debugging` 或 `skill-creator` 的专门任务。
+
+## Outcome Modes
+
+| Mode | Purpose |
 | --- | --- |
-| `adaptive-dev-workflow` | Admission router：分类任务事实、检测能力、输出 `route_decision.json` |
-| `workflow-control-plane` | Strategy resolver、`workflow_manifest.json` 单点写入、状态迁移、resume、artifact graph、claim ceiling |
-| `context-grounding` | Analysis Pack、Context Manifest、static/freshness/runtime/sufficiency 验证 |
-| `specflow` | 把 intent 或 Analysis Pack 转成 reviewed spec artifact；OpenSpec repo 走 adapter |
-| `technical-design` | 在 approved spec 和 implementation plan 之间生成/审查 technical design、设计边界、契约、回滚和 approval |
-| `agent-orchestration` | 生成 role roster、context packet、work order 和 structured role result，支持多 Agent 角色隔离协作 |
-| `change-aware-testing` | 根据 task diff 选择增量测试，管理 inner-loop/checkpoint/completion cadence 和 broad-test escalation |
-| `superpowers-adapter` | 把 approved artifacts 转换给 Superpowers 原生 skills，并把输出映射回 transition request |
-| `delivery-verification` | JSON evidence manifest、claim level、fresh consumer / real external / integration 证据验证 |
-| `knowledge-promotion` | 把重复 SOP、踩坑、用户反馈沉淀为 learning candidate，再进入项目 skill / AGENTS.md |
-| `project-harness-init` | 初始化项目级 harness：AGENTS.md、agent team、Goal Loop Mode、spec/technical design/plan/evidence 结构、项目 skill |
-
-Superpowers 仍然是可选方法提供者，不被重写。普通 `direct/selective` 默认不加载 Superpowers，Debug 可调用 `systematic-debugging`，规划可调用 `writing-plans`。Plan 执行、Review cadence 和 completion claim 默认由 Strategy execution policy、change-aware testing 与 delivery verification 管理，不自动进入 `executing-plans` 或 `subagent-driven-development`。
-
-## Control Plane Model
-
-`adaptive-dev-workflow` 只输出 `route_decision.json`。`workflow-control-plane` 根据 route decision 解析 strategy，并且是 `workflow_manifest.json` 的唯一 writer。机器校验 artifact 使用 JSON，Markdown 只做人读说明。
-
-Route decision:
-
-```json
-{
-  "schema_version": 3,
-  "status": "provisional",
-  "classification": {
-    "risk": "L2",
-    "work_intent": "implement",
-    "delivery_shape": "feature",
-    "scope": "module",
-    "uncertainty": "medium",
-    "pattern_familiarity": "novel",
-    "profiles": ["api"],
-    "change_types": ["api_contract"]
-  },
-  "capability_report_ref": ".agent/runtime/capability-report.json",
-  "user_constraints": {
-    "network_access": "unknown",
-    "production_changes": "forbidden",
-    "required_spec_system": null,
-    "required_execution_engine": null
-  },
-  "user_overrides": [],
-  "ambiguity": { "status": "clear", "reasons": [] }
-}
-```
-
-Resolved strategy:
-
-```json
-{
-  "schema_version": 4,
-  "strategy_id": "spec-driven-feature",
-  "strategy_version": "2.1",
-  "process_depth": "lifecycle",
-  "manifest_policy": "required",
-  "spec_system": "fallback",
-  "execution_engine": "local",
-  "execution_policy": {
-    "unit": "continuous_batch",
-    "task_risk": "local",
-    "task_exit": "focused_signal",
-    "checkpoint": "batch",
-    "review": "batch_risk",
-    "commit": "batch",
-    "manifest_updates": "stage_only",
-    "max_review_passes": 2
-  },
-  "required_skills": [],
-  "skill_plan": {
-    "ground": [],
-    "context_pack_if_needed": ["context-grounding"],
-    "pack_backed_specflow": ["specflow"],
-    "embedded_design": ["technical-design"],
-    "plan": ["superpowers:writing-plans"],
-    "focused_and_chain_verification": ["change-aware-testing", "delivery-verification"]
-  },
-  "design_control": {
-    "policy": "embedded",
-    "review": "self",
-    "documentation_topology": "compact",
-    "triggers": []
-  },
-  "gates": {
-    "human_design_approval_required": false,
-    "isolated_review_required": false,
-    "integration_evidence_required": true
-  },
-  "capability_report_ref": ".agent/runtime/capability-report.json",
-  "reason": "L2 implement -> lifecycle; project_sop=missing, pattern=novel"
-}
-```
-
-Deprecated and intentionally unsupported as canonical artifacts:
-
-- `route_card`
-- `evidence_card`
-- `artifact_state`
-- `delivery_claim`
-- `claim_ceiling`
-
-## Classification And Routing
-
-Classification describes task facts in `route_decision.json`:
-
-- `risk`: `L0 | L1 | L2 | L3`
-- `work_intent`: `implement | debug | review | design | verify | research | handoff`
-- `delivery_shape`: `none | doc_only | local_change | feature | mvp | spike`
-- `scope`: `local | module | cross_module | cross_service`
-- `uncertainty`: `low | medium | high`
-- `pattern_familiarity`: `known | adjacent | novel | unknown`
-- `profiles`: `frontend | api | data | auth | security | release | docs | infra`
-- `change_types`: `docs | visual | bugfix | feature | api_contract | migration | refactor`
-
-Routing describes execution choices after `workflow-control-plane` resolves the strategy:
-
-- `spec_system`: `none | openspec | repo_native | fallback`
-- `process_depth`: `direct | selective | lifecycle`
-- `manifest_policy`: `none | required`
-- `execution_engine`: `none | local`
-- `method_provider`: capability report 中的 `superpowers-native`，仅提供 stage-scoped method skill
-- `strategy_id`: selected strategy
-- `required_skills`: 当前 stage 才允许加载的 narrow skills
-- `skill_plan`: 后续 stage 到 skill 的延迟加载计划
-
-`OpenSpec` 是 spec system。`Superpowers` 不是 execution engine，只是原生 method skill provider。项目 SOP 是否可复用由 capability report 单独证明。
-
-## Strategies
-
-Strategy manifests live in `skills/workflow-control-plane/references/strategies/*.json`.
-
-| Strategy | Depth | Use when |
-| --- | --- | --- |
-| `quick-change` | direct | L0 docs/mechanical/local work |
-| `sop-guided-change` | direct | Ready project SOP 中的 L1 known pattern |
-| `focused-change` | selective | 其他 L1 implementation/bugfix；默认不加载 Superpowers |
-| `sop-guided-iteration` | selective | Ready project SOP 中的非关键 L2 known/adjacent pattern；使用项目 SOP 与 evidence gate |
-| `root-cause-debug` | selective | debug mode，按需只调用 systematic-debugging |
-| `spec-driven-feature` | lifecycle/local | 缺少成熟 SOP 或 novel 的 L2 feature |
-| `complex-real-slice` | lifecycle | L3、first MVP、handoff、关键边界；按 stage 选择方法 |
-| `migration-critical` | lifecycle | data/auth/security/migration/public protocol；按 stage 选择方法 |
-| `spike` | selective | bounded research，无 delivery claim |
-| `review-only` | direct | review without edits |
-
-The strategy owns stages. `direct` 不创建 manifest；`selective/lifecycle` 由 `workflow-control-plane` 记录 `selected_strategy` 和 `current_stage`。检测到 Superpowers 已安装本身不会改变 process depth。实现阶段由 `change-aware-testing` 运行受影响测试，`delivery-verification` 只负责根据 evidence 签发 claim，两者职责不混合。
-
-父级 L2/L3 风险只决定最终设计、集成、handoff 和 claim gate。每个 Plan Task 按自己的 changed surface 和 uncertainty 重新判断风险；Plan checkbox 不自动产生 subagent、Review、commit、report、artifact package 或 manifest transition。`continuous_batch` 才是复杂实现阶段的默认执行单位。
-
-Managed review 与 high-risk milestone 使用 Strategy-owned `stage_gates`：transition 必须匹配 allowed producer、minimum evidence 和 review mode。Independent review 还校验 reviewer actor 与 reviewed producer 分离；`changes_requested` 按 gate 的 `repair_stage` 返回修复，第二次仍有问题只重置 bounded Review cycle，不阻塞 Goal Mode。只有人工/外部能力/不可逆风险等真实 impasse 才进入 `blocked`。
-
-Project harness initialization is a local scaffold operation. Later stages may call one exact Superpowers native skill when scheduled, but project implementation remains owned by the workflow runtime.
-
-## Documentation Topology
-
-`design_control.documentation_topology` decides how many document layers the slice needs:
-
-| Topology | Use when | Shape |
-| --- | --- | --- |
-| `compact` | Small slice: `<5` files, one module, `<3` days | design notes inside spec or plan |
-| `single_file_design` | Standalone design is required but one design doc is enough | one canonical technical design artifact |
-| `split_design_workspace` | Large feature, multi-module, multi-phase, `>1` week, first MVP, migration, or repo-native split-doc request | spec/acceptance, design overview/parts, plan, ADR |
-
-For OpenSpec, reuse `proposal.md`, `design.md`, and `tasks.md`. For Superpowers fallback, use `docs/superpowers/specs`, `docs/superpowers/designs`, and `docs/superpowers/plans`. For repo-native large slices, use `docs/specs/<feature>/`, `docs/design/<feature>/`, `docs/plans/<feature>.md`, and `docs/adr/`.
-
-## Artifact Graph
-
-Artifacts are independent from workflow state:
-
-```json
-{
-  "id": "ctx-001",
-  "type": "context_manifest",
-  "status": "ready",
-  "version": 1,
-  "producer": "context-grounding",
-  "depends_on": ["ap-001"],
-  "covers_acceptance": ["AC-1"],
-  "path": "docs/context/ctx-001.json"
-}
-Graph rules:
-
-- `spec` depends on approved `analysis_pack`, unless there is a declared lightweight exception.
-- embedded `plan` depends on approved `spec` and declares a stable technical design section.
-- standalone `technical_design` depends on approved `spec`, approved `analysis_pack`, and ready/approved `context_manifest`.
-- standalone `plan` depends on approved `technical_design`.
-- `task_packet` depends on approved `plan` and ready/approved `context_manifest`.
-- validated claims require ready/approved `evidence_manifest`.
-- stale upstream artifacts force downstream artifacts to become `stale` or `rejected`.
-
-## Claims
-
-Agents request claims; verifiers sign claims.
-
-| Claim | Evidence requirement |
-| --- | --- |
-| `dev_done` | implementation artifact plus focused passing validator |
-| `integration_done` | passing integration/e2e/system/fresh-consumer/real-external evidence |
-| `handoff_done` | passing fresh consumer or real external evidence |
-
-Analysis Pack, SpecFlow, and Plan artifacts cannot by themselves request or validate delivery completion.
-
-For L2/L3 SpecFlow that changes runtime architecture, delivery contracts, public API, data/auth/security model, project priority, or implementation engine, use maker/checker separation: a spec writer drafts, an isolated spec reviewer checks, and the user or project approval flow decides whether the spec is approved.
-
-## Context Pack Verification
-
-`context-grounding` splits context validation into four checks:
-
-- Static validation: completeness, minimality, allowed/forbidden paths.
-- Freshness validation: repo commit and file hash freshness.
-- Runtime audit: actual reads stay inside allowed paths or update the pack first.
-- Sufficiency eval: fresh plan agent can plan from Spec + Context Pack without reading the repo.
-
-This is the main guard against complex tasks drifting back into “read everything and improvise”.
+| `bypass` | 普通任务绕过 Adaptive |
+| `prove` | 用 Minimum Real Slice 证明方向可行 |
+| `improve` | 用小矩阵和 failure cluster 迭代到 Basic Usable |
+| `harden` | 在已可用基础上补可靠性、恢复、并发和观测 |
+| `release` | 执行完整交付、fresh consumer、real external 和 rollback 验收 |
 
 ## Install
 
-```sh
-git clone https://github.com/BlueWhalexh/Adaptive-dev-skill.git
-cd Adaptive-dev-skill
-for skill in adaptive-dev-workflow workflow-control-plane context-grounding specflow technical-design agent-orchestration change-aware-testing superpowers-adapter delivery-verification knowledge-promotion project-harness-init; do
-  mkdir -p "$HOME/.codex/skills/$skill"
-  rsync -a "skills/$skill/" "$HOME/.codex/skills/$skill/"
-done
-```
-
-Optional `.agents` install:
+默认只安装 Outcome Guard：
 
 ```sh
-for skill in adaptive-dev-workflow workflow-control-plane context-grounding specflow technical-design agent-orchestration change-aware-testing superpowers-adapter delivery-verification knowledge-promotion project-harness-init; do
-  mkdir -p "$HOME/.agents/skills/$skill"
-  rsync -a "skills/$skill/" "$HOME/.agents/skills/$skill/"
-done
+mkdir -p "$HOME/.codex/skills/adaptive-dev-workflow"
+rsync -a skills/adaptive-dev-workflow/ "$HOME/.codex/skills/adaptive-dev-workflow/"
 ```
 
-## Use
+如果同时使用 Claude Code：
 
-Direct:
-
-```text
-Use $adaptive-dev-workflow.
-给导出接口加 format 参数，保持旧客户端兼容，并说明怎么验证。
+```sh
+mkdir -p "$HOME/.agents/skills/adaptive-dev-workflow"
+rsync -a skills/adaptive-dev-workflow/ "$HOME/.agents/skills/adaptive-dev-workflow/"
 ```
 
-Recommended project `AGENTS.md` line:
+不建议在全局 `AGENTS.md` 中规定“所有开发任务必须使用 Adaptive”。Skill 的双语 description 已覆盖窄触发场景。
+
+可选的一行全局规则：
 
 ```md
-For implementation, fix, refactor, design, planning, verification, review, or handoff tasks, use adaptive-dev-workflow to classify task facts and let workflow-control-plane resolve strategy. Direct routes use project SOP and focused validation without a workflow manifest. Selective/lifecycle routes create or update workflow_manifest.json and load only the skills required by the active stage. Use change-aware-testing for diff-based inner-loop tests and expand at checkpoints instead of running the full unit suite after every task. Request verifier-signed claims only through delivery-verification after evidence.
-Human-facing docs default to Chinese; keep commands, paths, schema keys, validator types, skill names, and tool errors in English.
+- 仅在长期目标、MVP/Basic Usable、AI 行为效果迭代或流程明显跑偏时使用 `adaptive-dev-workflow`；普通开发任务直接执行，不创建 workflow manifest。
 ```
 
-Complex project start:
+## Optional Specialist Skills
 
-```text
-Use $project-harness-init.
-Initialize this repo for Goal Loop Mode with OpenSpec-first spec routing, Superpowers fallback specs/plans when OpenSpec is absent, docs/evidence, AGENTS.md, agent team roles, and a project-local skill.
-```
+仓库仍保留以下窄 Skill，供用户显式安装和调用：
 
-## Eval And Validation
+| Skill | Explicit use |
+| --- | --- |
+| `change-aware-testing` | 项目确实需要按 diff 选择测试 |
+| `technical-design` | 存在真实架构/契约/迁移设计决策 |
+| `delivery-verification` | 申请 integration/release/handoff 声明 |
+| `agent-orchestration` | 2 个以上独立工作流值得并行 |
+| `project-harness-init` | 用户明确要求初始化项目 harness |
+| `knowledge-promotion` | 用户明确要求沉淀已验证项目经验 |
 
-Deterministic checks:
+`workflow-control-plane`、`context-grounding`、`specflow` 和 `superpowers-adapter` 作为兼容/高级组件保留，但默认不安装、不隐式调用。已有项目确实依赖 canonical manifest 时可以显式使用。
+
+## AGENTS.md Boundary
+
+`AGENTS.md` 应保存项目事实、真实命令和不可违反边界，不应复制一套通用开发方法论。
+
+推荐保留：
+
+- 项目入口和事实源。
+- 架构/安全/数据边界。
+- 可执行的测试和启动命令。
+- 需要人决定的不可逆操作。
+
+推荐删除：
+
+- 所有开发任务强制路由 Adaptive。
+- 按文件数量暂停。
+- 每个 Task 强制 TDD、独立 Reviewer、Worktree 和 commit。
+- 把项目最大风险继承给所有后续小步。
+
+## Validation
+
+Deterministic：
 
 ```sh
-PYTHONPYCACHEPREFIX=/private/tmp/adaptive-skill-pycache python3 -m py_compile scripts/*.py skills/*/scripts/*.py
 python3 scripts/run-skill-sandbox-eval.py
-python3 scripts/run-workflow-e2e-eval.py
-python3 scripts/run-agent-orchestration-e2e-eval.py
-python3 scripts/run-change-aware-testing-eval.py
-python3 scripts/run-handoff-fresh-consumer-eval.py
-python3 /Users/didi/.codex/skills/.system/skill-creator/scripts/quick_validate.py skills/adaptive-dev-workflow
-python3 /Users/didi/.codex/skills/.system/skill-creator/scripts/quick_validate.py skills/workflow-control-plane
-python3 /Users/didi/.codex/skills/.system/skill-creator/scripts/quick_validate.py skills/context-grounding
-python3 /Users/didi/.codex/skills/.system/skill-creator/scripts/quick_validate.py skills/specflow
-python3 /Users/didi/.codex/skills/.system/skill-creator/scripts/quick_validate.py skills/technical-design
-python3 /Users/didi/.codex/skills/.system/skill-creator/scripts/quick_validate.py skills/agent-orchestration
-python3 /Users/didi/.codex/skills/.system/skill-creator/scripts/quick_validate.py skills/change-aware-testing
-python3 /Users/didi/.codex/skills/.system/skill-creator/scripts/quick_validate.py skills/superpowers-adapter
-python3 /Users/didi/.codex/skills/.system/skill-creator/scripts/quick_validate.py skills/delivery-verification
-python3 /Users/didi/.codex/skills/.system/skill-creator/scripts/quick_validate.py skills/knowledge-promotion
-python3 /Users/didi/.codex/skills/.system/skill-creator/scripts/quick_validate.py skills/project-harness-init
-git diff --check
 ```
 
-Fresh semantic route eval:
+Fresh-agent semantic eval：
 
 ```sh
-python3 scripts/run-fresh-agent-route-eval.py --repeat 3 --case tiny-readme-command
-python3 scripts/run-fresh-agent-route-eval.py --repeat 3 --case sop-guided-existing-project
-python3 scripts/run-fresh-agent-route-eval.py --repeat 3 --case sop-guided-small-fix
-python3 scripts/run-fresh-agent-route-eval.py --repeat 3 --case debug-ci
-python3 scripts/run-fresh-agent-route-eval.py --repeat 3 --case specflow-intent-to-spec
-python3 scripts/run-fresh-agent-route-eval.py --repeat 3 --case complex-frontend-context-pack
-python3 scripts/run-fresh-agent-route-eval.py --repeat 3 --case package-handoff
-python3 scripts/run-fresh-agent-route-eval.py --repeat 3 --case large-permission-model
-python3 scripts/run-fresh-agent-route-eval.py --repeat 3 --case review-only-no-edit
-python3 scripts/run-fresh-agent-route-eval.py --repeat 3 --case spike-unknown-architecture
-python3 scripts/run-fresh-agent-route-eval.py --repeat 3 --case migration-critical-data
+python3 scripts/run-fresh-agent-route-eval.py --repeat 1
 ```
 
-The deterministic E2E checks verify JSON schema parsing, artifact graph rules, evidence claim rules, context validation, learning candidate path safety, project harness init, and fresh consumer package handoff. Real external handoff still belongs to each concrete project.
+测试集包含真实生产场景的抽象版本：Query Basic Usable、Import Minimum Real Slice、process drift、局部 CAS bug、前端修复、文档事实核对、权限设计和 package handoff。
 
-## Repository Layout
+## Historical Components
 
-```text
-skills/
-  adaptive-dev-workflow/
-    SKILL.md
-    schemas/
-    scripts/
-    references/
-      routing-model.md
-      strategy-registry.md
-      strategies/*.json
-  context-grounding/
-  specflow/
-  technical-design/
-  agent-orchestration/
-  change-aware-testing/
-  delivery-verification/
-  knowledge-promotion/
-  project-harness-init/
-scripts/
-evals/
-docs/
-examples/
-```
+2026-07-22 之前的 control-plane schema、strategy registry、artifact graph 和 eval report 仍保留，用于已有项目兼容和研究。它们不再代表默认使用方式。
 
-## Design Sources
-
-- OpenAI Codex skills: concise skills with progressive disclosure.
-- OpenAI Codex AGENTS.md: durable project rules should live near the project.
-- Superpowers: optional stage-scoped methods such as systematic debugging, writing plans, and explicit strict TDD/review.
-- OpenSpec: preferred product behavior spec lifecycle when the repo already uses it.
-
-## Contributing
-
-Good changes should improve measured behavior, not just add wording. Compare with old versions or no-skill baselines using seed cases, failure cases, deterministic validators, fresh-agent route evals, and human review notes.
+完整生产轨迹分析见 `docs/research/`。

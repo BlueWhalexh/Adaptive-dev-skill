@@ -1,0 +1,145 @@
+{
+  "schema_version": 1,
+  "cases": [
+    {
+      "id": "tiny-readme",
+      "prompt": "README 里把 npm 改成 pnpm，并检查示例命令。",
+      "activate": false,
+      "mode": "bypass",
+      "max_new_subagents": 0,
+      "forbidden_skills": ["workflow-control-plane", "specflow", "technical-design"]
+    },
+    {
+      "id": "frontend-local-fix",
+      "prompt": "修复 React related assets 列表 duplicate key warning，运行相关前端测试。",
+      "activate": false,
+      "mode": "bypass",
+      "max_new_subagents": 0,
+      "forbidden_skills": ["workflow-control-plane", "specflow", "agent-orchestration"]
+    },
+    {
+      "id": "docs-fact-check",
+      "prompt": "只核对并修订新人代码串讲 Markdown，关键事实回到当前代码验证，不改业务代码。",
+      "activate": false,
+      "mode": "bypass",
+      "max_new_subagents": 0,
+      "forbidden_skills": ["workflow-control-plane", "specflow"]
+    },
+    {
+      "id": "known-cas-bug",
+      "prompt": "已复现 heartbeat 后 CAS revision 过期。做最小修复，focused regression 后跑一次真实 smoke。",
+      "activate": false,
+      "mode": "bypass",
+      "max_new_subagents": 0,
+      "forbidden_skills": ["workflow-control-plane", "specflow", "technical-design"]
+    },
+    {
+      "id": "query-new-chain",
+      "prompt": "从零建立 Knowledge Query 的 LLM 检索、Judge、Composer 链路。先证明方向可行，再考虑生产可靠性。",
+      "activate": true,
+      "mode": "prove",
+      "max_new_subagents": 1,
+      "required_concepts": [["minimum real slice", "最小真实链路"], ["代表场景", "代表性"]],
+      "forbidden_skills": ["workflow-control-plane", "project-harness-init", "knowledge-promotion"]
+    },
+    {
+      "id": "query-basic-usable",
+      "prompt": "查询链路已经跑通，但列举、比较和 partial 经常失败。进入目标模式，先迭代到基本可用，不要过度 review。",
+      "activate": true,
+      "mode": "improve",
+      "max_new_subagents": 1,
+      "required_concepts": [["矩阵", "代表性"], ["共性", "共因", "聚类"]],
+      "forbidden_skills": ["workflow-control-plane", "specflow", "project-harness-init", "knowledge-promotion"]
+    },
+    {
+      "id": "process-drift",
+      "prompt": "当前一直在修评估计数和 review finding，真实查询还没验证。请重新定优先级，先让我看到阶段性可用结果。",
+      "activate": true,
+      "mode": "prove",
+      "max_new_subagents": 0,
+      "required_concepts": ["真实", ["deferred", "非阻塞", "延后", "暂缓", "暂停"]],
+      "forbidden_skills": ["workflow-control-plane", "technical-design", "knowledge-promotion"]
+    },
+    {
+      "id": "import-minimum-chain",
+      "prompt": "验证文章导入是否能正确理解 Source、从 Overview 选资产、读取后生成候选 patch。先跑通一次核心链路。",
+      "activate": true,
+      "mode": "prove",
+      "max_new_subagents": 1,
+      "required_concepts": ["source", "overview", ["candidate", "候选"]],
+      "forbidden_skills": ["workflow-control-plane", "project-harness-init", "knowledge-promotion"]
+    },
+    {
+      "id": "post-usable-hardening",
+      "prompt": "这个长期目标由目标模式管理，代表场景已达到 Basic Usable。crash recovery、并发、观测和回归保护还没排优先级，请决定下一阶段最值得先做什么。",
+      "activate": true,
+      "mode": "harden",
+      "max_new_subagents": 1,
+      "required_concepts": ["可靠", ["已达到", "已经达到"]],
+      "forbidden_skills": ["project-harness-init", "knowledge-promotion"]
+    },
+    {
+      "id": "package-release",
+      "prompt": "功能已通过开发测试，准备交接 SDK 给新项目使用，请完成 release/handoff 验收。",
+      "activate": false,
+      "mode": "bypass",
+      "max_new_subagents": 1,
+      "required_concepts": ["fresh consumer", "handoff"],
+      "allowed_skills": ["delivery-verification"],
+      "forbidden_skills": ["project-harness-init", "knowledge-promotion"]
+    },
+    {
+      "id": "auth-migration-design",
+      "prompt": "把权限模型从 role 迁移到 policy。先给我技术设计，不要实现。",
+      "activate": false,
+      "mode": "bypass",
+      "max_new_subagents": 0,
+      "allowed_skills": ["technical-design"],
+      "forbidden_skills": ["workflow-control-plane", "project-harness-init"]
+    },
+    {
+      "id": "explicit-project-skill",
+      "prompt": "把已经重复验证三次的导入 SOP 做成一个项目级 Skill。",
+      "activate": false,
+      "mode": "bypass",
+      "max_new_subagents": 0,
+      "allowed_skills": ["skill-creator"],
+      "forbidden_skills": ["workflow-control-plane", "specflow"]
+    },
+    {
+      "id": "clear-hardening-task",
+      "prompt": "Basic Usable 已确认，验收标准也已批准。现在只实现 crash recovery，并运行现有 recovery integration test。",
+      "activate": false,
+      "mode": "bypass",
+      "max_new_subagents": 0,
+      "forbidden_skills": ["workflow-control-plane", "specflow", "agent-orchestration"]
+    },
+    {
+      "id": "external-evidence-blocked",
+      "prompt": "进入目标模式验证真实导入链路，但当前没有外部 Source 凭证。不要拿 mock 冒充基本可用。",
+      "activate": true,
+      "mode": "prove",
+      "max_new_subagents": 0,
+      "required_concepts": [["凭证", "访问"], ["不得", "不能", "禁止", "forbidden"], ["basic usable", "基本可用"]],
+      "forbidden_skills": ["workflow-control-plane", "project-harness-init", "knowledge-promotion"]
+    },
+    {
+      "id": "resume-long-goal",
+      "prompt": "继续昨天跨会话的 Query 目标：链路已通，比较类失败仍最多。按原 Basic Usable 标准继续迭代。",
+      "activate": true,
+      "mode": "improve",
+      "max_new_subagents": 0,
+      "required_concepts": [["比较", "失败"], ["共因", "聚类", "behavioral"]],
+      "forbidden_skills": ["workflow-control-plane", "specflow", "project-harness-init"]
+    },
+    {
+      "id": "active-goal-release-transition",
+      "prompt": "这个长期 SDK 目标一直由目标模式管理，Basic Usable 和 hardening 标准都已通过，但还没决定是否值得进入 release/handoff。请先做阶段取舍，不要直接开始交付验收。",
+      "activate": true,
+      "mode": "harden",
+      "max_new_subagents": 0,
+      "required_concepts": [["release", "handoff"], ["已通过", "basic usable"]],
+      "forbidden_skills": ["delivery-verification", "workflow-control-plane", "project-harness-init", "knowledge-promotion"]
+    }
+  ]
+}

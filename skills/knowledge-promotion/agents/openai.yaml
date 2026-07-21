@@ -3,4 +3,4 @@ interface:
   short_description: "Promote validated project learning"
 
 policy:
-  allow_implicit_invocation: true
+  allow_implicit_invocation: false
