@@ -78,6 +78,8 @@ rsync -a skills/adaptive-dev-workflow/ "$HOME/.agents/skills/adaptive-dev-workfl
 
 | Skill | Explicit use |
 | --- | --- |
+| `brainstorming` | 产品、交互、架构或 public contract 存在会改变结果的未决选择；明确的小功能和字段扩展不调用 |
+| `test-driven-development` | 高回归价值、可自动化的行为切片；按切片集中一轮 RED/GREEN，不为每个断言重复 |
 | `change-aware-testing` | 项目确实需要按 diff 选择测试 |
 | `technical-design` | 存在真实架构/契约/迁移设计决策 |
 | `delivery-verification` | 申请 integration/release/handoff 声明 |
@@ -117,6 +119,7 @@ Fresh-agent semantic eval：
 
 ```sh
 python3 scripts/run-fresh-agent-route-eval.py --repeat 1
+python3 scripts/run-specialist-routing-eval.py --repeat 1
 ```
 
 测试集包含真实生产场景的抽象版本：Query Basic Usable、Import Minimum Real Slice、process drift、局部 CAS bug、前端修复、文档事实核对、权限设计和 package handoff。

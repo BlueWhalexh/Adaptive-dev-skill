@@ -93,8 +93,9 @@ Spec、Design、测试、Review、观测、Skill、manifest 和 Worktree 只是�
 
 Specialist Skill 只在当前动作真的需要时调用：
 
+- 产品、交互、架构或 public contract 存在会改变结果的未决选择：`brainstorming`。已有明确 acceptance 的局部功能、bugfix、metadata/front matter/字段扩展不调用。
 - 已复现 bug 且根因未知：`systematic-debugging`。
-- 行为可自动化且回归价值高：`test-driven-development` 或项目测试方式。
+- 行为可自动化且回归价值高：`test-driven-development` 或项目测试方式；按行为切片集中一轮 RED/GREEN，不为每个断言重启流程。
 - 存在真正架构决策：`technical-design`。
 - 2 个独立 writer、3 个以上角色/会话需要协调，或用户明确要求 orchestrator：`agent-orchestration`。单 maker + 单 Reviewer 不加载该 Skill。
 - 正在申请 integration/release/handoff 声明：`delivery-verification`。
@@ -144,5 +145,6 @@ Deferred:
 python3 scripts/run-outcome-first-eval.py
 python3 scripts/run-fresh-agent-route-eval.py --repeat 1
 python3 scripts/run-fresh-lightweight-dev-eval.py --repeat 1
+python3 scripts/run-specialist-routing-eval.py --repeat 1
 python3 "${CODEX_HOME:-$HOME/.codex}/skills/.system/skill-creator/scripts/quick_validate.py" skills/adaptive-dev-workflow
 ```

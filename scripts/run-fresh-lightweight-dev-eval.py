@@ -55,7 +55,7 @@ Read these contracts:
 - skills/adaptive-dev-workflow/SKILL.md
 - skills/adaptive-dev-workflow/references/lightweight-sdd-and-testing.md
 
-Decide the minimum documentation and evidence for this current slice. Do not infer release requirements from parent-project risk. `failure_evidence=preferred` means obtain failing evidence first when reasonable; `alternate` means no mechanical RED. `claim_ceiling=proxy_only` means current proxy evidence cannot sign a product capability claim.
+Decide the minimum documentation and evidence for this current slice. Do not infer release requirements from parent-project risk. `failure_evidence=preferred` means obtain failing evidence first when reasonable; `alternate` means no mechanical RED. `claim_ceiling=proxy_only` means current proxy evidence cannot sign a product capability claim. Use `spec_artifact=reuse_existing` only when the prompt explicitly identifies an existing Spec/OpenSpec/requirement artifact; an already agreed field list or server contract alone is not a Spec artifact.
 
 User task:
 {case['prompt']}

@@ -1,0 +1,37 @@
+{
+  "schema_version": 1,
+  "cases": [
+    {
+      "id": "extension-local-download-defined",
+      "prompt": "现有 Chrome Extension 已生成 Markdown。新增按钮，用 MV3 downloads API 保存到用户本机；服务器路径不变，验收明确。",
+      "brainstorming": false,
+      "tdd": false,
+      "design_document": false,
+      "independent_review": true
+    },
+    {
+      "id": "front-matter-fields-defined",
+      "prompt": "给本地 Markdown 增加已经确认的 title、source_url、captured_at front matter，直接实现。",
+      "brainstorming": false,
+      "tdd": false,
+      "design_document": false,
+      "independent_review": false
+    },
+    {
+      "id": "public-contract-choice",
+      "prompt": "我们要改变公开导出 API。同步返回文件还是异步创建下载任务尚未决定，会影响兼容性和调用方。先确定方案。",
+      "brainstorming": true,
+      "tdd": false,
+      "design_document": true,
+      "independent_review": true
+    },
+    {
+      "id": "visual-spacing-only",
+      "prompt": "把弹窗按钮间距从 4px 改为 8px，不改变任何交互。",
+      "brainstorming": false,
+      "tdd": false,
+      "design_document": false,
+      "independent_review": false
+    }
+  ]
+}

@@ -46,6 +46,8 @@ evidence: 每项 acceptance 由什么证明
 
 E2E 与 unit 是互补关系：E2E 证明链路，unit 约束逻辑并快速定位。Fresh consumer 与 real external 也不是等价证据，按交付声明二选一或组合。不要用全量 E2E 代替局部回归，也不要把 mock/fake 描述成真实链路。
 
+用户可见不等于里程碑：一个 deployable component 内、acceptance 已明确且不改变外部 contract 的局部能力，仍使用 `focused` validator 和 `local_change` claim。浏览器 API、manifest/config 或 UI 接线可以增加 static/focused test 和一次风险 Review，但不能仅凭“需要用户手工点一下”自动升级为 `changed_scope`、E2E 或 Basic Usable。只有跨 runtime/module contract，或本轮明确申请关键用户旅程/里程碑声明时才升级。
+
 ## Failure-Sensitive Testing
 
 不要求每个任务机械执行 Test First 或 RED。先问：这次能否以合理成本证明 validator 对目标失败敏感？
@@ -62,6 +64,7 @@ E2E 与 unit 是互补关系：E2E 证明链路，unit 约束逻辑并快速定�
 以下情况先定义 alternate validator 即可：
 
 - 文档、文案、机械重命名和局部样式。
+- 字段、metadata/front matter 或简单格式转换已经明确，风险低且可由 focused assertions 直接验证。
 - 视觉结果更适合 screenshot 或人工 acceptance。
 - 测试环境不可用，或自动化成本明显高于当前风险。
 - 已有 focused regression 能直接覆盖相同 contract。

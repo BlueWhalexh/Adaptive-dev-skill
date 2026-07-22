@@ -74,6 +74,30 @@
       "claim_ceiling": "local_change"
     },
     {
+      "id": "extension-local-download-defined",
+      "prompt": "现有 Chrome Extension 已生成 Markdown。新增一个按钮，用 MV3 downloads API 直接保存到用户本机；服务器保存路径保持不变，验收已经明确。",
+      "spec_artifact": "none",
+      "technical_design_needed": false,
+      "failure_evidence": "preferred",
+      "validator_scope": "focused",
+      "required_layers": ["unit"],
+      "forbidden_layers": ["fresh_consumer", "real_external"],
+      "max_new_documents": 0,
+      "claim_ceiling": "local_change"
+    },
+    {
+      "id": "front-matter-field-extension",
+      "prompt": "给本地下载的 Markdown 增加 title、source_url、captured_at front matter，字段和服务器 contract 已确认。直接实现。",
+      "spec_artifact": "none",
+      "technical_design_needed": false,
+      "failure_evidence": "alternate",
+      "validator_scope": "focused",
+      "required_layers": ["unit"],
+      "forbidden_layers": ["e2e", "fresh_consumer", "real_external"],
+      "max_new_documents": 0,
+      "claim_ceiling": "local_change"
+    },
+    {
       "id": "mock-cannot-prove-basic-usable",
       "prompt": "LLM 查询链路的 mock 和 fake tests 都通过了，但没有真实模型或外部 Source 凭证。现在能否声明 Basic Usable？",
       "spec_artifact": "none",
