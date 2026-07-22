@@ -89,6 +89,8 @@ rsync -a skills/adaptive-dev-workflow/ "$HOME/.agents/skills/adaptive-dev-workfl
 
 `workflow-control-plane`、`context-grounding`、`specflow` 和 `superpowers-adapter` 作为兼容/高级组件保留，但默认不安装、不隐式调用。已有项目确实依赖 canonical manifest 时可以显式使用。
 
+原生 `superpowers:brainstorming` 和 `superpowers:test-driven-development` 的默认触发范围过宽，不属于推荐安装集合；使用本仓库的轻量同名 Skill。其他 Superpowers Skill 仍可按当前动作选择性使用。
+
 ## AGENTS.md Boundary
 
 `AGENTS.md` 应保存项目事实、真实命令和不可违反边界，不应复制一套通用开发方法论。

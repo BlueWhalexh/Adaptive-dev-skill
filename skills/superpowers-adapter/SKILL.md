@@ -29,10 +29,10 @@ Use `references/superpowers-mapping.md` before calling a Superpowers execution s
 
 General mapping. Apply only the row required by the current stage; do not preload other rows:
 
-- Unresolved product, architecture, UX, or public-contract decision with multiple consequential answers -> `superpowers:brainstorming`. Acceptance-defined local changes bypass it.
+- Unresolved product, architecture, UX, or public-contract decision with multiple consequential answers -> lightweight `brainstorming`. Acceptance-defined local changes bypass it.
 - Approved spec but no implementation plan -> `superpowers:writing-plans`.
 - Written plan ready for execution -> use Registry batch policy; adaptive strategies do not schedule `superpowers:executing-plans`.
-- High-regression automatable behavior where strict test-first behavior has clear value -> `superpowers:test-driven-development`; group one behavior slice into one RED/GREEN cycle. Ordinary local changes use focused project validation or `change-aware-testing`.
+- High-regression automatable behavior where failure-sensitive testing has clear value -> lightweight `test-driven-development`; group one behavior slice into one RED/GREEN cycle. Ordinary local changes use focused project validation or `change-aware-testing`.
 - Failure or unknown cause -> `superpowers:systematic-debugging`.
 - Significant high-risk boundary review -> use Strategy `agent-orchestration` gate.
 - Completion claim -> `delivery-verification`.

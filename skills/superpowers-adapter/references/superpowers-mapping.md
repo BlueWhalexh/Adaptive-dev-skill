@@ -6,9 +6,9 @@ Invoke only the exact mapped row selected for the active stage. A lifecycle may 
 
 | Workflow situation | Native Superpowers skill | Input artifact |
 | --- | --- | --- |
-| Product, architecture, UX, or public-contract decision remains consequentially unresolved | `superpowers:brainstorming` | unresolved decision, constraints, relevant facts |
+| Product, architecture, UX, or public-contract decision remains consequentially unresolved | `brainstorming` | unresolved decision, constraints, relevant facts |
 | Multi-step implementation needed | `superpowers:writing-plans` | approved spec, approved/embedded technical design, evidence plan |
-| Strategy explicitly requires strict test-first behavior for a high-regression behavior slice | `superpowers:test-driven-development` | acceptance criteria, behavior slice, focused validator target |
+| Strategy requires failure-sensitive testing for a high-regression behavior slice | `test-driven-development` | acceptance criteria, behavior slice, focused validator target |
 | Bug/test/CI failure | `superpowers:systematic-debugging` | failure signal, reproduction, logs |
 
 An approved Plan normally executes through `execution_policy=single_change|continuous_batch`. Do not infer a native Superpowers execution chain from plan existence, lifecycle depth, or parent risk.
