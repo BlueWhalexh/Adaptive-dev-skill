@@ -82,8 +82,8 @@ def main() -> int:
         if marker not in guide:
             fail(f"lightweight guide missing contract: {marker}")
     lightweight_cases = json.loads(read(LIGHTWEIGHT_CASES)).get("cases", [])
-    if len(lightweight_cases) < 7:
-        fail("expected at least 7 lightweight SDD/testing behavior cases")
+    if len(lightweight_cases) < 9:
+        fail("expected at least 9 lightweight SDD/testing behavior cases")
     if not (ROOT / "scripts" / "run-fresh-lightweight-dev-eval.py").exists():
         fail("missing fresh lightweight behavior evaluator")
 

@@ -14,6 +14,7 @@
 仓库原生 OpenSpec、ADR、RFC 或需求系统优先。已有有效事实源时直接消费，不迁移、不复制。
 不要默认生成 Spec、Design、Plan 三件套；每个 artifact 都必须消除当前真实歧义，否则不创建。
 短 requirement note 至少固定本轮 goal、non-goals 和 acceptance；实现后的证据必须回到该 acceptance，而不只报告测试为绿。
+只要当前 slice 新建或批准 requirement note、canonical Spec 或 Technical Design，evidence plan 必须显式包含 `acceptance`；static/unit evidence 不能替代它。设计阶段的 acceptance 只证明目标、边界和技术取舍已获准，不得抬高产品 capability claim。
 
 需要新建 canonical Spec 时，至少包含：
 

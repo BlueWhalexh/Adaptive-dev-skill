@@ -84,6 +84,30 @@
       "forbidden_layers": [],
       "max_new_documents": 0,
       "claim_ceiling": "proxy_only"
+    },
+    {
+      "id": "coverage-is-not-proof",
+      "prompt": "核心逻辑改动后 coverage 是 73%，超过项目参考值 70%，但 changed branch 没有业务行为断言。现在能否声明局部修复完成？",
+      "spec_artifact": "none",
+      "technical_design_needed": false,
+      "failure_evidence": "preferred",
+      "validator_scope": "focused",
+      "required_layers": ["unit"],
+      "forbidden_layers": ["e2e", "fresh_consumer", "real_external"],
+      "max_new_documents": 0,
+      "claim_ceiling": "proxy_only"
+    },
+    {
+      "id": "frontend-key-journey-milestone",
+      "prompt": "前端关键用户旅程进入 Basic Usable 里程碑，已有 approved acceptance，相关局部测试已通过。选择里程碑收尾证据。",
+      "spec_artifact": "reuse_existing",
+      "technical_design_needed": false,
+      "failure_evidence": "alternate",
+      "validator_scope": "milestone",
+      "required_layers": ["e2e", "acceptance"],
+      "forbidden_layers": ["fresh_consumer", "real_external"],
+      "max_new_documents": 0,
+      "claim_ceiling": "basic_usable"
     }
   ]
 }
