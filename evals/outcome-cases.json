@@ -48,7 +48,7 @@
       "activate": true,
       "mode": "improve",
       "max_new_subagents": 1,
-      "required_concepts": [["矩阵", "代表性"], ["共性", "共因", "聚类"]],
+      "required_concepts": [["矩阵", "代表性", "代表场景", "代表失败"], ["共性", "共因", "聚类"]],
       "forbidden_skills": ["workflow-control-plane", "specflow", "project-harness-init", "knowledge-promotion"]
     },
     {

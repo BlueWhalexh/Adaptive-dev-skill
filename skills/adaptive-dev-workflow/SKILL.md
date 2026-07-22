@@ -85,6 +85,8 @@ Spec、Design、测试、Review、观测、Skill、manifest 和 Worktree 只是�
 
 首次进入 `prove`/`improve`，或无法判断优先级和 Specialist 边界时，读取 `references/scenario-routing.md`；已有有效模式和下一步时不要读取。
 
+只有当前动作需要决定“是否写 Spec、写到哪一层”或“选择 unit/integration/E2E/acceptance 哪类证据”时，才读取 `references/lightweight-sdd-and-testing.md`。清晰小改和已有有效 Spec/Plan 的任务不要读取，也不要补齐文档套件。
+
 真实链路因凭证、外部环境、数据或服务不可用时，记录缺失条件和最近似的代理证据。代理证据只用于诊断，不得签发 Basic Usable；如果真实证据是当前决策所必需，向用户请求访问或外部决策。
 
 ## Specialist Boundary
@@ -141,5 +143,6 @@ Deferred:
 ```sh
 python3 scripts/run-outcome-first-eval.py
 python3 scripts/run-fresh-agent-route-eval.py --repeat 1
+python3 scripts/run-fresh-lightweight-dev-eval.py --repeat 1
 python3 "${CODEX_HOME:-$HOME/.codex}/skills/.system/skill-creator/scripts/quick_validate.py" skills/adaptive-dev-workflow
 ```

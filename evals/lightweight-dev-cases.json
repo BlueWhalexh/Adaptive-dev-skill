@@ -1,0 +1,89 @@
+{
+  "schema_version": 1,
+  "cases": [
+    {
+      "id": "readme-command",
+      "prompt": "README 里把 npm 命令改为 pnpm，项目脚本不变。",
+      "spec_artifact": "none",
+      "technical_design_needed": false,
+      "failure_evidence": "alternate",
+      "validator_scope": "focused",
+      "required_layers": ["static"],
+      "forbidden_layers": ["e2e", "fresh_consumer", "real_external"],
+      "max_new_documents": 0,
+      "claim_ceiling": "local_change"
+    },
+    {
+      "id": "automatable-local-bug",
+      "prompt": "已复现 heartbeat 后 CAS revision 过期，现有 unit test 可稳定覆盖。做局部修复。",
+      "spec_artifact": "none",
+      "technical_design_needed": false,
+      "failure_evidence": "preferred",
+      "validator_scope": "focused",
+      "required_layers": ["unit"],
+      "forbidden_layers": ["e2e", "fresh_consumer", "real_external"],
+      "max_new_documents": 0,
+      "claim_ceiling": "local_change"
+    },
+    {
+      "id": "reuse-approved-openspec",
+      "prompt": "仓库已有 approved OpenSpec 和明确 acceptance。实现一个跨 module 行为，不涉及新架构或 public contract。",
+      "spec_artifact": "reuse_existing",
+      "technical_design_needed": false,
+      "failure_evidence": "preferred",
+      "validator_scope": "changed_scope",
+      "required_layers": ["unit", "integration"],
+      "forbidden_layers": ["fresh_consumer", "real_external"],
+      "max_new_documents": 0,
+      "claim_ceiling": "integration"
+    },
+    {
+      "id": "drifting-acceptance-note",
+      "prompt": "这是普通行为改动，但三次讨论中验收口径一直变化。没有跨模块架构决策。先固定本轮范围。",
+      "spec_artifact": "requirement_note",
+      "technical_design_needed": false,
+      "failure_evidence": "preferred",
+      "validator_scope": "focused",
+      "required_layers": ["acceptance"],
+      "forbidden_layers": ["fresh_consumer", "real_external"],
+      "max_new_documents": 1,
+      "claim_ceiling": "local_change"
+    },
+    {
+      "id": "public-contract-design",
+      "prompt": "新功能跨多个模块并改变 public API 和数据迁移方式，当前没有需求事实源。先确定目标和技术取舍。",
+      "spec_artifact": "canonical_spec",
+      "technical_design_needed": true,
+      "failure_evidence": "alternate",
+      "validator_scope": "focused",
+      "required_layers": ["acceptance"],
+      "forbidden_layers": ["fresh_consumer", "real_external"],
+      "max_new_documents": 2,
+      "claim_ceiling": "proxy_only"
+    },
+    {
+      "id": "visual-spacing",
+      "prompt": "把按钮间距从 4px 调成 8px，不改交互逻辑。",
+      "spec_artifact": "none",
+      "technical_design_needed": false,
+      "failure_evidence": "alternate",
+      "validator_scope": "focused",
+      "required_layers": ["visual"],
+      "forbidden_layers": ["unit", "integration", "e2e", "fresh_consumer", "real_external"],
+      "max_new_documents": 0,
+      "claim_ceiling": "local_change"
+    },
+    {
+      "id": "mock-cannot-prove-basic-usable",
+      "prompt": "LLM 查询链路的 mock 和 fake tests 都通过了，但没有真实模型或外部 Source 凭证。现在能否声明 Basic Usable？",
+      "spec_artifact": "none",
+      "technical_design_needed": false,
+      "failure_evidence": "alternate",
+      "validator_scope": "milestone",
+      "required_layers": ["e2e", "real_external", "acceptance"],
+      "forbidden_layers": [],
+      "max_new_documents": 0,
+      "claim_ceiling": "proxy_only"
+    }
+  ]
+}

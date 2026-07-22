@@ -11,6 +11,8 @@ ROOT = Path(__file__).resolve().parents[1]
 SKILL = ROOT / "skills" / "adaptive-dev-workflow" / "SKILL.md"
 OPENAI_YAML = ROOT / "skills" / "adaptive-dev-workflow" / "agents" / "openai.yaml"
 CASES = ROOT / "evals" / "outcome-cases.json"
+LIGHTWEIGHT_GUIDE = ROOT / "skills" / "adaptive-dev-workflow" / "references" / "lightweight-sdd-and-testing.md"
+LIGHTWEIGHT_CASES = ROOT / "evals" / "lightweight-dev-cases.json"
 
 HEAVY_SKILLS = [
     "workflow-control-plane",
@@ -66,6 +68,24 @@ def main() -> int:
     for marker in forbidden:
         if marker in skill:
             fail(f"legacy control-plane marker remains: {marker}")
+
+    if "references/lightweight-sdd-and-testing.md" not in skill:
+        fail("lightweight SDD/testing reference is not conditionally routed")
+    guide = read(LIGHTWEIGHT_GUIDE)
+    for marker in [
+        "canonical ready Spec",
+        "不要默认生成 Spec、Design、Plan 三件套",
+        "E2E 与 unit 是互补关系",
+        "不要求每个任务机械执行 Test First 或 RED",
+        "Coverage 用于发现空白和观察趋势",
+    ]:
+        if marker not in guide:
+            fail(f"lightweight guide missing contract: {marker}")
+    lightweight_cases = json.loads(read(LIGHTWEIGHT_CASES)).get("cases", [])
+    if len(lightweight_cases) < 7:
+        fail("expected at least 7 lightweight SDD/testing behavior cases")
+    if not (ROOT / "scripts" / "run-fresh-lightweight-dev-eval.py").exists():
+        fail("missing fresh lightweight behavior evaluator")
 
     if "allow_implicit_invocation: true" not in read(OPENAI_YAML):
         fail("adaptive must remain discoverable for its narrow trigger")
