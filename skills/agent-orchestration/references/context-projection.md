@@ -1,6 +1,6 @@
 # Context Projection
 
-Context projection decides what a role gets from shared workflow state. It should be repeatable and minimal.
+Context projection decides what a role gets from the current outcome, accepted artifacts, and repository facts. It should be repeatable and minimal.
 
 ## Include
 
@@ -20,15 +20,16 @@ Context projection decides what a role gets from shared workflow state. It shoul
 
 ## Projection Rules
 
-1. Start from `workflow_manifest.json` and artifact graph.
+1. Start from the accepted artifact list and current objective. Use `artifact_index.json` only when a cross-process runner needs a machine-readable source.
 2. Pick only artifacts named in the work order dependencies or needed by role contract.
 3. Add `omissions[]` explaining important context intentionally withheld.
 4. Use `allowed_paths[]` as a reviewable boundary, not as a claim that the role cannot discover new facts.
 5. If a role discovers new risk, return `discovered_facts`; do not silently expand scope.
+6. Refresh the packet only when an input artifact, accepted decision, or owned path changes.
 
 ## Anti-Patterns
 
 - "Here is the whole chat, continue from there."
 - Giving implementer review findings before it has produced a patch, causing it to optimize for review wording rather than requirements.
 - Giving reviewer implementer's self-justification without the diff, spec, and evidence.
-- Letting context packets age without a manifest revision.
+- Rebuilding every context packet after an unrelated task changes.

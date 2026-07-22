@@ -1,0 +1,59 @@
+{
+  "schema_version": 1,
+  "cases": [
+    {
+      "id": "docs-typo",
+      "prompt": "修正 README 的两个错别字并检查 diff。",
+      "use_orchestration_skill": false,
+      "execution_pattern": "direct",
+      "independent_reviewer_required": false,
+      "max_active_writers": 1,
+      "reviewer_worktree": false
+    },
+    {
+      "id": "known-local-bug",
+      "prompt": "已定位到按钮 loading class 拼错。做局部修复并运行 focused regression。",
+      "use_orchestration_skill": false,
+      "execution_pattern": "direct",
+      "independent_reviewer_required": false,
+      "max_active_writers": 1,
+      "reviewer_worktree": false
+    },
+    {
+      "id": "auth-maker-checker",
+      "prompt": "按已批准设计实现权限 policy 迁移。实现者完成 focused tests 后，必须由未参与实现的人独立审查权限边界。",
+      "use_orchestration_skill": false,
+      "execution_pattern": "maker_checker",
+      "independent_reviewer_required": true,
+      "max_active_writers": 1,
+      "reviewer_worktree": false
+    },
+    {
+      "id": "independent-team",
+      "prompt": "请由 orchestrator 管理 Agent Team：API client、前端页面和 onboarding 文档互不改同一文件，可以并行；最后统一集成并审 public API。",
+      "use_orchestration_skill": true,
+      "execution_pattern": "parallel_team",
+      "independent_reviewer_required": true,
+      "max_active_writers": 3,
+      "reviewer_worktree": false
+    },
+    {
+      "id": "shared-schema-team",
+      "prompt": "请用 Agent Team 完成 schema、API 和前端适配，但三部分都依赖并会修改同一个 schema 文件。安排安全的执行顺序并审查兼容性。",
+      "use_orchestration_skill": true,
+      "execution_pattern": "sequential_team",
+      "independent_reviewer_required": true,
+      "max_active_writers": 1,
+      "reviewer_worktree": false
+    },
+    {
+      "id": "long-goal-milestone",
+      "prompt": "目标模式下主 Agent 已完成一个跨模块 Minimum Real Slice。现在只需要独立检查这个里程碑是否满足 acceptance，不要启动完整团队。",
+      "use_orchestration_skill": false,
+      "execution_pattern": "maker_checker",
+      "independent_reviewer_required": true,
+      "max_active_writers": 0,
+      "reviewer_worktree": false
+    }
+  ]
+}

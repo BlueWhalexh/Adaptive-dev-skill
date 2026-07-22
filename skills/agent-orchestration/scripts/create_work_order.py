@@ -24,13 +24,13 @@ def build(args: argparse.Namespace) -> dict:
     packet = load_json(Path(args.context_packet))
     if packet["role"] != args.role:
         raise SystemExit("FAIL: context packet role does not match requested role")
-    if packet["workflow_id"] != args.workflow_id:
-        raise SystemExit("FAIL: context packet workflow_id does not match requested workflow_id")
+    if packet["coordination_id"] != args.coordination_id:
+        raise SystemExit("FAIL: context packet coordination_id does not match requested coordination_id")
     assigned = choose_agent(Path(args.agent_roster) if args.agent_roster else None, args.role)
     order = {
         "schema_version": 1,
         "work_order_id": args.work_order_id,
-        "workflow_id": args.workflow_id,
+        "coordination_id": args.coordination_id,
         "role": args.role,
         "objective": args.objective,
         "stage_id": args.stage_id,
@@ -60,7 +60,7 @@ def build(args: argparse.Namespace) -> dict:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--workflow-id", required=True)
+    parser.add_argument("--coordination-id", required=True)
     parser.add_argument("--work-order-id", default="WO-001")
     parser.add_argument("--role", required=True)
     parser.add_argument("--stage-id", required=True)
@@ -75,7 +75,7 @@ def main() -> int:
     parser.add_argument("--output-artifact-type", required=True)
     parser.add_argument("--output-schema-ref", default="")
     parser.add_argument("--output-artifact-path", required=True)
-    parser.add_argument("--forbidden-action", action="append", default=["Do not mutate workflow_manifest.json directly.", "Do not use full chat history as context."])
+    parser.add_argument("--forbidden-action", action="append", default=["Do not expand ownership without coordinator approval.", "Do not use full chat history as context."])
     parser.add_argument("--dependency", action="append", default=[])
     parser.add_argument("--output", required=True)
     args = parser.parse_args()

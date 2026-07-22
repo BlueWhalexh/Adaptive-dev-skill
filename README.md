@@ -81,7 +81,7 @@ rsync -a skills/adaptive-dev-workflow/ "$HOME/.agents/skills/adaptive-dev-workfl
 | `change-aware-testing` | 项目确实需要按 diff 选择测试 |
 | `technical-design` | 存在真实架构/契约/迁移设计决策 |
 | `delivery-verification` | 申请 integration/release/handoff 声明 |
-| `agent-orchestration` | 2 个以上独立工作流值得并行 |
+| `agent-orchestration` | 2 个独立 writer、3 个以上角色/会话，或明确要求 orchestrator；单 maker + checker 不加载 |
 | `project-harness-init` | 用户明确要求初始化项目 harness |
 | `knowledge-promotion` | 用户明确要求沉淀已验证项目经验 |
 

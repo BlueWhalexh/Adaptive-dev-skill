@@ -30,12 +30,11 @@ def write_json(path: Path, value: dict[str, Any]) -> Path:
     return path
 
 
-def manifest() -> dict[str, Any]:
+def artifact_index() -> dict[str, Any]:
     return {
-        "schema_version": 3,
-        "run_id": "WF-ORCH-001",
-        "manifest_revision": 7,
-        "current_stage": "spec_review",
+        "schema_version": 1,
+        "coordination_id": "TEAM-001",
+        "index_revision": 2,
         "artifacts": [
             {
                 "id": "ap-001",
@@ -56,7 +55,7 @@ def manifest() -> dict[str, Any]:
 def roster() -> dict[str, Any]:
     return {
         "schema_version": 1,
-        "workflow_id": "WF-ORCH-001",
+        "coordination_id": "TEAM-001",
         "agents": [
             {
                 "agent_id": "agent-spec-reviewer",
@@ -74,7 +73,7 @@ def work_result() -> dict[str, Any]:
     return {
         "schema_version": 1,
         "work_order_id": "WO-001",
-        "workflow_id": "WF-ORCH-001",
+        "coordination_id": "TEAM-001",
         "role": "spec_reviewer",
         "status": "completed",
         "produced_artifacts": [
@@ -97,7 +96,7 @@ def work_result() -> dict[str, Any]:
 def main() -> int:
     with tempfile.TemporaryDirectory(prefix="agent-orch-e2e-") as tmp:
         root = Path(tmp)
-        manifest_path = write_json(root / "workflow_manifest.json", manifest())
+        artifact_index_path = write_json(root / "artifact_index.json", artifact_index())
         roster_path = write_json(root / "agent_roster.json", roster())
         context_path = root / "context_packet.json"
         order_path = root / "work_order.json"
@@ -107,9 +106,11 @@ def main() -> int:
         run([
             sys.executable,
             str(ORCH / "scripts" / "build_context_packet.py"),
-            str(manifest_path),
+            str(artifact_index_path),
             "--role",
             "spec_reviewer",
+            "--packet-kind",
+            "review",
             "--context-packet-id",
             "CP-001",
             "--include-artifact",
@@ -124,14 +125,20 @@ def main() -> int:
             "src/**",
             "--instruction",
             "Review goals, non-goals, acceptance, evidence plan, and drift risk.",
+            "--review-acceptance-ref",
+            "spec-001#acceptance",
+            "--review-target-ref",
+            "spec-001",
+            "--review-evidence-ref",
+            "ap-001",
             "--output",
             str(context_path),
         ])
         run([
             sys.executable,
             str(ORCH / "scripts" / "create_work_order.py"),
-            "--workflow-id",
-            "WF-ORCH-001",
+            "--coordination-id",
+            "TEAM-001",
             "--work-order-id",
             "WO-001",
             "--role",
@@ -184,6 +191,16 @@ def main() -> int:
         bad_context_path = write_json(root / "bad_context_packet.json", bad_context)
         run([sys.executable, str(ORCH / "scripts" / "validate_context_packet.py"), str(bad_context_path)], expect_ok=False)
 
+        missing_review_contract = json.loads(context_path.read_text(encoding="utf-8"))
+        missing_review_contract.pop("review_contract")
+        missing_review_contract_path = write_json(root / "missing_review_contract.json", missing_review_contract)
+        run([sys.executable, str(ORCH / "scripts" / "validate_context_packet.py"), str(missing_review_contract_path)], expect_ok=False)
+
+        blank_review_ref = json.loads(context_path.read_text(encoding="utf-8"))
+        blank_review_ref["review_contract"]["evidence_refs"] = [""]
+        blank_review_ref_path = write_json(root / "blank_review_ref.json", blank_review_ref)
+        run([sys.executable, str(ORCH / "scripts" / "validate_context_packet.py"), str(blank_review_ref_path)], expect_ok=False)
+
         bad_result = work_result()
         bad_result["produced_artifacts"][0]["type"] = "implementation"
         bad_result_path = write_json(root / "bad_work_result.json", bad_result)
@@ -198,6 +215,7 @@ def main() -> int:
     print("Agent orchestration E2E eval passed")
     print("- roster/context/work-order/result positive flow: pass")
     print("- full-chat context negative check: pass")
+    print("- reviewer minimum-input negative check: pass")
     print("- runtime isolation policy negative checks: pass")
     print("- wrong result artifact type negative check: pass")
     print("- progress summary: pass")

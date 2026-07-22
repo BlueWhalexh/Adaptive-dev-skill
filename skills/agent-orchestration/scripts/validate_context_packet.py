@@ -22,6 +22,15 @@ def validate(path: Path) -> list[str]:
         errors.append("instructions must state how the role should use this context")
     if "full chat" in " ".join(packet.get("instructions", []) + packet.get("omissions", [])).lower():
         errors.append("context packet must not include or request full chat history")
+    if packet.get("packet_kind") == "review":
+        contract = packet.get("review_contract")
+        if not contract:
+            errors.append("reviewer context requires review_contract")
+        else:
+            for key in ["acceptance_refs", "target_refs", "evidence_refs"]:
+                refs = contract.get(key, [])
+                if not refs or any(not isinstance(ref, str) or not ref.strip() for ref in refs):
+                    errors.append(f"review_contract {key} must contain non-empty refs")
     return errors
 
 

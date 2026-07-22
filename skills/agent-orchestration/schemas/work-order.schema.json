@@ -1,11 +1,11 @@
 {
   "type": "object",
   "additionalProperties": false,
-  "required": ["schema_version", "work_order_id", "workflow_id", "role", "objective", "stage_id", "status", "context_packet_ref", "execution_carrier", "context_isolation", "workspace_policy", "input_artifacts", "output_contract", "forbidden_actions", "expected_result_schema", "dependencies"],
+  "required": ["schema_version", "work_order_id", "coordination_id", "role", "objective", "stage_id", "status", "context_packet_ref", "execution_carrier", "context_isolation", "workspace_policy", "input_artifacts", "output_contract", "forbidden_actions", "expected_result_schema", "dependencies"],
   "properties": {
     "schema_version": { "type": "integer", "enum": [1] },
     "work_order_id": { "type": "string" },
-    "workflow_id": { "type": "string" },
+    "coordination_id": { "type": "string" },
     "role": { "type": "string" },
     "assigned_agent_id": { "type": "string" },
     "objective": { "type": "string" },

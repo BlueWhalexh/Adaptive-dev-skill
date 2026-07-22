@@ -1,7 +1,7 @@
 interface:
   display_name: "Agent Orchestration"
-  short_description: "Coordinate role agents with context packets"
-  default_prompt: "Use $agent-orchestration to create role-based work orders, context packets, and structured result contracts so multiple agents can collaborate through artifacts instead of copied chat history."
+  short_description: "Coordinate a bounded Agent Team with isolated context"
+  default_prompt: "Use $agent-orchestration only for two independent writers, three or more coordinated roles/sessions, or an explicit orchestrator request. A single maker plus one checker does not trigger it. Keep temporary execution agents, minimal context, isolated writers, and no per-task fan-out."
 
 policy:
-  allow_implicit_invocation: false
+  allow_implicit_invocation: true

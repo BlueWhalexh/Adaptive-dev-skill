@@ -22,7 +22,7 @@ def validate(path: Path, *, work_order_path: Path | None = None) -> list[str]:
         errors.append("completed result must not include error")
     if work_order_path:
         order = load_json(work_order_path)
-        for key in ["workflow_id", "work_order_id", "role"]:
+        for key in ["coordination_id", "work_order_id", "role"]:
             if result[key] != order[key]:
                 errors.append(f"work result {key} must match work order")
         expected_type = order["output_contract"]["artifact_type"]

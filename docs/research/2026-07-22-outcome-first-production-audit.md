@@ -75,7 +75,7 @@ workflow state、artifact graph、review ledger 和 task evidence 从支持开�
 | `writing-plans` / `specflow` | 尚无 approved 方案且真实存在范围/契约不确定性 | 已有 Spec/Plan 后重复生成或复审 | 直接消费已有 artifact；只补缺失决策 |
 | `test-driven-development` | 可自动化行为回归、核心逻辑和高风险边界 | 纯文档、机械改动或已有明确 validator 也走完整 RED | 按当前行为与回归价值调用 |
 | `change-aware-testing` | 大仓库无法人工可靠选择 affected tests | 每个小步都引入额外 test-routing 控制面 | 默认关闭隐式触发；优先项目原生命令 |
-| `agent-orchestration` | 2 个以上真正独立工作流 | 把角色模板当作默认开发团队 | 默认关闭；共享写状态或顺序依赖时不并行 |
+| `agent-orchestration` | 2 个独立 writer、3 个以上角色/会话或明确 orchestrator 请求 | 把角色模板当作默认开发团队 | 窄触发；单 maker + checker 直接执行，共享写状态时顺序交接 |
 | `knowledge-promotion` | 模式已重复验证且用户要求沉淀 | Basic Usable 前就创建项目 Skill/知识流程 | 后处理、显式触发，不是默认交付阶段 |
 | `delivery-verification` | integration/release/handoff claim | 中间 Task 提前承担完整交付门 | 只在申请相应 claim 时调用 |
 

@@ -14,7 +14,6 @@ CASES = ROOT / "evals" / "outcome-cases.json"
 
 HEAVY_SKILLS = [
     "workflow-control-plane",
-    "agent-orchestration",
     "context-grounding",
     "specflow",
     "technical-design",
@@ -74,6 +73,9 @@ def main() -> int:
         policy = read(ROOT / "skills" / name / "agents" / "openai.yaml")
         if "allow_implicit_invocation: false" not in policy:
             fail(f"heavy skill remains implicitly invocable: {name}")
+    team_policy = read(ROOT / "skills" / "agent-orchestration" / "agents" / "openai.yaml")
+    if "allow_implicit_invocation: true" not in team_policy:
+        fail("agent-orchestration must remain discoverable for its narrow multi-role trigger")
 
     payload = json.loads(read(CASES))
     cases = payload.get("cases", [])

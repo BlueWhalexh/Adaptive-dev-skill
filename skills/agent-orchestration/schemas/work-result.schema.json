@@ -1,11 +1,11 @@
 {
   "type": "object",
   "additionalProperties": false,
-  "required": ["schema_version", "work_order_id", "workflow_id", "role", "status", "produced_artifacts", "discovered_facts", "evidence_refs", "claim_requests", "next_work_order_requests", "error", "handoff_notes"],
+  "required": ["schema_version", "work_order_id", "coordination_id", "role", "status", "produced_artifacts", "discovered_facts", "evidence_refs", "claim_requests", "next_work_order_requests", "error", "handoff_notes"],
   "properties": {
     "schema_version": { "type": "integer", "enum": [1] },
     "work_order_id": { "type": "string" },
-    "workflow_id": { "type": "string" },
+    "coordination_id": { "type": "string" },
     "role": { "type": "string" },
     "status": { "type": "string", "enum": ["completed", "blocked", "failed", "needs_human"] },
     "produced_artifacts": {

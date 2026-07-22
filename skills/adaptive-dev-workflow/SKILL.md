@@ -54,7 +54,9 @@ Spec、Design、测试、Review、观测、Skill、manifest 和 Worktree 只是�
 
 默认预算：主会话执行、零 Subagent、零新文档、零 workflow manifest。
 
-只有当前 slice 需要独立高风险 Review、并行任务互不共享写状态，或上下文污染会影响结论时才增加 Agent。一个边界默认最多一个 Reviewer 和一次 delta re-review，避免 reviewer 往返成为新的主任务；多个独立安全/数据边界或项目强制政策可以提高预算。非阻塞 finding 进入 deferred backlog。
+实现 Agent 必须自查，但 public contract、权限/认证、数据/迁移、状态机、并发/幂等、安全、不可逆副作用，以及长期目标的里程碑/最终声明，需要一个未参与实现的只读 checker。一个边界默认最多一个 Reviewer 和一次 delta re-review，避免 reviewer 往返成为新的主任务；多个独立安全/数据边界或项目强制政策可以提高预算。非阻塞 finding 进入 deferred backlog。
+
+文档、样式、机械修改、局部可逆修复和 focused regression 已充分覆盖的普通改动不创建 Reviewer。具体 maker/checker 输入、结论和停止规则见 `references/maker-checker.md`，仅在命中独立 Review Gate 时读取。
 
 ## Outcome Modes
 
@@ -92,7 +94,7 @@ Specialist Skill 只在当前动作真的需要时调用：
 - 已复现 bug 且根因未知：`systematic-debugging`。
 - 行为可自动化且回归价值高：`test-driven-development` 或项目测试方式。
 - 存在真正架构决策：`technical-design`。
-- 2 个以上独立并行工作流且收益明确：`agent-orchestration`。
+- 2 个独立 writer、3 个以上角色/会话需要协调，或用户明确要求 orchestrator：`agent-orchestration`。单 maker + 单 Reviewer 不加载该 Skill。
 - 正在申请 integration/release/handoff 声明：`delivery-verification`。
 
 不要自动调用完整 Superpowers、workflow-control-plane、SpecFlow、context-grounding、project-harness-init 或 knowledge-promotion。已有 approved Spec/Design/Plan 时直接消费，不重新生成。

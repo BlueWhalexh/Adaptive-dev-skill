@@ -41,8 +41,8 @@ def validate(path: Path, *, roster_path: Path | None = None, context_packet_path
 
     if context_packet_path:
         packet = load_json(context_packet_path)
-        if packet["workflow_id"] != order["workflow_id"]:
-            errors.append("context packet workflow_id must match work order")
+        if packet["coordination_id"] != order["coordination_id"]:
+            errors.append("context packet coordination_id must match work order")
         if packet["role"] != order["role"]:
             errors.append("context packet role must match work order")
 

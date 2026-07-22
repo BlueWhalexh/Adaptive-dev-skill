@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build a role-scoped context_packet.json from workflow_manifest.json."""
+"""Build a role-scoped context_packet.json from a small artifact index."""
 
 from __future__ import annotations
 
@@ -21,16 +21,17 @@ def artifact_ref(artifact: dict[str, Any]) -> dict[str, str]:
 
 
 def build(args: argparse.Namespace) -> dict[str, Any]:
-    manifest_path = Path(args.workflow_manifest)
-    manifest = load_json(manifest_path)
-    by_id = {artifact["id"]: artifact for artifact in manifest.get("artifacts", [])}
+    index_path = Path(args.artifact_index)
+    index = load_json(index_path)
+    by_id = {artifact["id"]: artifact for artifact in index.get("artifacts", [])}
     missing = [artifact_id for artifact_id in args.include_artifact if artifact_id not in by_id]
     if missing:
         raise SystemExit("FAIL: unknown artifact ids: " + ", ".join(missing))
-    return {
+    packet = {
         "schema_version": 1,
         "context_packet_id": args.context_packet_id,
-        "workflow_id": manifest["run_id"],
+        "coordination_id": index["coordination_id"],
+        "packet_kind": args.packet_kind,
         "role": args.role,
         "purpose": args.purpose,
         "artifact_refs": [artifact_ref(by_id[artifact_id]) for artifact_id in args.include_artifact],
@@ -39,16 +40,24 @@ def build(args: argparse.Namespace) -> dict[str, Any]:
         "instructions": args.instruction,
         "omissions": args.omission,
         "created_from": {
-            "workflow_manifest": manifest_path.as_posix(),
-            "manifest_revision": manifest.get("manifest_revision", 1),
+            "artifact_index": index_path.as_posix(),
+            "index_revision": index.get("index_revision", 1),
         },
     }
+    if args.review_acceptance_ref or args.review_target_ref or args.review_evidence_ref:
+        packet["review_contract"] = {
+            "acceptance_refs": args.review_acceptance_ref,
+            "target_refs": args.review_target_ref,
+            "evidence_refs": args.review_evidence_ref,
+        }
+    return packet
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("workflow_manifest")
+    parser.add_argument("artifact_index")
     parser.add_argument("--role", required=True)
+    parser.add_argument("--packet-kind", choices=["task", "review", "verification"], default="task")
     parser.add_argument("--context-packet-id", required=True)
     parser.add_argument("--purpose", default="Provide role-scoped context for the assigned work order.")
     parser.add_argument("--include-artifact", action="append", default=[])
@@ -56,6 +65,9 @@ def main() -> int:
     parser.add_argument("--forbidden-path", action="append", default=[])
     parser.add_argument("--instruction", action="append", default=["Use only the provided artifact refs and paths needed for this role."])
     parser.add_argument("--omission", action="append", default=["Full conversation history intentionally omitted."])
+    parser.add_argument("--review-acceptance-ref", action="append", default=[])
+    parser.add_argument("--review-target-ref", action="append", default=[])
+    parser.add_argument("--review-evidence-ref", action="append", default=[])
     parser.add_argument("--output", required=True)
     args = parser.parse_args()
 

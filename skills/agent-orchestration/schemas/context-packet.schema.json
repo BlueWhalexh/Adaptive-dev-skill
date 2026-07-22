@@ -1,11 +1,12 @@
 {
   "type": "object",
   "additionalProperties": false,
-  "required": ["schema_version", "context_packet_id", "workflow_id", "role", "purpose", "artifact_refs", "allowed_paths", "forbidden_paths", "instructions", "omissions", "created_from"],
+  "required": ["schema_version", "context_packet_id", "coordination_id", "packet_kind", "role", "purpose", "artifact_refs", "allowed_paths", "forbidden_paths", "instructions", "omissions", "created_from"],
   "properties": {
     "schema_version": { "type": "integer", "enum": [1] },
     "context_packet_id": { "type": "string" },
-    "workflow_id": { "type": "string" },
+    "coordination_id": { "type": "string" },
+    "packet_kind": { "type": "string", "enum": ["task", "review", "verification"] },
     "role": { "type": "string" },
     "purpose": { "type": "string" },
     "artifact_refs": {
@@ -26,13 +27,23 @@
     "forbidden_paths": { "type": "array", "items": { "type": "string" } },
     "instructions": { "type": "array", "items": { "type": "string" } },
     "omissions": { "type": "array", "items": { "type": "string" } },
+    "review_contract": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["acceptance_refs", "target_refs", "evidence_refs"],
+      "properties": {
+        "acceptance_refs": { "type": "array", "minItems": 1, "items": { "type": "string" } },
+        "target_refs": { "type": "array", "minItems": 1, "items": { "type": "string" } },
+        "evidence_refs": { "type": "array", "minItems": 1, "items": { "type": "string" } }
+      }
+    },
     "created_from": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["workflow_manifest", "manifest_revision"],
+      "required": ["artifact_index", "index_revision"],
       "properties": {
-        "workflow_manifest": { "type": "string" },
-        "manifest_revision": { "type": "integer" }
+        "artifact_index": { "type": "string" },
+        "index_revision": { "type": "integer" }
       }
     }
   }

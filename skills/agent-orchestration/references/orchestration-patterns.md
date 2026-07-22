@@ -2,17 +2,17 @@
 
 ## Sequential
 
-Use only for the artifact stages actually missing or materially changed. This is a dependency example, not a mandatory full chain:
+Use when multiple roles are valuable but outputs depend on one another. Start only the next role that has a ready input:
 
 ```text
-context_researcher -> spec_writer -> spec_reviewer -> technical_designer -> plan_writer -> implementer -> code_reviewer -> verifier
+maker -> optional checker -> next maker
 ```
 
-Reuse approved spec/design/plan artifacts. Do not regenerate or re-review them because a new implementation Task started.
+Do not instantiate a complete lifecycle team. Reuse accepted artifacts and skip roles whose work already exists.
 
 ## Continuous Batch
 
-Default for L2/L3 implementation after approved artifacts:
+Default for several related low-risk edits after direction is clear:
 
 ```text
 one scoped context packet
@@ -23,11 +23,11 @@ one scoped context packet
   -> one commit and progress result
 ```
 
-Plan checkboxes remain progress tracking. They do not imply one work order, fresh subagent, reviewer, fixer, report, or commit each.
+Task checkboxes remain progress tracking. They do not imply one work order, fresh agent, reviewer, fixer, report, or commit each.
 
 ## Maker / Checker
 
-Use for high-impact spec, design, security, data, migration, architecture checkpoints, and handoff work. Do not use maker/checker for ordinary docs, schema plumbing, or known-pattern Tasks inside a batch.
+Use when an independent checker is required by project policy. A single checker does not require loading the full orchestration skill or creating machine contracts.
 
 ```text
 producer work_order
@@ -39,9 +39,9 @@ producer work_order
 
 The reviewer context packet should include the produced artifact, source inputs, and acceptance/evidence policy. It should not include the producer's full chat.
 
-## Parallel Review
+## Parallel Work
 
-Use when review surfaces are independent:
+Use only when writers own disjoint files and write state. Parallel read-only review is also safe when review surfaces are independent:
 
 ```text
 code_reviewer
@@ -50,7 +50,7 @@ test_reviewer
 docs_reviewer
 ```
 
-Each gets a separate context packet. The orchestrator merges findings into a single progress summary and only advances when required gates pass.
+Each gets a separate minimal packet. The orchestrator merges outputs once; it does not stream every role log into the main context.
 
 ## Runtime Carrier
 
@@ -84,13 +84,13 @@ Rules:
 - `isolated_worktree` requires `worktree_ref` and `merge_owner`.
 - Review/verifier roles use `shared_readonly`.
 
-## Repair Loop
+## Repair Boundary
 
 When a role returns `blocked`, `failed`, or `needs_human`:
 
-1. Do not assign downstream work orders.
-2. Summarize blocker and missing artifact.
-3. If new risk facts were discovered, submit a route facts delta to `workflow-control-plane`.
-4. Rebuild context packet after manifest revision changes.
+1. Keep actionable diagnosis and repair in the current owner when possible.
+2. Stop dependent work only when the missing input truly blocks it; independent work may continue.
+3. Escalate only product decisions, unsafe operations, or blockers with no executable next step.
+4. Refresh only packets affected by changed inputs or decisions.
 
 For review findings, fix Critical/Major or material contract findings and run at most one delta re-review. Minor non-contract findings may be fixed without restarting the full maker/checker chain.

@@ -1,78 +1,107 @@
 ---
 name: agent-orchestration
-description: Coordinate role-based AI agents through agent rosters, work orders, context packets, artifact refs, and structured result contracts. Use when a software workflow needs multiple roles such as context researcher, spec writer, spec reviewer, technical designer, implementer, code reviewer, tester, verifier, or when the user wants an orchestrator to manage progress without manually copying context between sessions. 当需要多 Agent 协作、角色隔离、上下文投影、work order、artifact 驱动交接、进度监管或避免人工搬运上下文时使用。
+description: Coordinate a small role-based Agent Team with minimal context packets, bounded parallelism, and explicit workspace ownership. Use when two or more independent writers can run safely, three or more roles/sessions need coordinated handoffs, or the user explicitly asks for an orchestrator without manually moving context. Do not use for an ordinary single implementation, one isolated reviewer, or one maker followed by one checker. 当两个独立 writer、三个以上角色/会话或用户明确要求 orchestrator 时使用；普通任务和单 maker + 单 checker 不触发。
 ---
 
 # Agent Orchestration
 
-目标：让 orchestrator 管状态和上下文投影，不亲自写 spec、代码、review 或 verification。Agent 之间不传聊天记录，只通过 workflow state、artifact refs、context packet 和 structured result 协作。
+你管理的是逻辑 Agent Team，不是永久会话池，也不是 workflow control plane。
 
-This skill is an orchestration contract, not an agent runtime. It prepares role work that can be executed by the main session, a subagent, a separate session, a human, or an external worker.
+稳定复用角色定义，按需创建执行实例。Orchestrator 负责目标、ownership、上下文投影、进度和集成；Maker、Reviewer、Verifier 只完成自己的 work order。不要把完整聊天记录交给所有角色。
 
-## Responsibilities
+## Activation Gate
 
-- Create and validate `agent_roster.json`.
-- Build role-scoped `context_packet.json` from workflow/artifact state.
-- Create `work_order.json` for a specific role and stage.
-- Validate `work_result.json` before handing it to `workflow-control-plane`.
-- Summarize progress, blockers, and missing role outputs.
+仅在以下任一情况成立时使用：
+
+- 两个以上独立 writer 可以并行，且不共享文件或写状态。
+- Spec/Design/实现/验证需要多个角色跨会话交接。
+- 用户明确要求 Agent Team、独立会话或 orchestrator 代替人工搬运上下文。
+- 单个上下文已经污染，需要由独立 Agent 重新判断多个 artifact。
+
+以下情况不使用：普通单任务、只有一个独立 Reviewer、强顺序依赖、共享文件频繁修改、并行收益低于准备和合并成本。
+
+## Team Model
+
+角色是稳定契约，执行 Agent 是临时 carrier：
+
+| Role | Owns | Must not own |
+| --- | --- | --- |
+| Orchestrator | outcome、任务边界、context packet、集成、预算 | 代替角色产出并自批 |
+| Maker | 一个明确 artifact 或文件域 | 批准自己的高风险产出 |
+| Reviewer | acceptance、diff、边界、副作用检查 | 写实现代码、扩大 scope |
+| Verifier | 运行独立 evidence、判断 claim 支持度 | 用 maker 总结替代命令结果 |
+
+领域角色可以替换 Maker，例如 Spec Writer、Technical Designer、Frontend Writer。不要因为角色表存在就启动所有角色。
+
+## Default Budget
+
+- 一个 milestone 默认 `1 writer + 1 optional reviewer`。
+- 最多同时运行 3 个 writer；增加前必须证明文件域和写状态独立。
+- 一个风险边界默认一次 Review；Blocking/High 修复后一次 delta re-review。
+- Verifier 只在证据必须与实现上下文隔离，或申请 integration/release/handoff claim 时独立创建。
+- 不创建常驻 Agent 来“节省上下文”。运行时是否复用缓存由宿主决定；Skill 只保证每次投影最小必要上下文。
+
+## Context Packet
+
+每个 work order 只包含：
+
+```text
+objective
+acceptance_and_non_goals
+owned_paths_or_artifacts
+read_only_context_refs
+known_decisions
+validator
+expected_result
+forbidden_scope
+```
+
+Reviewer 额外接收 diff 和 evidence，但不接收完整实现对话。缺少事实时先向 Orchestrator 请求一个明确 context delta，不自行遍历无关仓库。
+
+## Workspace Policy
+
+- 只读 Reviewer/Verifier 使用当前仓库视图，不创建 worktree。
+- 并发 writer 必须有互斥文件域；需要写代码时使用独立 worktree 或宿主提供的隔离 workspace。
+- 单 writer 顺序实现可以在干净目标分支就地执行。
+- Orchestrator 是 worktree lifecycle owner：记录路径和分支，在合并、放弃或过期后安全回收；含未合并改动的 worktree 不自动删除。
+
+## Procedure
+
+1. 写一句 shared outcome 和当前 acceptance。
+2. 判断是单 reviewer、顺序 handoff，还是值得并行的多个 writer。
+3. 为每个真正需要的角色分配唯一 objective 和 ownership。
+4. 投影最小 context packet；不复制整个聊天和完整仓库说明。
+5. 启动所需 carrier，并限制它只返回 result、evidence、blocker 和 context request。
+6. Orchestrator 校验输出、处理冲突并运行一次集成验证。
+7. 只汇报 capability delta、blocking findings、剩余风险和下一步；不汇报每个 Agent 的过程日志。
+
+普通单 reviewer 可以直接执行步骤 4-6，不创建 roster、JSON manifest 或 orchestration artifact。
+
+## Optional Machine Contracts
+
+跨进程 runner 确实需要机器交接时，才使用本 Skill 的 `schemas/` 和 `scripts/` 创建 `agent_roster.json`、`context_packet.json`、`work_order.json`、`work_result.json`。这些 artifact 是 carrier contract，不要求 `workflow_manifest.json` 或 `workflow-control-plane`。
+
+## Conditional References
+
+- 分配领域角色时读 `references/role-contracts.md`。
+- 生成跨会话 packet 时读 `references/context-projection.md`。
+- 选择顺序/并行、carrier 或 worktree 时读 `references/orchestration-patterns.md`。
+- 普通单 checker 不读这些 references，直接使用 Reviewer 最小输入。
 
 ## Never
 
-- Do not pass full conversation history as role context.
-- Do not let role agents mutate `workflow_manifest.json` directly.
-- Do not let a producer approve its own spec/design/review output.
-- Do not treat role output as a delivery claim; `delivery-verification` owns claim attestations.
-- Do not spawn agents merely because a role exists; use roles only when isolation, maker/checker, or parallelism adds value.
-- Do not create per-Task implementer/reviewer/fixer work orders for a continuous low-risk batch.
-- Do not generate a fresh context packet, artifact package, or progress report unless ownership, risk boundary, or carrier changes.
-- Do not claim fresh-context isolation when `execution_carrier=main_session`.
-- Do not let non-main execution carriers write in the shared workspace; use `workspace_policy=isolated_worktree`.
-
-## Contracts
-
-Canonical JSON contracts:
-
-- `schemas/agent-roster.schema.json`: available roles, agent ids, capabilities, limits.
-- `schemas/context-packet.schema.json`: role-scoped artifact refs, allowed paths, omissions, instructions.
-- `schemas/work-order.schema.json`: objective, role, stage, execution carrier, workspace policy, context packet ref, expected output.
-- `schemas/work-result.schema.json`: structured role output, produced artifacts, facts, blockers.
-
-Use scripts rather than hand-writing contracts when possible:
-
-```sh
-python3 skills/agent-orchestration/scripts/build_context_packet.py workflow_manifest.json --role spec_reviewer --context-packet-id CP-001 --output context_packet.json --include-artifact spec-001
-python3 skills/agent-orchestration/scripts/create_work_order.py --workflow-id WF-001 --role spec_reviewer --stage-id spec_review --context-packet context_packet.json --objective "Review draft spec" --output work_order.json
-python3 skills/agent-orchestration/scripts/validate_work_result.py work_result.json --work-order work_order.json
-python3 skills/agent-orchestration/scripts/summarize_progress.py --work-orders .agent/runs/WF-001/work_orders --results .agent/runs/WF-001/results
-```
-
-## Role Flow
-
-1. Read `workflow_manifest.json` and strategy stage from `workflow-control-plane`.
-2. Select a role from `agent_roster.json`; if none exists, create a minimal roster first.
-3. Build the smallest context packet for that role. Include artifact refs and explicit omissions.
-4. Create one work order with one objective, one output contract, an `execution_carrier`, a `context_isolation`, and a `workspace_policy`.
-5. Give the role agent only the work order and context packet, not the whole chat.
-6. Validate the work result. Convert accepted outputs into a `transition_request.json` for `workflow-control-plane`.
-
-For implementation stages, apply the selected Strategy's `execution_policy` first. A batch can stay in the main session with one scoped context packet. Add a role carrier only for independent high-risk review, parallel work without shared state, or material context contamination.
-
-## References
-
-- `references/role-contracts.md`: standard role boundaries and anti-patterns.
-- `references/context-projection.md`: how to decide included/omitted context.
-- `references/orchestration-patterns.md`: sequential, maker/checker, parallel review, runtime carrier, and worktree policy patterns.
-
-Read only the reference needed for the current orchestration decision.
+- 不让 Maker 批准自己的 required Review。
+- 不为每个 Task 创建 implementer/reviewer/fixer/re-review 链。
+- 不把“不同角色”误解为“必须创建不同 Agent”。
+- 不让多个 writer 并发修改共享文件、schema 或数据库状态。
+- 不把完整聊天历史 fork 给所有 Agent。
+- 不让 Reviewer 的 Minor finding 自动抢占当前 outcome。
+- 不让只读角色创建永久分支或 worktree。
 
 ## Validation
 
-After modifying this skill, run:
-
 ```sh
-python3 /Users/didi/.codex/skills/.system/skill-creator/scripts/quick_validate.py skills/agent-orchestration
+python3 "${CODEX_HOME:-$HOME/.codex}/skills/.system/skill-creator/scripts/quick_validate.py" skills/agent-orchestration
 python3 scripts/run-agent-orchestration-e2e-eval.py
+python3 scripts/run-fresh-agent-team-trigger-eval.py
 ```
-
-局部修改只运行以上 focused checks。Suite release 由顶层 `run-skill-sandbox-eval.py` 聚合执行，不要在这里重复运行。
